@@ -32,9 +32,7 @@ export default function Navbar() {
             Docs
           </a>
         </Link>
-        <button className="text-docs-muted hover:text-docs-accent">
-          <span className="material-icons">Settings</span>
-        </button>
+        
         <span className="rounded-full bg-docs-section w-8 h-8 flex items-center justify-center text-docs-text font-bold text-base">A</span>
       </nav>
     </header>
