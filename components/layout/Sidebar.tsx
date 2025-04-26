@@ -63,25 +63,25 @@ export default function Sidebar() {
   return (
     <div 
       className={`fixed top-0 left-0 h-screen bg-[#0D1117] border-r border-[#21262D] transition-all duration-300 ${
-        isExpanded ? 'w-56' : 'w-16'
+        isExpanded ? 'w-48' : 'w-14'
       } overflow-hidden`}
     >
       <button
         onClick={toggleSidebar}
-        className="absolute right-0 top-4 bg-[#1C2128] h-8 w-5 flex items-center justify-center rounded-l-lg hover:bg-[#2D333B] transition-colors"
+        className="absolute right-0 top-4 bg-[#1C2128] h-8 w-4 flex items-center justify-center rounded-l-lg hover:bg-[#2D333B] transition-colors"
       >
         {isExpanded ? (
-          <ChevronLeftIcon className="w-4 h-4 text-[#8B949E]" />
+          <ChevronLeftIcon className="w-3 h-3 text-[#8B949E]" />
         ) : (
-          <ChevronRightIcon className="w-4 h-4 text-[#8B949E]" />
+          <ChevronRightIcon className="w-3 h-3 text-[#8B949E]" />
         )}
       </button>
 
-      <div className={`p-4 ${isExpanded ? '' : 'opacity-0'}`}>
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-sm font-medium text-[#8B949E] tracking-wider">DECISION WORKFLOWS</h2>
+      <div className={`p-3 ${isExpanded ? '' : 'opacity-0'}`}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xs font-medium text-[#8B949E] tracking-wider">DECISION WORKFLOWS</h2>
         </div>
-        <nav className="space-y-1 mb-8">
+        <nav className="space-y-0.5 mb-6">
           {decisionWorkflows.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -89,14 +89,14 @@ export default function Sidebar() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                className={`flex items-center px-2 py-1.5 text-sm font-medium rounded-md transition-colors ${
                   isActive
                     ? 'bg-[#1F6FEB] text-white'
                     : 'text-[#8B949E] hover:bg-[#21262D] hover:text-white'
                 }`}
               >
-                <Icon className="w-5 h-5 mr-3 flex-shrink-0" />
-                <span className={`transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
+                <Icon className="w-4 h-4 mr-2 flex-shrink-0" />
+                <span className={`transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0'} text-xs`}>
                   {item.name}
                 </span>
               </Link>
@@ -104,10 +104,10 @@ export default function Sidebar() {
           })}
         </nav>
 
-        <div className="mb-4">
-          <h2 className="text-sm font-medium text-[#8B949E] tracking-wider">PLATFORM CONCEPTS</h2>
+        <div className="mb-3">
+          <h2 className="text-xs font-medium text-[#8B949E] tracking-wider">PLATFORM CONCEPTS</h2>
         </div>
-        <nav className="space-y-1">
+        <nav className="space-y-0.5">
           {platformConcepts.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -115,14 +115,14 @@ export default function Sidebar() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                className={`flex items-center px-2 py-1.5 text-sm font-medium rounded-md transition-colors ${
                   isActive
                     ? 'bg-[#1F6FEB] text-white'
                     : 'text-[#8B949E] hover:bg-[#21262D] hover:text-white'
                 }`}
               >
-                <Icon className="w-5 h-5 mr-3 flex-shrink-0" />
-                <span className={`transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
+                <Icon className="w-4 h-4 mr-2 flex-shrink-0" />
+                <span className={`transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0'} text-xs`}>
                   {item.name}
                 </span>
               </Link>
@@ -132,7 +132,7 @@ export default function Sidebar() {
       </div>
 
       {/* Collapsed state - only show icons */}
-      <div className={`p-4 ${isExpanded ? 'hidden' : 'block'}`}>
+      <div className={`p-2 ${isExpanded ? 'hidden' : 'block'}`}>
         <nav className="space-y-1">
           {[...decisionWorkflows, ...platformConcepts].map((item) => {
             const Icon = item.icon;
@@ -142,13 +142,13 @@ export default function Sidebar() {
                 key={item.name}
                 href={item.href}
                 title={item.name}
-                className={`flex items-center justify-center p-2 rounded-md transition-colors ${
+                className={`flex items-center justify-center p-1.5 rounded-md transition-colors ${
                   isActive
                     ? 'bg-[#1F6FEB] text-white'
                     : 'text-[#8B949E] hover:bg-[#21262D] hover:text-white'
                 }`}
               >
-                <Icon className="w-5 h-5" />
+                <Icon className="w-4 h-4" />
               </Link>
             );
           })}

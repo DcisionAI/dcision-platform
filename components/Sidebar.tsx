@@ -46,10 +46,10 @@ export default function Sidebar() {
   return (
     <aside 
       className={`bg-docs-sidebar border-r border-docs-section-border min-h-screen sticky top-16 transition-all duration-300 ease-in-out flex ${
-        isExpanded ? 'w-80' : 'w-16'
+        isExpanded ? 'w-50' : 'w-16'
       }`}
     >
-      <div className={`flex-1 ${isExpanded ? 'p-6' : 'p-2'}`}>
+      <div className={`flex-1 ${isExpanded ? 'p-2' : 'p-2'}`}>
         {menu.map((group, idx) => (
           <div className="mb-8" key={group.section + idx}>
             {isExpanded && group.section && (
