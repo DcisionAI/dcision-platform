@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 13, 13, 13;
+  --background-end-rgb: 13, 13, 13;
+}
+
+body {
+  font-family: 'Roboto Flex', 'IBM Plex Sans', Inter, Arial, sans-serif;
+  font-weight: 100;
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-start-rgb));
+}
+
+/* Playground Styles */
+@layer components {
+  .playground-container {
+    @apply grid h-[calc(100vh-60px)] bg-[#0D0D0D] text-white;
+    grid-template-columns: 260px 1fr 300px;
+  }
+
+  .playground-sidebar {
+    @apply bg-[#171717] border-r border-[#2D2D2D] p-4 overflow-y-auto;
+  }
+
+  .playground-main {
+    @apply flex flex-col bg-[#0D0D0D] flex-1 min-h-0;
+  }
+
+  .playground-editor {
+    @apply flex-1 min-h-0 p-4 bg-[#171717] border border-[#2D2D2D] rounded-lg m-4 font-mono flex flex-col;
+  }
+
+  .playground-controls {
+    @apply bg-[#171717] p-4 border-t border-[#2D2D2D];
+  }
+
+  .playground-settings {
+    @apply bg-[#171717] border-l border-[#2D2D2D] p-4;
+  }
+
+  .playground-button {
+    @apply bg-[#10A37F] text-white border-none px-4 py-2 rounded cursor-pointer text-sm hover:bg-[#0D856A];
+  }
+
+  .playground-select {
+    @apply bg-[#2D2D2D] text-white border border-[#404040] p-2 rounded w-full mb-4;
+  }
+
+  .playground-input {
+    @apply bg-[#2D2D2D] text-white border border-[#404040] p-2 rounded w-full mb-4;
+  }
+
+  .playground-response {
+    @apply bg-[#171717] border border-[#2D2D2D] rounded-lg m-4 p-4 overflow-y-auto max-h-[300px];
+  }
+
+  .playground-section-title {
+    @apply text-white text-sm font-semibold mb-4 uppercase tracking-wider;
+  }
+} 

@@ -1,0 +1,18 @@
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
+  webpack: (config, { isServer }) => {
+    // Monaco editor webpack config
+    if (!isServer) {
+      config.resolve.fallback = {
+        fs: false,
+        path: false,
+        "crypto": false
+      }
+    }
+    return config
+  }
+}
+
+module.exports = nextConfig 
