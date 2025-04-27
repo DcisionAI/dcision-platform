@@ -29,7 +29,6 @@
     "axios": "^1.9.0",
     "dotenv": "^16.5.0",
     "express-rate-limit": "^7.5.0",
-    "google-or-tools": "^9.8.0",
     "gray-matter": "^4.0.3",
     "jsonwebtoken": "^9.0.2",
     "lru-cache": "^11.1.0",
