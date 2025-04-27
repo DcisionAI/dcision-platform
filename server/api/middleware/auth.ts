@@ -1,33 +1,42 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import { NextApiRequest, NextApiResponse } from 'next';
+import { createClient } from '@supabase/supabase-js';
 import { logger } from '../../utils/Logger';
 
-// Extend Express Request type to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        [key: string]: any;
-      };
-    }
-  }
-}
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+);
 
-export function authenticate(req: Request, res: Response, next: NextFunction): void {
+export async function authenticate(
+  req: NextApiRequest,
+  res: NextApiResponse
+): Promise<boolean> {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) {
-      res.status(401).json({ error: 'No token provided' });
-      return;
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader) {
+      res.status(401).json({ error: 'No authorization header' });
+      return false;
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || '');
-    req.user = decoded as { id: string };
-    next();
+    // Extract the JWT token from the Authorization header
+    const token = authHeader.replace('Bearer ', '');
+
+    // Verify the session with Supabase
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+
+    if (error || !user) {
+      logger.error({ error }, 'Authentication failed');
+      res.status(401).json({ error: 'Invalid token' });
+      return false;
+    }
+
+    // Add the user to the request object
+    (req as any).user = user;
+    return true;
   } catch (error) {
     logger.error({ error }, 'Authentication failed');
-    res.status(401).json({ error: 'Invalid token' });
-    return;
+    res.status(401).json({ error: 'Authentication failed' });
+    return false;
   }
 } 
