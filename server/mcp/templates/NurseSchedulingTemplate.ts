@@ -297,13 +297,32 @@ export class NurseSchedulingTemplate {
               timeout: 60000,
               solution_limit: 100
             }
+          },
+          {
+            action: 'explain_solution',
+            description: 'Generate schedule insights',
+            required: true,
+            parameters: {
+              include_metrics: [
+                'understaffing',
+                'preference_satisfaction',
+                'overtime_hours',
+                'workload_balance',
+                'skill_utilization'
+              ]
+            }
+          },
+          {
+            action: 'human_review',
+            description: 'Review and approve nurse schedules',
+            required: true
           }
         ],
         allowPartialSolutions: true,
         explainabilityEnabled: true,
         humanInTheLoop: {
           required: true,
-          approvalSteps: ['final_schedule']
+          approvalSteps: ['final_schedule', 'shift_assignments']
         }
       }
     };

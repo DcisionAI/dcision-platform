@@ -71,31 +71,30 @@ export class JobShopTemplate {
         }
       },
       {
-        name: 'machine_utilization',
+        name: 'jobs',
         type: 'array',
-        description: 'Utilization metrics for each machine',
+        description: 'List of jobs to be scheduled',
         metadata: {
           itemType: 'object',
           properties: {
-            machineId: 'string',
-            totalProcessingTime: 'number',
-            totalSetupTime: 'number',
-            idleTime: 'number',
-            utilizationRate: 'number'
+            'id': 'string',
+            'name': 'string',
+            'operations': 'array',
+            'dueDate': 'datetime',
+            'priority': 'number'
           }
         }
       },
       {
-        name: 'job_completion',
+        name: 'machines',
         type: 'array',
-        description: 'Completion metrics for each job',
+        description: 'List of available machines',
         metadata: {
           itemType: 'object',
           properties: {
-            jobId: 'string',
-            completionTime: 'string',
-            lateness: 'number',
-            flowTime: 'number'
+            'id': 'string',
+            'name': 'string',
+            'availability': 'array'
           }
         }
       }
@@ -103,62 +102,32 @@ export class JobShopTemplate {
   }
 
   private createConstraints(): Constraint[] {
-    const constraints: Constraint[] = [];
-
-    // Add time window constraints for machine availability
-    this.config.machines.forEach(machine => {
-      machine.availableTimeSlots.forEach(slot => {
-        constraints.push(
-          FleetConstraintFactory.timeWindow(slot.start, slot.end)
-            .withPriority('must')
-            .build()
-        );
-      });
-    });
-
-    // Add precedence constraints for operations
-    this.config.operations
-      .filter(op => op.precedingOperations && op.precedingOperations.length > 0)
-      .forEach(op => {
-        op.precedingOperations!.forEach(precedingOp => {
-          constraints.push({
-            type: 'precedence',
-            description: `Operation ${op.id} must follow ${precedingOp}`,
-            field: 'operation_sequence',
-            operator: 'after',
-            value: {
-              operation: op.id,
-              predecessor: precedingOp
-            },
-            priority: 'must'
-          });
-        });
-      });
-
-    // Add resource capacity constraints
-    if (this.config.constraints?.resourceCapacity) {
-      Object.entries(this.config.constraints.resourceCapacity).forEach(([resource, capacity]) => {
-        constraints.push(
-          FleetConstraintFactory.capacity(capacity)
-            .withPriority('must')
-            .build()
-        );
-      });
-    }
-
-    // Add minimum buffer time constraints if specified
-    if (this.config.constraints?.minimumBufferTime) {
-      constraints.push({
-        type: 'buffer_time',
-        description: 'Minimum buffer time between operations',
-        field: 'operation_schedule',
-        operator: 'min_gap',
-        value: this.config.constraints.minimumBufferTime,
-        priority: 'should'
-      });
-    }
-
-    return constraints;
+    return [
+      {
+        type: 'sequence',
+        description: 'Operations for each job must be performed in sequence',
+        field: 'operation_sequence',
+        operator: 'follows',
+        value: null,
+        priority: 'must'
+      },
+      {
+        type: 'capacity',
+        description: 'Each machine can process only one operation at a time',
+        field: 'machine_capacity',
+        operator: 'lte',
+        value: 1,
+        priority: 'must'
+      },
+      {
+        type: 'time_window',
+        description: 'Operations can only be scheduled during machine availability windows',
+        field: 'machine_availability',
+        operator: 'between',
+        value: this.config.machines.map(m => m.availableTimeSlots),
+        priority: 'must'
+      }
+    ];
   }
 
   private createObjectives(): Objective[] {
@@ -166,26 +135,20 @@ export class JobShopTemplate {
       {
         type: 'minimize',
         field: 'makespan',
-        description: 'Minimize total completion time',
-        weight: 0.4
+        description: 'Minimize total completion time of all jobs',
+        weight: 1.0
       },
       {
         type: 'minimize',
-        field: 'total_tardiness',
-        description: 'Minimize total job tardiness',
-        weight: 0.3
+        field: 'tardiness',
+        description: 'Minimize total tardiness (lateness beyond due dates)',
+        weight: 0.8
       },
       {
         type: 'minimize',
         field: 'setup_time',
-        description: 'Minimize total setup time',
-        weight: 0.2
-      },
-      {
-        type: 'maximize',
-        field: 'machine_utilization',
-        description: 'Maximize machine utilization',
-        weight: 0.1
+        description: 'Minimize total setup time between operations',
+        weight: 0.5
       }
     ];
   }
@@ -208,36 +171,17 @@ export class JobShopTemplate {
           timezone: 'UTC',
           parameters: {
             solver_config: {
-              type: 'or_tools',
-              first_solution_strategy: 'SEQUENCE_LEXICAL',
-              local_search_metaheuristic: 'TABU_SEARCH',
-              time_limit_ms: 60000,
-              solution_limit: 100,
-              log_search: true
-            },
-            setup_matrix: this.config.machines.reduce<Record<string, Record<string, Record<string, number>>>>((acc, machine) => {
-              if (machine.setupMatrix) {
-                acc[machine.id] = machine.setupMatrix;
-              }
-              return acc;
-            }, {}),
-            maintenance_schedule: this.config.machines.reduce((acc, machine) => {
-              if (machine.maintenanceSchedule) {
-                acc[machine.id] = machine.maintenanceSchedule;
-              }
-              return acc;
-            }, {} as Record<string, any[]>)
+              type: 'or_tools_cp',
+              first_solution_strategy: 'PATH_CHEAPEST_ARC',
+              local_search_metaheuristic: 'SIMULATED_ANNEALING',
+              time_limit_ms: 60000
+            }
           }
         },
         dataset: {
-          internalSources: ['operations', 'machines', 'jobs'],
+          internalSources: ['jobs', 'machines', 'operations'],
           dataQuality: 'good',
-          requiredFields: [
-            'id',
-            'processingTime',
-            'machineId',
-            'precedingOperations'
-          ]
+          requiredFields: ['id', 'processingTime', 'machineId', 'jobId']
         },
         problemType: 'job_shop',
         industry: 'manufacturing'
@@ -246,44 +190,36 @@ export class JobShopTemplate {
         steps: [
           {
             action: 'collect_data',
-            description: 'Collect operation and machine data',
+            description: 'Collect job and machine data',
+            required: true
+          },
+          {
+            action: 'validate_constraints',
+            description: 'Validate job sequences and machine availability',
             required: true
           },
           {
             action: 'build_model',
             description: 'Build job shop scheduling model',
-            required: true,
-            parameters: {
-              solver_type: 'or_tools_cp',
-              consider_setup_times: true,
-              consider_maintenance: true
-            }
+            required: true
           },
           {
             action: 'solve_model',
-            description: 'Generate optimal schedule',
-            required: true,
-            parameters: {
-              solver: 'or_tools',
-              timeout: 60000,
-              solution_limit: 100
-            }
+            description: 'Solve job shop scheduling model',
+            required: true
           },
           {
             action: 'explain_solution',
-            description: 'Generate schedule insights',
-            required: true,
-            parameters: {
-              include_metrics: [
-                'makespan',
-                'tardiness',
-                'machine_utilization',
-                'setup_efficiency'
-              ]
-            }
+            description: 'Generate schedule visualization and metrics',
+            required: true
+          },
+          {
+            action: 'human_review',
+            description: 'Review and approve schedule',
+            required: true
           }
         ],
-        allowPartialSolutions: true,
+        allowPartialSolutions: false,
         explainabilityEnabled: true,
         humanInTheLoop: {
           required: true,

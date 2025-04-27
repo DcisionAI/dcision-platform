@@ -96,6 +96,8 @@ export type IndustryVertical =
 
 // Protocol section types
 export type StepAction = 
+  | 'interpret_intent'
+  | 'map_data'
   | 'collect_data'
   | 'enrich_data'
   | 'validate_constraints'
@@ -105,6 +107,7 @@ export type StepAction =
   | 'explain_solution'
   | 'human_review'
   | 'human_approval'
+  | 'productionalize_workflow'
   | 'custom';
 
 export type ConstraintPriority = 'must' | 'should' | 'nice_to_have';
@@ -113,6 +116,7 @@ export interface ProtocolStep {
   action: StepAction;
   description: string;
   required: boolean;
+  agent?: string;
   parameters?: Record<string, any>;
 }
 

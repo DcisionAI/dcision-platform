@@ -289,13 +289,18 @@ export class AssignmentTemplate {
                 'priority_satisfaction'
               ]
             }
+          },
+          {
+            action: 'human_review',
+            description: 'Review and approve task assignments',
+            required: true
           }
         ],
         allowPartialSolutions: true,
         explainabilityEnabled: true,
         humanInTheLoop: {
           required: true,
-          approvalSteps: ['final_assignments']
+          approvalSteps: ['final_assignments', 'worker_schedules']
         }
       }
     };

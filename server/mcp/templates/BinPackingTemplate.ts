@@ -307,13 +307,18 @@ export class BinPackingTemplate {
                 'packing_efficiency'
               ]
             }
+          },
+          {
+            action: 'human_review',
+            description: 'Review and approve packing plan',
+            required: true
           }
         ],
         allowPartialSolutions: true,
         explainabilityEnabled: true,
         humanInTheLoop: {
-          required: false,
-          approvalSteps: []
+          required: true,
+          approvalSteps: ['packing_plan', 'bin_assignments']
         }
       }
     };

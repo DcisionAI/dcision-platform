@@ -1,0 +1,95 @@
+{
+  "sessionId": "test-session-001",
+  "version": "1.0",
+  "status": "pending",
+  "created": "2024-06-01T10:00:00Z",
+  "lastModified": "2024-06-01T10:00:00Z",
+  "model": {
+    "variables": [],
+    "constraints": [],
+    "objective": {
+      "type": "minimize",
+      "field": "cost",
+      "description": "Minimize total cost",
+      "weight": 1
+    }
+  },
+  "context": {
+    "environment": {},
+    "dataset": {
+      "internalSources": [],
+      "metadata": {
+        "userInput": "I want to optimize my delivery fleet for cost and time.",
+        "customerFields": ["DriverName", "VehicleID", "DeliveryAddress", "DeliveryTime"],
+        "requiredFields": ["driver", "vehicle", "address", "time"],
+        "dbMetadata": {
+          "tables": [
+            {
+              "name": "drivers",
+              "columns": ["id", "name", "license_number"]
+            },
+            {
+              "name": "vehicles",
+              "columns": ["id", "vehicle_id", "capacity"]
+            },
+            {
+              "name": "deliveries",
+              "columns": ["id", "address", "delivery_time", "driver_id", "vehicle_id"]
+            }
+          ]
+        }
+      },
+      "requiredFields": ["driver", "vehicle", "address", "time"]
+    },
+    "problemType": "fleet_scheduling"
+  },
+  "protocol": {
+    "steps": [
+      {
+        "action": "interpret_intent",
+        "description": "Interpret user intent and select the right optimization model.",
+        "required": true,
+        "agent": "Intent Interpreter Agent"
+      },
+      {
+        "action": "map_data",
+        "description": "Map customer data fields to required schema fields.",
+        "required": true,
+        "agent": "Data Mapping Agent"
+      },
+      {
+        "action": "collect_data",
+        "description": "Map required fields to customer database tables/columns and fetch data.",
+        "required": true,
+        "agent": "Data Integration Agent"
+      },
+      {
+        "action": "explain_solution",
+        "description": "Explain the optimization solution in business-friendly terms.",
+        "required": false,
+        "agent": "Solution Explanation Agent",
+        "parameters": {
+          "solution": {
+            "routes": [
+              {"vehicle": "V1", "stops": ["A", "B", "C"]},
+              {"vehicle": "V2", "stops": ["D", "E"]}
+            ],
+            "totalCost": 1234.56
+          }
+        }
+      },
+      {
+        "action": "productionalize_workflow",
+        "description": "Deploy the workflow as a live endpoint.",
+        "required": true,
+        "agent": "Process Automation Agent"
+      }
+    ],
+    "allowPartialSolutions": false,
+    "explainabilityEnabled": true,
+    "humanInTheLoop": {
+      "required": false,
+      "approvalSteps": []
+    }
+  }
+}

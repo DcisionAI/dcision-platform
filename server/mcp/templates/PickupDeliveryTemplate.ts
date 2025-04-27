@@ -264,13 +264,18 @@ export class PickupDeliveryTemplate {
                 'priority_satisfaction'
               ]
             }
+          },
+          {
+            action: 'human_review',
+            description: 'Review and approve pickup-delivery routes',
+            required: true
           }
         ],
         allowPartialSolutions: true,
         explainabilityEnabled: true,
         humanInTheLoop: {
-          required: false,
-          approvalSteps: []
+          required: true,
+          approvalSteps: ['final_routes', 'vehicle_assignments']
         }
       }
     };

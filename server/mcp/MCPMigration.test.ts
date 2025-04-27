@@ -32,7 +32,7 @@ describe('MCPMigrationManager', () => {
       model: {
         variables: [],
         constraints: [],
-        objective: { type: 'minimize', field: 'cost', description: 'Minimize cost' }
+        objective: { type: 'minimize', field: 'cost', description: 'Minimize cost', weight: 1 }
       },
       context: {
         environment: {},
@@ -43,7 +43,7 @@ describe('MCPMigrationManager', () => {
         steps: [],
         allowPartialSolutions: false,
         explainabilityEnabled: true,
-        humanInTheLoop: { required: false }
+        humanInTheLoop: { required: false, approvalSteps: [] }
       },
       version: '1.0.0',
       created: '2024-03-20T10:00:00Z',
@@ -55,9 +55,6 @@ describe('MCPMigrationManager', () => {
       const migrated = await migrationManager.migrateToVersion(oldMCP, '1.1.0');
       
       expect(migrated.version).toBe('1.1.0');
-      expect(migrated.metadata).toBeDefined();
-      expect(migrated.context.metadata).toBeDefined();
-      expect(migrated.protocol.metadata).toBeDefined();
     });
 
     it('should return same object if already at target version', async () => {

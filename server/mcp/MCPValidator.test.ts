@@ -19,7 +19,7 @@ describe('MCPValidator', () => {
       model: {
         variables: [],
         constraints: [],
-        objective: { type: 'minimize', field: 'total_distance', description: 'Minimize total distance' },
+        objective: { type: 'minimize', field: 'total_distance', description: 'Minimize total distance', weight: 1 },
         fleet: {
           vehicles: [
             {
@@ -32,7 +32,8 @@ describe('MCPValidator', () => {
             {
               id: 'depot1',
               latitude: 37.7749,
-              longitude: -122.4194
+              longitude: -122.4194,
+              address: 'Depot Address'
             }
           ],
           customers: [
@@ -40,7 +41,8 @@ describe('MCPValidator', () => {
               id: 'customer1',
               latitude: 37.7833,
               longitude: -122.4167,
-              demand: 10
+              demand: 10,
+              address: 'Customer Address'
             }
           ]
         }
@@ -54,9 +56,9 @@ describe('MCPValidator', () => {
         steps: [],
         allowPartialSolutions: false,
         explainabilityEnabled: true,
-        humanInTheLoop: { required: false }
+        humanInTheLoop: { required: false, approvalSteps: [] }
       },
-      version: '1.0',
+      version: '1.0.0',
       created: '2024-03-20T10:00:00Z',
       lastModified: '2024-03-20T10:00:00Z',
       status: 'pending'
@@ -114,7 +116,11 @@ describe('MCPValidator', () => {
     invalidProblem.model.constraints = [
       {
         type: 'other_constraint',
-        description: 'Some other constraint'
+        description: 'Some other constraint',
+        field: 'route',
+        operator: 'eq',
+        value: 1,
+        priority: 'must'
       }
     ];
     
@@ -126,7 +132,8 @@ describe('MCPValidator', () => {
   it('should validate human-in-the-loop settings', () => {
     const invalidProblem = { ...validFleetProblem };
     invalidProblem.protocol.humanInTheLoop = {
-      required: true
+      required: true,
+      approvalSteps: []
     };
     
     const errors = validator.validate(invalidProblem);
@@ -139,7 +146,8 @@ describe('MCPValidator', () => {
     invalidProblem.protocol.steps = [
       {
         action: 'invalid_action' as any,
-        required: true
+        required: true,
+        description: 'Invalid step for testing'
       }
     ];
     
@@ -154,7 +162,7 @@ describe('MCPValidator', () => {
       model: {
         variables: [],
         constraints: [],
-        objective: { type: 'minimize', field: 'total_time', description: 'Minimize total completion time' },
+        objective: { type: 'minimize', field: 'total_time', description: 'Minimize total completion time', weight: 1 },
         scheduling: {
           resources: [
             {
@@ -188,9 +196,9 @@ describe('MCPValidator', () => {
         steps: [],
         allowPartialSolutions: false,
         explainabilityEnabled: true,
-        humanInTheLoop: { required: false }
+        humanInTheLoop: { required: false, approvalSteps: [] }
       },
-      version: '1.0',
+      version: '1.0.0',
       created: '2024-03-20T10:00:00Z',
       lastModified: '2024-03-20T10:00:00Z',
       status: 'pending'
@@ -223,7 +231,7 @@ describe('MCPValidator', () => {
       model: {
         variables: [],
         constraints: [],
-        objective: { type: 'minimize', field: 'total_cost', description: 'Minimize total inventory cost' },
+        objective: { type: 'minimize', field: 'total_cost', description: 'Minimize total inventory cost', weight: 1 },
         inventory: {
           products: [
             {
@@ -263,9 +271,9 @@ describe('MCPValidator', () => {
         steps: [],
         allowPartialSolutions: false,
         explainabilityEnabled: true,
-        humanInTheLoop: { required: false }
+        humanInTheLoop: { required: false, approvalSteps: [] }
       },
-      version: '1.0',
+      version: '1.0.0',
       created: '2024-03-20T10:00:00Z',
       lastModified: '2024-03-20T10:00:00Z',
       status: 'pending'
@@ -303,7 +311,7 @@ describe('MCPValidator', () => {
       model: {
         variables: [],
         constraints: [],
-        objective: { type: 'minimize', field: 'makespan', description: 'Minimize total production time' },
+        objective: { type: 'minimize', field: 'makespan', description: 'Minimize total production time', weight: 1 },
         production: {
           machines: [
             {
@@ -350,9 +358,9 @@ describe('MCPValidator', () => {
         steps: [],
         allowPartialSolutions: false,
         explainabilityEnabled: true,
-        humanInTheLoop: { required: false }
+        humanInTheLoop: { required: false, approvalSteps: [] }
       },
-      version: '1.0',
+      version: '1.0.0',
       created: '2024-03-20T10:00:00Z',
       lastModified: '2024-03-20T10:00:00Z',
       status: 'pending'

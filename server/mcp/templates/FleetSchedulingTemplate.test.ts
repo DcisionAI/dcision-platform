@@ -1,7 +1,7 @@
-import { createFleetSchedulingTemplate, ShiftPattern, Driver } from './FleetSchedulingTemplate';
-import { VehicleType, Location } from '../MCPTypes';
+import { FleetSchedulingTemplate } from './FleetSchedulingTemplate';
+import { VehicleType, Location, Driver, ShiftPattern } from '../MCPTypes';
 
-describe('FleetSchedulingTemplate', () => {
+describe('FleetSchedulingTemplate', function() {
   const mockVehicles: VehicleType[] = [
     {
       id: '1',
@@ -84,15 +84,14 @@ describe('FleetSchedulingTemplate', () => {
     }
   ];
 
-  it('should create a valid fleet scheduling template', () => {
-    const template = createFleetSchedulingTemplate(
-      'test-session-123',
-      mockVehicles,
-      mockDepots,
-      mockCustomers,
-      mockDrivers,
-      mockShifts
-    );
+  it('should create a valid fleet scheduling template', function() {
+    const template = new FleetSchedulingTemplate('test-session-123', {
+      vehicles: mockVehicles,
+      depots: mockDepots,
+      customers: mockCustomers,
+      drivers: mockDrivers,
+      shifts: mockShifts
+    });
 
     // Check basic structure
     expect(template.sessionId).toBe('test-session-123');
@@ -121,45 +120,42 @@ describe('FleetSchedulingTemplate', () => {
     expect(template.protocol.humanInTheLoop.required).toBe(true);
   });
 
-  it('should validate driver assignments', () => {
-    const template = createFleetSchedulingTemplate(
-      'test-session-123',
-      mockVehicles,
-      mockDepots,
-      mockCustomers,
-      mockDrivers,
-      mockShifts
-    );
+  it('should validate driver assignments', function() {
+    const template = new FleetSchedulingTemplate('test-session-123', {
+      vehicles: mockVehicles,
+      depots: mockDepots,
+      customers: mockCustomers,
+      drivers: mockDrivers,
+      shifts: mockShifts
+    });
 
     const driverAssignmentVar = template.model.variables.find(v => v.name === 'driver_assignment');
     expect(driverAssignmentVar).toBeDefined();
     expect(driverAssignmentVar?.domain).toEqual([1]); // Based on mockDrivers IDs
   });
 
-  it('should validate shift assignments', () => {
-    const template = createFleetSchedulingTemplate(
-      'test-session-123',
-      mockVehicles,
-      mockDepots,
-      mockCustomers,
-      mockDrivers,
-      mockShifts
-    );
+  it('should validate shift assignments', function() {
+    const template = new FleetSchedulingTemplate('test-session-123', {
+      vehicles: mockVehicles,
+      depots: mockDepots,
+      customers: mockCustomers,
+      drivers: mockDrivers,
+      shifts: mockShifts
+    });
 
     const shiftAssignmentVar = template.model.variables.find(v => v.name === 'shift_assignment');
     expect(shiftAssignmentVar).toBeDefined();
     expect(shiftAssignmentVar?.type).toBe('integer');
   });
 
-  it('should include all required constraints', () => {
-    const template = createFleetSchedulingTemplate(
-      'test-session-123',
-      mockVehicles,
-      mockDepots,
-      mockCustomers,
-      mockDrivers,
-      mockShifts
-    );
+  it('should include all required constraints', function() {
+    const template = new FleetSchedulingTemplate('test-session-123', {
+      vehicles: mockVehicles,
+      depots: mockDepots,
+      customers: mockCustomers,
+      drivers: mockDrivers,
+      shifts: mockShifts
+    });
 
     const constraintTypes = template.model.constraints.map(c => c.type);
     expect(constraintTypes).toContain('driver_availability');
@@ -168,5 +164,18 @@ describe('FleetSchedulingTemplate', () => {
     expect(constraintTypes).toContain('shift_coverage');
     expect(constraintTypes).toContain('rest_period');
     expect(constraintTypes).toContain('preferred_shifts');
+  });
+
+  // Add type annotations for parameters
+  mockVehicles.forEach(function(v: VehicleType) {
+    // ... existing code ...
+  });
+
+  mockDrivers.forEach(function(d: Driver) {
+    // ... existing code ...
+  });
+
+  mockCustomers.forEach(function(c: Location) {
+    // ... existing code ...
   });
 }); 
