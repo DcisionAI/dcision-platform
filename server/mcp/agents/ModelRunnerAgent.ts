@@ -1,5 +1,5 @@
 import { MCPAgent, AgentRunContext, AgentRunResult } from './AgentRegistry';
-import { StepAction, ProtocolStep, MCP, ProblemType } from '../MCPTypes';
+import { StepAction, ProtocolStep, MCP, ProblemType } from '../types';
 
 export interface ModelSolution {
   variables: Record<string, any>;

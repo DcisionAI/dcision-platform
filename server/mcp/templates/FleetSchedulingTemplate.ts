@@ -1,4 +1,4 @@
-import { MCP, Variable, Constraint, Objective, VariableType } from '../MCPTypes';
+import { MCP, Variable, Constraint, Objective, VariableType } from '../types';
 import { FleetConstraintFactory } from '../constraints/FleetConstraints';
 
 export interface ShiftPattern {
@@ -199,7 +199,7 @@ export class FleetSchedulingTemplate {
         dataset: {
           internalSources: ['drivers', 'shifts'],
           dataQuality: 'good',
-          requiredFields: ['id', 'name', 'skills', 'preferredShifts']
+          requiredFields: ['id', 'name', 'skills', 'availability']
         },
         problemType: 'fleet_scheduling',
         industry: 'logistics'
@@ -207,28 +207,48 @@ export class FleetSchedulingTemplate {
       protocol: {
         steps: [
           {
-            action: 'collect_data',
-            description: 'Validate driver and shift data',
+            action: 'interpret_intent',
+            description: 'Understand scheduling requirements',
             required: true
           },
           {
+            action: 'map_data',
+            description: 'Map driver and shift data fields',
+            required: true
+          },
+          {
+            action: 'collect_data',
+            description: 'Collect driver and shift data',
+            required: true
+          },
+          {
+            action: 'enrich_data',
+            description: 'Add traffic and weather data',
+            required: false
+          },
+          {
             action: 'build_model',
-            description: 'Validate scheduling constraints',
+            description: 'Build scheduling model',
             required: true
           },
           {
             action: 'solve_model',
-            description: 'Generate optimal schedules',
-            required: true,
-            parameters: {
-              solver: 'cp_sat',
-              timeout: 600,
-              reoptimization_interval: '1d'
-            }
+            description: 'Generate optimal schedule',
+            required: true
+          },
+          {
+            action: 'explain_solution',
+            description: 'Generate schedule explanations',
+            required: true
           },
           {
             action: 'human_review',
-            description: 'Manager review and approval',
+            description: 'Manager approval',
+            required: true
+          },
+          {
+            action: 'productionalize_workflow',
+            description: 'Deploy approved schedule',
             required: true
           }
         ],

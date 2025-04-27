@@ -1,4 +1,4 @@
-import { MCP, Variable, Constraint, Objective, ProtocolStep, ProblemType, IndustryVertical } from '../MCPTypes';
+import { MCP, Variable, Constraint, Objective, ProtocolStep, ProblemType, IndustryVertical } from '../types';
 
 const FlowShopTemplate: MCP = {
   sessionId: `flowshop-${Date.now()}`,

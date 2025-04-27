@@ -10,7 +10,7 @@ import {
   VehicleType,
   Location,
   StepAction
-} from './MCPTypes';
+} from '../../types';
 import { 
   SchedulingProblem,
   InventoryProblem,
@@ -22,12 +22,12 @@ import {
   Machine,
   Material,
   ProductionOrder
-} from './OptimizationTypes';
-import { mcpSchema } from './MCPSchema';
+} from '../../types/optimization';
+import { mcpSchema } from '../schema/MCPSchema';
 import Ajv, { ErrorObject } from 'ajv/dist/2020';
 import ajvFormats from 'ajv-formats';
 import ajvErrors from 'ajv-errors';
-import { ValidationError } from '../errors/ValidationError';
+import { ValidationError } from '../../../errors/ValidationError';
 
 export class MCPValidator {
   private readonly ajv: Ajv;
@@ -40,7 +40,7 @@ export class MCPValidator {
     'build_model',
     'solve_model',
     'explain_solution',
-    'human_approval',
+    'human_review',
     'custom'
   ];
 
@@ -171,7 +171,6 @@ export class MCPValidator {
       'solve_model': 5,
       'explain_solution': 6,
       'human_review': 7,
-      'human_approval': 8,
       'custom': -1
     } as const;
 

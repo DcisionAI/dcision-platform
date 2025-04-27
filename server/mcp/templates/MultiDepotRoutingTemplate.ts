@@ -1,4 +1,4 @@
-import { MCP, Variable, Constraint, Objective, VariableType, VehicleType, Location } from '../MCPTypes';
+import { MCP, Variable, Constraint, Objective, VariableType, VehicleType, Location } from '../types';
 import { FleetConstraintFactory } from '../constraints/FleetConstraints';
 
 interface MultiDepotConfig {
@@ -183,56 +183,67 @@ export class MultiDepotRoutingTemplate {
           region: 'default',
           timezone: 'UTC',
           parameters: {
-            balancing_rules: this.config.constraints?.balancingRules,
-            zone_restrictions: this.config.constraints?.zoneRestrictions,
-            complexity: this.complexity
+            solver_config: {
+              type: 'or_tools_cp',
+              first_solution_strategy: 'PATH_CHEAPEST_ARC',
+              local_search_metaheuristic: 'SIMULATED_ANNEALING',
+              time_limit_ms: 60000
+            }
           }
         },
         dataset: {
           internalSources: ['vehicles', 'depots', 'customers'],
           dataQuality: 'good',
-          requiredFields: [
-            'id',
-            'latitude',
-            'longitude',
-            'capacity',
-            'timeWindows',
-            'serviceTime'
-          ]
+          requiredFields: ['id', 'location', 'demand', 'timeWindow']
         },
-        problemType: 'vehicle_routing',
+        problemType: 'multi_depot_routing',
         industry: 'logistics'
       },
       protocol: {
         steps: [
           {
-            action: 'collect_data',
-            description: 'Collect vehicle, depot, and customer data',
+            action: 'interpret_intent',
+            description: 'Understand routing requirements',
             required: true
           },
           {
+            action: 'map_data',
+            description: 'Map fleet and customer data fields',
+            required: true
+          },
+          {
+            action: 'collect_data',
+            description: 'Collect fleet and delivery data',
+            required: true
+          },
+          {
+            action: 'enrich_data',
+            description: 'Add weather and traffic data',
+            required: false
+          },
+          {
             action: 'build_model',
-            description: 'Build multi-depot routing model',
+            description: 'Build VRP model',
             required: true
           },
           {
             action: 'solve_model',
-            description: 'Generate optimal routes',
-            required: true,
-            parameters: {
-              solver: 'or_tools',
-              timeout: 600,
-              reoptimization_interval: '30m'
-            }
+            description: 'Optimize routes',
+            required: true
           },
           {
             action: 'explain_solution',
-            description: 'Generate solution insights',
+            description: 'Generate route explanations',
             required: true
           },
           {
             action: 'human_review',
-            description: 'Review and approve routes',
+            description: 'Manager approval',
+            required: true
+          },
+          {
+            action: 'productionalize_workflow',
+            description: 'Deploy optimized routes',
             required: true
           }
         ],

@@ -1,5 +1,5 @@
 import { MCPAgent, AgentRunContext, AgentRunResult } from './AgentRegistry';
-import { StepAction, ProtocolStep, MCP } from '../MCPTypes';
+import { StepAction, ProtocolStep, MCP } from '../types';
 
 interface ReviewRequest {
   id: string;
@@ -13,7 +13,7 @@ interface ReviewRequest {
 
 export class HumanInTheLoopAgent implements MCPAgent {
   name = 'Human-in-the-Loop Agent';
-  supportedActions: StepAction[] = ['human_review', 'human_approval'];
+  supportedActions: StepAction[] = ['human_review'];
 
   async run(step: ProtocolStep, mcp: MCP, context?: AgentRunContext): Promise<AgentRunResult> {
     const thoughtProcess: string[] = [];

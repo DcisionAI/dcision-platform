@@ -1,4 +1,4 @@
-import { MCP } from './MCPTypes';
+import { MCP } from '../../types';
 
 export interface MCPVersion {
   version: string;

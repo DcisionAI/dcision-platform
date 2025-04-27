@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import PlaygroundEditor from './PlaygroundEditor';
 import PlaygroundSettings from './PlaygroundSettings';
-import MCPExamples from './MCPExamples';
-import { MCP } from '../../server/mcp/types/MCPTypes';
+import { MCPExamples } from './MCPExamples';
+import { MCP } from '../../server/mcp/types';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import {
   CubeIcon,
@@ -104,8 +104,23 @@ interface MCPResponse {
 
 export default function Playground() {
   const [mcpConfig, setMcpConfig] = useState<Partial<MCP>>({
+    sessionId: '',
+    version: '1.0',
+    status: 'pending',
+    created: new Date().toISOString(),
+    lastModified: new Date().toISOString(),
+    model: {
+      variables: [],
+      constraints: [],
+      objective: {
+        type: 'minimize',
+        field: 'total_distance',
+        description: 'Minimize total distance',
+        weight: 1
+      }
+    },
     context: {
-      problemType: 'vehicle_routing', // Set default problem type
+      problemType: 'vehicle_routing',
       industry: 'logistics',
       environment: {
         region: 'New York Metro',
@@ -114,6 +129,15 @@ export default function Playground() {
       dataset: {
         internalSources: [],
         externalEnrichment: []
+      }
+    },
+    protocol: {
+      steps: [],
+      allowPartialSolutions: false,
+      explainabilityEnabled: true,
+      humanInTheLoop: {
+        required: false,
+        approvalSteps: []
       }
     }
   });
@@ -210,7 +234,7 @@ export default function Playground() {
             <h2 className="text-lg font-semibold text-white">EXAMPLES</h2>
           </div>
           <div className="bg-[#161B22] rounded-lg p-3">
-            <MCPExamples onSelectExample={handleExampleSelect} />
+            <MCPExamples onSelect={handleExampleSelect} />
           </div>
         </div>
 

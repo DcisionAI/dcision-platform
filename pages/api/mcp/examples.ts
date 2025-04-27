@@ -1,6 +1,6 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiRequest, NextApiResponse } from 'next';
 import { ExampleSessionService } from '../../../server/mcp/services/ExampleSessionService';
-import { MCPStatus } from '../../../server/mcp/types/MCPTypes';
+import { MCP, MCPStatus } from '../../../server/mcp/types';
 
 const exampleService = new ExampleSessionService();
 

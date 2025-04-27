@@ -1,4 +1,4 @@
-import { MCP, Variable, Constraint, Objective, VariableType } from '../MCPTypes';
+import { MCP, Variable, Constraint, Objective, VariableType } from '../types';
 import { FleetConstraintFactory } from '../constraints/FleetConstraints';
 
 interface Item {

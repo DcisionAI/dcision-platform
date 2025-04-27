@@ -1,4 +1,4 @@
-import { MCP, ProblemType } from '../MCPTypes';
+import { MCP, ProblemType } from '../types';
 import { ModelSolution } from '../agents/ModelRunnerAgent';
 import { SolverBackend } from './ORToolsSolver';
 import axios from 'axios';

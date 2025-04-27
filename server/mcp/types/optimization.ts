@@ -1,14 +1,11 @@
-import { MCP, Variable, Constraint, Objective } from './MCPTypes';
+import { MCP, Variable, Constraint, Objective } from './core';
 
 // Resource Scheduling Types
 export interface Resource {
   id: string;
   name: string;
   skills: string[];
-  availability: Array<{
-    start: string;  // ISO time
-    end: string;    // ISO time
-  }>;
+  availability: TimeWindow[];
   cost: number;
   efficiency?: number;
   maxWorkload?: number;
@@ -135,14 +132,7 @@ export interface ProductionOrder {
   quantity: number;
   dueDate: string;  // ISO time
   priority: number;
-  routingSteps: Array<{
-    machineType: string;
-    duration: number;
-    materials: Array<{
-      materialId: string;
-      quantity: number;
-    }>;
-  }>;
+  routingSteps: RoutingStep[];
   metadata?: Record<string, unknown>;
 }
 
@@ -168,4 +158,15 @@ export type ExtendedProblemType =
   | 'resource_scheduling'
   | 'inventory_optimization'
   | 'production_planning'
-  | 'custom'; 
+  | 'custom';
+
+export interface RoutingStep {
+  machineId: string;
+  sequence: number;
+  processingTime: number;
+}
+
+export interface TimeWindow {
+  start: string;
+  end: string;
+} 

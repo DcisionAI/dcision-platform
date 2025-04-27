@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import MonacoEditor from '@monaco-editor/react';
-import { MCP } from '../../server/mcp/types/MCPTypes';
+import { MCP } from '../../server/mcp/types';
 
 interface PlaygroundEditorProps {
   config: Partial<MCP>;
@@ -49,113 +49,135 @@ export default function PlaygroundEditor({ config, onConfigChange }: PlaygroundE
   };
 
   const defaultConfig = {
-    "sessionId": "fleet-vrp-001",
-    "model": {
-      "name": "Fleet VRP Optimizer",
-      "version": "1.0.0",
-      "description": "Vehicle routing optimization for last-mile delivery",
-      "variables": [
-        { "name": "vehicle_capacity", "type": "integer", "description": "Max load per truck", "default": 1000 },
-        { "name": "delivery_location", "type": "geolocation", "description": "Customer delivery coordinates" },
-        { "name": "time_window", "type": "timestamp", "description": "Delivery time slot" },
-        { "name": "service_time", "type": "integer", "description": "Time spent at each stop", "default": 15 }
-      ],
-      "constraints": [
+    sessionId: "fleet-vrp-001",
+    version: "1.0",
+    status: "pending" as const,
+    model: {
+      variables: [
         { 
-          "type": "capacity_limit", 
-          "description": "Vehicle cannot exceed capacity", 
-          "operator": "lte", 
-          "field": "vehicle_capacity", 
-          "value": 1000 
+          name: "vehicle_capacity", 
+          type: "integer" as const, 
+          description: "Max load per truck", 
+          default: 1000 
         },
         { 
-          "type": "time_window", 
-          "description": "Deliveries must happen within allowed time windows", 
-          "operator": "between", 
-          "field": "time_window" 
+          name: "delivery_location", 
+          type: "object" as const, 
+          description: "Customer delivery coordinates",
+          metadata: {
+            properties: {
+              lat: "number",
+              lng: "number"
+            }
+          }
+        },
+        { 
+          name: "time_window", 
+          type: "datetime" as const, 
+          description: "Delivery time slot" 
+        },
+        { 
+          name: "service_time", 
+          type: "integer" as const, 
+          description: "Time spent at each stop", 
+          default: 15 
+        }
+      ],
+      constraints: [
+        { 
+          type: "capacity_limit", 
+          description: "Vehicle cannot exceed capacity", 
+          operator: "lte" as const, 
+          field: "vehicle_capacity", 
+          value: 1000,
+          priority: "must" as const
+        },
+        { 
+          type: "time_window", 
+          description: "Deliveries must happen within allowed time windows", 
+          operator: "between" as const, 
+          field: "time_window",
+          value: {
+            start: "08:00",
+            end: "18:00"
+          },
+          priority: "should" as const
         },
         {
-          "type": "max_route_duration",
-          "description": "Maximum route duration per vehicle",
-          "operator": "lte",
-          "field": "route_duration",
-          "value": 480
+          type: "max_route_duration",
+          description: "Maximum route duration per vehicle",
+          operator: "lte" as const,
+          field: "route_duration",
+          value: 480,
+          priority: "must" as const
         }
       ],
-      "objective": {
-        "type": "minimize",
-        "field": "total_distance",
-        "description": "Minimize total fleet distance traveled",
-        "weights": {
-          "distance": 0.7,
-          "time": 0.3
-        }
+      objective: {
+        type: "minimize" as const,
+        field: "total_distance",
+        description: "Minimize total fleet distance traveled",
+        weight: 1
       }
     },
-    "context": {
-      "problemType": "vehicle_routing",
-      "industry": "logistics",
-      "environment": {
-        "region": "New York Metro",
-        "timezone": "EST",
-        "operatingHours": {
-          "start": "08:00",
-          "end": "18:00"
-        }
+    context: {
+      problemType: "vehicle_routing" as const,
+      industry: "logistics" as const,
+      environment: {
+        region: "New York Metro",
+        timezone: "EST"
       },
-      "dataset": {
-        "internalSources": ["delivery_db", "fleet_db"],
-        "externalEnrichment": ["traffic", "weather", "historical_patterns"]
+      dataset: {
+        internalSources: ["delivery_db", "fleet_db"],
+        externalEnrichment: ["traffic", "weather"]
       }
     },
-    "protocol": {
-      "steps": [
+    protocol: {
+      steps: [
         { 
-          "action": "collect_data", 
-          "required": true,
-          "description": "Collect delivery and vehicle data"
+          action: "collect_data" as const, 
+          description: "Collect delivery and vehicle data",
+          required: true
         },
         { 
-          "action": "enrich_data", 
-          "required": true,
-          "description": "Enrich with traffic and weather data"
+          action: "enrich_data" as const, 
+          description: "Enrich with traffic and weather data",
+          required: true
         },
         { 
-          "action": "validate_constraints", 
-          "required": true,
-          "description": "Validate capacity and time window constraints"
+          action: "validate_constraints" as const, 
+          description: "Validate capacity and time window constraints",
+          required: true
         },
         { 
-          "action": "build_model", 
-          "required": true,
-          "description": "Build VRP optimization model"
+          action: "build_model" as const, 
+          description: "Build VRP optimization model",
+          required: true
         },
         { 
-          "action": "solve_model", 
-          "required": true,
-          "description": "Solve using OR-Tools engine"
+          action: "solve_model" as const, 
+          description: "Solve using OR-Tools engine",
+          required: true
         },
         { 
-          "action": "explain_solution", 
-          "required": true,
-          "description": "Generate route explanations"
+          action: "explain_solution" as const, 
+          description: "Generate route explanations",
+          required: true
         },
         {
-          "action": "human_review",
-          "required": true,
-          "description": "Review and approve routes"
+          action: "human_review" as const,
+          description: "Review and approve routes",
+          required: true
         }
       ],
-      "allowPartialSolutions": true,
-      "explainabilityEnabled": true,
-      "humanInTheLoop": { 
-        "required": true,
-        "approvalSteps": ["route_validation", "final_dispatch"]
+      allowPartialSolutions: true,
+      explainabilityEnabled: true,
+      humanInTheLoop: { 
+        required: true,
+        approvalSteps: ["route_validation", "final_dispatch"]
       }
     },
-    "status": "pending",
-    "created": new Date().toISOString(),
-    "lastModified": new Date().toISOString()
+    created: new Date().toISOString(),
+    lastModified: new Date().toISOString()
   };
 
   return (

@@ -1,7 +1,7 @@
-import './agents'; // Ensures all agents are registered
-import { MCP, ProtocolStep } from './MCPTypes';
-import { agentRegistry } from './agents/AgentRegistry';
-import { callOpenAI } from './agents/llm/openai';
+import '../agents'; // Ensures all agents are registered
+import { MCP, ProtocolStep } from '../types';
+import { agentRegistry } from '../agents/AgentRegistry';
+import { callOpenAI } from '../agents/llm/openai';
 
 export interface OrchestrationResult {
   step: ProtocolStep;

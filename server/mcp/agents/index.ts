@@ -9,28 +9,18 @@ import { HumanInTheLoopAgent } from './HumanInTheLoopAgent';
 import { ProcessAutomationAgent } from './ProcessAutomationAgent';
 import { MockDatabaseConnector } from '../connectors/DatabaseConnector';
 
-// Initialize connectors
+// Initialize database connector
 const dbConnector = new MockDatabaseConnector();
 
-// Initialize agents
-const intentInterpreterAgent = new IntentInterpreterAgent();
-const dataMappingAgent = new DataMappingAgent();
-const dataIntegrationAgent = new DataIntegrationAgent(dbConnector);
-const dataEnrichmentAgent = new DataEnrichmentAgent();
-const modelRunnerAgent = new ModelRunnerAgent();
-const solutionExplanationAgent = new SolutionExplanationAgent();
-const humanInTheLoopAgent = new HumanInTheLoopAgent();
-const processAutomationAgent = new ProcessAutomationAgent();
-
 // Register all agents
-agentRegistry.register(intentInterpreterAgent);
-agentRegistry.register(dataMappingAgent);
-agentRegistry.register(dataIntegrationAgent);
-agentRegistry.register(dataEnrichmentAgent);
-agentRegistry.register(modelRunnerAgent);
-agentRegistry.register(solutionExplanationAgent);
-agentRegistry.register(humanInTheLoopAgent);
-agentRegistry.register(processAutomationAgent);
+agentRegistry.register(new IntentInterpreterAgent());  // Classifies as 'vehicle_routing' or 'fleet_scheduling'
+agentRegistry.register(new DataMappingAgent());       // Handles field mapping
+agentRegistry.register(new DataIntegrationAgent(dbConnector));   // Handles data collection
+agentRegistry.register(new DataEnrichmentAgent());    // Adds weather/traffic data
+agentRegistry.register(new ModelRunnerAgent());       // Builds and solves model using OR-Tools
+agentRegistry.register(new SolutionExplanationAgent()); // Explains results
+agentRegistry.register(new HumanInTheLoopAgent());    // Handles approvals
+agentRegistry.register(new ProcessAutomationAgent()); // Handles deployment
 
 export {
   IntentInterpreterAgent,
@@ -40,6 +30,5 @@ export {
   ModelRunnerAgent,
   SolutionExplanationAgent,
   HumanInTheLoopAgent,
-  ProcessAutomationAgent,
-  agentRegistry
+  ProcessAutomationAgent
 }; 

@@ -1,4 +1,4 @@
-import { MCP } from '../mcp/MCPTypes';
+import { MCP } from '../mcp/types';
 import { supabase } from '../utils/supabase';
 import { ValidationError } from '../errors/ValidationError';
 

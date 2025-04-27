@@ -1,4 +1,4 @@
-import { MCPStatus } from './core';
+export type MCPStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
 
 export interface Session {
   sessionId: string;

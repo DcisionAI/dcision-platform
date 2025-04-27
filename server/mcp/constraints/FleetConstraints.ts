@@ -1,4 +1,4 @@
-import { Constraint } from '../MCPTypes';
+import { Constraint } from '../types';
 
 export interface ConstraintBuilder {
   build(): Constraint;

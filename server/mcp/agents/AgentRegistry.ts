@@ -1,4 +1,4 @@
-import { StepAction, ProtocolStep, MCP } from '../MCPTypes';
+import { StepAction, ProtocolStep, MCP } from '../types';
 
 export interface AgentRunContext {
   llm?: (prompt: string, config?: any) => Promise<any>;

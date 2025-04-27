@@ -1,5 +1,5 @@
 import { MCPAgent, AgentRunContext, AgentRunResult } from './AgentRegistry';
-import { StepAction, ProtocolStep, MCP } from '../MCPTypes';
+import { StepAction, ProtocolStep, MCP } from '../types';
 import { DatabaseConnector } from '../connectors/DatabaseConnector';
 
 interface FieldMapping {

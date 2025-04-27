@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { Session, SessionsResponse, SessionFilters } from '../types/SessionTypes';
-import { MCP } from '../types/MCPTypes';
+import { MCP } from '../types';
 
 export class ExampleSessionService {
   private readonly examplesPath: string;

@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { orchestrateMCP } from '../../../server/mcp/orchestrator';
-import { MCP } from '../../../server/mcp/MCPTypes';
+import { MCP } from '../../../server/mcp/types';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {

@@ -1,4 +1,10 @@
 import React from 'react';
+import { MCP } from '../../server/mcp/types';
+
+interface PlaygroundSettingsProps {
+  config: Partial<MCP>;
+  onConfigChange: (config: Partial<MCP>) => void;
+}
 
 export default function PlaygroundSettings() {
   return (

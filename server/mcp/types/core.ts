@@ -3,6 +3,9 @@
  * Defines the structure for Model-Context-Protocol objects
  */
 
+// Status types
+export type MCPStatus = 'pending' | 'running' | 'completed' | 'failed';
+
 // Base variable types
 export type VariableType = 'string' | 'number' | 'boolean' | 'integer' | 'float' | 'array' | 'object' | 'datetime' | 'binary';
 
@@ -46,6 +49,8 @@ export interface Objective {
   description: string;
   weight: number;
 }
+
+export type ConstraintPriority = 'must' | 'should' | 'nice_to_have';
 
 // Context section types
 export interface Environment {
@@ -106,11 +111,18 @@ export type StepAction =
   | 'solve_model'
   | 'explain_solution'
   | 'human_review'
-  | 'human_approval'
   | 'productionalize_workflow'
   | 'custom';
 
-export type ConstraintPriority = 'must' | 'should' | 'nice_to_have';
+export interface Protocol {
+  steps: ProtocolStep[];
+  allowPartialSolutions: boolean;
+  explainabilityEnabled: boolean;
+  humanInTheLoop: {
+    required: boolean;
+    approvalSteps: string[];
+  };
+}
 
 export interface ProtocolStep {
   action: StepAction;
@@ -124,7 +136,7 @@ export interface ProtocolStep {
 export interface MCP {
   sessionId: string;
   version: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: MCPStatus;
   created: string;
   lastModified: string;
   model: {
@@ -138,50 +150,5 @@ export interface MCP {
     problemType: ProblemType;
     industry?: IndustryVertical;
   };
-  protocol: {
-    steps: ProtocolStep[];
-    allowPartialSolutions: boolean;
-    explainabilityEnabled: boolean;
-    humanInTheLoop: {
-      required: boolean;
-      approvalSteps: string[];
-    };
-  };
-}
-
-// Fleet optimization specific types
-export interface VehicleType {
-  id: string;
-  capacity: number;
-  costPerKm: number;
-  maxDistance?: number;
-  features?: string[];
-  metadata?: Record<string, unknown>;
-}
-
-export interface Location {
-  id: string;
-  latitude: number;
-  longitude: number;
-  address: string;
-  timeWindows?: Array<{
-    start: string;
-    end: string;
-  }>;
-  serviceTime?: number;
-  demand?: number;
-  metadata?: Record<string, any>;
-}
-
-export interface FleetProblem extends MCP {
-  model: {
-    variables: Variable[];
-    constraints: Constraint[];
-    objective: Objective | Objective[];
-    fleet: {
-      vehicles: VehicleType[];
-      depots: Location[];
-      customers: Location[];
-    };
-  };
-}
+  protocol: Protocol;
+} 
