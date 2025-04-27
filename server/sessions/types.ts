@@ -1,8 +1,11 @@
+import { Protocol } from '../mcp/types';
+
 export enum SessionStatus {
-  ACTIVE = 'ACTIVE',
-  IDLE = 'IDLE',
-  TERMINATED = 'TERMINATED',
-  ERROR = 'ERROR'
+  CREATED = 'created',
+  RUNNING = 'running',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  CANCELLED = 'cancelled'
 }
 
 export enum ProblemType {
@@ -15,8 +18,13 @@ export enum ProblemType {
 
 export interface Session {
   id: string;
+  protocol: Protocol;
   status: SessionStatus;
-  createdAt: Date;
-  updatedAt: Date;
-  agentId: string;
+  currentStep?: string;
+  progress?: number;
+  error?: string;
+  failedStep?: string;
+  outputs?: Record<string, any>;
+  createdAt: string;
+  lastUpdated: string;
 } 
