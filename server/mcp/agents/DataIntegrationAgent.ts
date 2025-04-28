@@ -52,6 +52,43 @@ export class DataIntegrationAgent implements MCPAgent {
     const fieldMappings = this.parseFieldMappings(llmResponse);
     thoughtProcess.push(`Generated ${fieldMappings.length} field mappings`);
 
+    // LLM-based feature engineering
+    const featurePrompt = `
+Given the database schema: ${JSON.stringify(dbMetadata)}
+and required fields: ${JSON.stringify(requiredFields)}
+for a ${mcp.context.problemType} problem,
+suggest any new features or transformations that could improve the model.
+Respond in JSON: { "suggestedFeatures": ["..."], "reasoning": "..." }
+`;
+    const featureRaw = await context.llm(featurePrompt);
+    try {
+      const features = JSON.parse(featureRaw);
+      if (features.suggestedFeatures?.length) {
+        thoughtProcess.push(`LLM suggested features: ${features.suggestedFeatures.join(', ')}`);
+        thoughtProcess.push(`Feature reasoning: ${features.reasoning}`);
+      }
+    } catch (e) {
+      thoughtProcess.push('LLM feature engineering response could not be parsed.');
+    }
+
+    // LLM-based mapping validation
+    const validationPrompt = `
+Given the following field mappings: ${JSON.stringify(fieldMappings)}
+Are there any missing or incorrect mappings? Respond in JSON: { "issues": ["..."], "suggestions": ["..."] }
+`;
+    const validationRaw = await context.llm(validationPrompt);
+    try {
+      const validation = JSON.parse(validationRaw);
+      if (validation.issues?.length) {
+        thoughtProcess.push(`LLM validation issues: ${validation.issues.join(', ')}`);
+      }
+      if (validation.suggestions?.length) {
+        thoughtProcess.push(`LLM validation suggestions: ${validation.suggestions.join(', ')}`);
+      }
+    } catch (e) {
+      thoughtProcess.push('LLM mapping validation response could not be parsed.');
+    }
+
     // Check confidence levels and determine if human review is needed
     const needsHumanReview = fieldMappings.some(mapping => mapping.confidence < 0.8);
     

@@ -41,6 +41,29 @@ export class SolutionExplanationAgent implements MCPAgent {
           thoughtProcess.push(`- ${imp}`)
         );
       }
+
+      // LLM-based critique and improvement suggestions
+      const critiquePrompt = `
+Given the following solution explanation: ${JSON.stringify(llmResponse)}
+Critique this explanation for clarity, completeness, and business value. Suggest any improvements or additional recommendations. Respond in JSON: { "critique": "...", "improvements": ["..."], "additionalRecommendations": ["..."] }
+`;
+      try {
+        const critiqueRaw = context?.llm
+          ? await context.llm(critiquePrompt)
+          : await callOpenAI(critiquePrompt);
+        const critique = JSON.parse(extractJsonFromMarkdown(critiqueRaw));
+        if (critique.critique) {
+          thoughtProcess.push(`LLM critique: ${critique.critique}`);
+        }
+        if (critique.improvements?.length) {
+          thoughtProcess.push(`LLM suggested improvements: ${critique.improvements.join(', ')}`);
+        }
+        if (critique.additionalRecommendations?.length) {
+          thoughtProcess.push(`LLM additional recommendations: ${critique.additionalRecommendations.join(', ')}`);
+        }
+      } catch (e) {
+        thoughtProcess.push('LLM critique response could not be parsed.');
+      }
     } catch (error: any) {
       const errorMessage = error?.message || 'Unknown error occurred';
       thoughtProcess.push(`LLM call or parsing failed: ${errorMessage}`);

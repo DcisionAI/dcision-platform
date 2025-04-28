@@ -30,6 +30,22 @@ export class IntentInterpreterAgent implements MCPAgent {
       
       thoughtProcess.push(`Identified problem type: ${llmResponse.problemType}`);
       thoughtProcess.push(`Reasoning: ${llmResponse.reasoning}`);
+
+      // LLM-based validation/critique
+      const critiquePrompt = `
+Given the user request: "${userInput}"
+And the selected problem type: "${llmResponse.problemType}"
+Critique this choice. Is it the best fit? If not, suggest a better type and explain why.
+Respond in JSON: { "isBestFit": true/false, "suggestedType": "...", "reasoning": "..." }
+`;
+      const critiqueRaw = context?.llm
+        ? await context.llm(critiquePrompt)
+        : await callOpenAI(critiquePrompt);
+      const critique = JSON.parse(extractJsonFromMarkdown(critiqueRaw));
+      thoughtProcess.push(`LLM critique: ${critique.reasoning}`);
+      if (!critique.isBestFit) {
+        thoughtProcess.push(`Warning: LLM suggests a better fit: ${critique.suggestedType}`);
+      }
     } catch (error: any) {
       const errorMessage = error?.message || 'Unknown error occurred';
       thoughtProcess.push(`LLM call or parsing failed: ${errorMessage}`);

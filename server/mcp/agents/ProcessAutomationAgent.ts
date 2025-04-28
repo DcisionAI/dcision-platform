@@ -31,6 +31,29 @@ export class ProcessAutomationAgent implements MCPAgent {
       const config = this.generateDeploymentConfig(mcp);
       thoughtProcess.push(`Created deployment configuration for ${config.endpoint}`);
 
+      // LLM-based deployment/monitoring script generation
+      if (context?.llm) {
+        const scriptPrompt = `
+Given the following deployment configuration: ${JSON.stringify(config)}
+Suggest deployment and monitoring scripts or improvements for a production ML workflow. Respond in JSON: { "scripts": ["..."], "improvements": ["..."], "reasoning": "..." }
+`;
+        try {
+          const scriptRaw = await context.llm(scriptPrompt);
+          const scripts = JSON.parse(scriptRaw);
+          if (scripts.scripts?.length) {
+            thoughtProcess.push(`LLM suggested scripts: ${scripts.scripts.join(', ')}`);
+          }
+          if (scripts.improvements?.length) {
+            thoughtProcess.push(`LLM suggested improvements: ${scripts.improvements.join(', ')}`);
+          }
+          if (scripts.reasoning) {
+            thoughtProcess.push(`LLM reasoning: ${scripts.reasoning}`);
+          }
+        } catch (e) {
+          thoughtProcess.push('LLM deployment script response could not be parsed.');
+        }
+      }
+
       // In a real implementation, this would:
       // 1. Create API endpoint
       // 2. Set up monitoring

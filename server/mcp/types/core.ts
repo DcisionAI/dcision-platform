@@ -149,6 +149,7 @@ export interface MCP {
     dataset: Dataset;
     problemType: ProblemType;
     industry?: IndustryVertical;
+    businessRules?: any;
   };
   protocol: Protocol;
 } 

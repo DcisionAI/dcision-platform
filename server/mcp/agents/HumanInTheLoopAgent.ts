@@ -32,6 +32,48 @@ export class HumanInTheLoopAgent implements MCPAgent {
     const mockReviewResponse = await this.mockReviewProcess(reviewRequest);
     thoughtProcess.push(`Received ${mockReviewResponse.status} response`);
 
+    // LLM-assisted review summarization
+    if (context?.llm) {
+      const summaryPrompt = `
+Summarize the following data for human review: ${JSON.stringify(reviewRequest.data)}
+Suggest likely approval/rejection reasons.
+Respond in JSON: { "summary": "...", "likelyActions": ["..."] }
+`;
+      try {
+        const summaryRaw = await context.llm(summaryPrompt);
+        const summary = JSON.parse(summaryRaw);
+        if (summary.summary) {
+          thoughtProcess.push(`LLM review summary: ${summary.summary}`);
+        }
+        if (summary.likelyActions?.length) {
+          thoughtProcess.push(`LLM likely actions: ${summary.likelyActions.join(', ')}`);
+        }
+
+        // LLM-based critique and improvement suggestions
+        const critiquePrompt = `
+Given the following review summary: ${JSON.stringify(summary)}
+Critique this summary for clarity, completeness, and usefulness for human reviewers. Suggest any improvements or additional considerations. Respond in JSON: { "critique": "...", "improvements": ["..."], "additionalConsiderations": ["..."] }
+`;
+        try {
+          const critiqueRaw = await context.llm(critiquePrompt);
+          const critique = JSON.parse(critiqueRaw);
+          if (critique.critique) {
+            thoughtProcess.push(`LLM critique: ${critique.critique}`);
+          }
+          if (critique.improvements?.length) {
+            thoughtProcess.push(`LLM suggested improvements: ${critique.improvements.join(', ')}`);
+          }
+          if (critique.additionalConsiderations?.length) {
+            thoughtProcess.push(`LLM additional considerations: ${critique.additionalConsiderations.join(', ')}`);
+          }
+        } catch (e) {
+          thoughtProcess.push('LLM review summary critique response could not be parsed.');
+        }
+      } catch (e) {
+        thoughtProcess.push('LLM review summary response could not be parsed.');
+      }
+    }
+
     if (mockReviewResponse.status === 'rejected') {
       return {
         output: {

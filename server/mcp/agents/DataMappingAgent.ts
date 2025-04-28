@@ -37,6 +37,26 @@ export class DataMappingAgent implements MCPAgent {
       thoughtProcess.push('Field mapping analysis complete');
       thoughtProcess.push(llmResponse.reasoning || '');
 
+      // LLM-based mapping review
+      const reviewPrompt = `
+Review the following field mappings for a ${mcp.context.problemType} problem: ${JSON.stringify(llmResponse.mappings)}
+Are there any semantic mismatches or missing fields? Respond in JSON: { "issues": ["..."], "suggestions": ["..."] }
+`;
+      try {
+        const reviewRaw = context?.llm
+          ? await context.llm(reviewPrompt)
+          : await callOpenAI(reviewPrompt);
+        const review = JSON.parse(extractJsonFromMarkdown(reviewRaw));
+        if (review.issues?.length) {
+          thoughtProcess.push(`LLM review issues: ${review.issues.join(', ')}`);
+        }
+        if (review.suggestions?.length) {
+          thoughtProcess.push(`LLM review suggestions: ${review.suggestions.join(', ')}`);
+        }
+      } catch (e) {
+        thoughtProcess.push('LLM mapping review response could not be parsed.');
+      }
+
       // Validate mappings
       const missingFields = this.validateMappings(llmResponse.mappings || [], requiredFields);
       if (missingFields.length > 0) {

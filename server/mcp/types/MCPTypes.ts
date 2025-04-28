@@ -46,6 +46,7 @@ export interface Context {
   industry: string;
   environment: Environment;
   dataset: Dataset;
+  businessRules?: any;
 }
 
 export interface ProtocolStep {

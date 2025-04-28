@@ -48,6 +48,23 @@ export class DataEnrichmentAgent implements MCPAgent {
       }
     }
 
+    // LLM-based constraint suggestion
+    const constraintPrompt = `
+Given the enriched data: ${JSON.stringify(enrichedData)}
+Suggest any additional constraints that should be added to the optimization model.
+Respond in JSON: { "constraints": ["..."], "reasoning": "..." }
+`;
+    try {
+      const constraintRaw = await context.llm(constraintPrompt);
+      const constraints = JSON.parse(constraintRaw);
+      if (constraints.constraints?.length) {
+        thoughtProcess.push(`LLM suggested constraints: ${constraints.constraints.join(', ')}`);
+        thoughtProcess.push(`Constraint reasoning: ${constraints.reasoning}`);
+      }
+    } catch (e) {
+      thoughtProcess.push('LLM constraint suggestion response could not be parsed.');
+    }
+
     return {
       output: {
         success: true,

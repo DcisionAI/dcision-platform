@@ -23,7 +23,7 @@ export class ModelRunnerAgent implements MCPAgent {
     const thoughtProcess: string[] = [];
     
     if (step.action === 'build_model') {
-      return this.buildModel(mcp, thoughtProcess);
+      return this.buildModel(mcp, thoughtProcess, context);
     } else if (step.action === 'solve_model') {
       return this.solveModel(mcp, thoughtProcess);
     }
@@ -31,12 +31,31 @@ export class ModelRunnerAgent implements MCPAgent {
     throw new Error(`Unsupported action: ${step.action}`);
   }
 
-  private async buildModel(mcp: MCP, thoughtProcess: string[]): Promise<AgentRunResult> {
+  private async buildModel(mcp: MCP, thoughtProcess: string[], context?: AgentRunContext): Promise<AgentRunResult> {
     thoughtProcess.push('Building optimization model...');
 
     // Select appropriate solver based on problem type
     const solver = this.getSolverForProblemType(mcp.context.problemType);
     thoughtProcess.push(`Selected ${solver} solver for ${mcp.context.problemType}`);
+
+    // LLM-based constraint generation
+    if (mcp.context.businessRules && context?.llm) {
+      const constraintPrompt = `
+Given the business rules: ${JSON.stringify(mcp.context.businessRules)}
+Generate mathematical constraints for the optimization model.
+Respond in JSON: { "constraints": ["..."], "reasoning": "..." }
+`;
+      try {
+        const constraintRaw = await context.llm(constraintPrompt);
+        const constraints = JSON.parse(constraintRaw);
+        if (constraints.constraints?.length) {
+          thoughtProcess.push(`LLM generated constraints: ${constraints.constraints.join(', ')}`);
+          thoughtProcess.push(`Constraint reasoning: ${constraints.reasoning}`);
+        }
+      } catch (e) {
+        thoughtProcess.push('LLM constraint generation response could not be parsed.');
+      }
+    }
 
     // Build model components
     const modelComponents = await this.buildModelComponents(mcp);
@@ -44,6 +63,29 @@ export class ModelRunnerAgent implements MCPAgent {
     thoughtProcess.push(`- Variables: ${Object.keys(modelComponents.variables).length}`);
     thoughtProcess.push(`- Constraints: ${modelComponents.constraints.length}`);
     thoughtProcess.push(`- Objective function defined`);
+
+    // LLM-based model validation
+    if (context?.llm) {
+      const validationPrompt = `
+Given the model components: ${JSON.stringify(modelComponents)}
+Validate that all constraints and variables are appropriate for a ${mcp.context.problemType} problem. Respond in JSON: { "issues": ["..."], "suggestions": ["..."], "reasoning": "..." }
+`;
+      try {
+        const validationRaw = await context.llm(validationPrompt);
+        const validation = JSON.parse(validationRaw);
+        if (validation.issues?.length) {
+          thoughtProcess.push(`LLM model validation issues: ${validation.issues.join(', ')}`);
+        }
+        if (validation.suggestions?.length) {
+          thoughtProcess.push(`LLM model validation suggestions: ${validation.suggestions.join(', ')}`);
+        }
+        if (validation.reasoning) {
+          thoughtProcess.push(`LLM model validation reasoning: ${validation.reasoning}`);
+        }
+      } catch (e) {
+        thoughtProcess.push('LLM model validation response could not be parsed.');
+      }
+    }
 
     return {
       output: {
