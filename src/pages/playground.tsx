@@ -74,7 +74,7 @@ export default function PlaygroundPage() {
     setSessions([...sessions, newSession]);
     setActiveSessionId(newSession.id);
     setShowInput(false);
-    runSession(newSession.id);
+    runSession(newSession.id, newSession);
   };
 
   const handleNewSession = () => {
@@ -82,9 +82,9 @@ export default function PlaygroundPage() {
     setShowInput(true);
   };
 
-  const runSession = async (sessionId: string) => {
+  const runSession = async (sessionId: string, initialSession?: Session) => {
     const mockOutputs: Record<string, string | undefined> = {
-      'Intent Interpreter Agent': 'Analyzing your request for a vehicle routing optimization problem. Key objectives identified: minimize total distance, balance workload across vehicles, and meet delivery time windows.',
+      'Intent Interpreter Agent': undefined,
       'Data Mapping Agent': 'Successfully mapped input data:\n- 15 delivery locations identified\n- 5 available vehicles\n- Time windows validated\n- Capacity constraints applied',
       'Model Runner Agent': 'Optimization model solved successfully:\n- Total route distance: 213.5 miles\n- Average vehicle utilization: 85%\n- All time windows satisfied\n- Solution found in 2.3 seconds',
       'Solution Explanation Agent': 'Your fleet optimization achieved:\n- 22% reduction in total distance\n- 15% improvement in delivery times\n- Balanced workload across all vehicles\n- All customer time windows respected\n\nRecommended routes have been generated for each vehicle.',
@@ -94,7 +94,41 @@ export default function PlaygroundPage() {
       updateStepStatus(sessionId, i, 'running');
       await new Promise((resolve) => setTimeout(resolve, 1500));
       
-      const output = mockOutputs[baseSteps[i].name];
+      let output = mockOutputs[baseSteps[i].name];
+      
+      // Call intent interpreter API for the first step
+      if (baseSteps[i].name === 'Intent Interpreter Agent') {
+        try {
+          const session = initialSession || sessions.find(s => s.id === sessionId);
+          if (!session) throw new Error('Session not found');
+          
+          const response = await fetch('/api/mcp/intent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userInput: session.description })
+          });
+          
+          if (!response.ok) throw new Error('Intent interpretation failed');
+          
+          const result = await response.json();
+          if (result.output?.success) {
+            output = `Problem Type: ${result.output.selectedModel}\nConfidence: ${(result.output.details.confidence * 100).toFixed(1)}%\n\nReasoning: ${result.output.details.reasoning}\n\nAlternative Types: ${result.output.details.alternativeTypes.join(', ')}`;
+            
+            // Update the session's problem type
+            setSessions(prev => prev.map(s => 
+              s.id === sessionId 
+                ? { ...s, problemType: result.output.selectedModel as ProblemType }
+                : s
+            ));
+          } else {
+            output = `Error: ${result.output?.error || 'Unknown error'}`;
+          }
+        } catch (error) {
+          console.error('Intent interpreter error:', error);
+          output = `Error: ${error instanceof Error ? error.message : 'Failed to interpret intent'}`;
+        }
+      }
+      
       updateStepStatus(sessionId, i, 'completed', output);
     }
   };
