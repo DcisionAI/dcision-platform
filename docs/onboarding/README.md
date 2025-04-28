@@ -55,4 +55,34 @@ Welcome to the DcisionAI development team! This guide will help you get started 
 1. Complete the [Development Environment Setup](./environment-setup.md)
 2. Review the [Codebase Overview](./codebase-overview.md)
 3. Study the [Technology Stack](./technology-stack.md)
-4. Try the [Portfolio Management Example](./examples/portfolio-management.md) 
+4. Try the [Portfolio Management Example](./examples/portfolio-management.md)
+
+## Pinecone Integration
+
+DcisionAI uses Pinecone as a vector database for storing and searching documentation embeddings.
+
+### Upserting Documentation to Pinecone
+
+To (re)ingest your documentation into Pinecone, use the upsert script. For best compatibility, use a separate TypeScript config for scripts:
+
+1. Create a `tsconfig.scripts.json` in your project root:
+
+```json
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs"
+  },
+  "include": ["scripts/**/*.ts"]
+}
+```
+
+2. Run the upsert script with:
+
+```sh
+npx ts-node --project tsconfig.scripts.json scripts/upsertDocsToPinecone.ts
+```
+
+This will delete all vectors in your Pinecone namespace and upsert your documentation in section-based chunks.
+
+See the script in `scripts/upsertDocsToPinecone.ts` for details. 

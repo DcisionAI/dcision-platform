@@ -178,4 +178,34 @@ Each step is defined as a protocol action in the MCP, with clear hand-offs betwe
 - **Extensibility:** New agents can be added for new capabilities (e.g., compliance, advanced analytics).
 - **Enterprise-Readiness:** Supports production deployment, monitoring, and dynamic re-execution.
 
+## Pinecone Integration
+
+DcisionAI uses Pinecone as a vector database for storing and searching documentation embeddings.
+
+### Upserting Documentation to Pinecone
+
+To (re)ingest your documentation into Pinecone, use the upsert script. For best compatibility, use a separate TypeScript config for scripts:
+
+1. Create a `tsconfig.scripts.json` in your project root:
+
+```json
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs"
+  },
+  "include": ["scripts/**/*.ts"]
+}
+```
+
+2. Run the upsert script with:
+
+```sh
+npx ts-node --project tsconfig.scripts.json scripts/upsertDocsToPinecone.ts
+```
+
+This will delete all vectors in your Pinecone namespace and upsert your documentation in section-based chunks.
+
+See the script in `scripts/upsertDocsToPinecone.ts` for details.
+
 --- 

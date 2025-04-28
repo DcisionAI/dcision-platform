@@ -2,40 +2,20 @@ import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Layout from '@/components/Layout';
-import type { Components } from 'react-markdown';
 
-// Utility to fetch all docs content from the backend
-async function fetchDocs() {
-  try {
-    console.log('Fetching all docs from /api/docs...');
-    const res = await fetch('/api/docs');
-    if (!res.ok) {
-      console.error('Failed to fetch docs:', res.status, await res.text());
-      return [];
-    }
-    const data = await res.json();
-    console.log('Successfully loaded docs:', data.length);
-    return data;
-  } catch (error) {
-    console.error('Error fetching docs:', error);
-    return [];
-  }
-}
 
-// Improved heading extraction: handles ATX, Setext, ignores code blocks, trims/normalizes text
+// Extract headings for ToC
 function extractHeadings(markdown: string, file: string) {
   const lines = markdown.split('\n');
   const headings = [];
   let inCodeBlock = false;
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i];
-    // Toggle code block state
     if (/^\s*```/.test(line)) {
       inCodeBlock = !inCodeBlock;
       continue;
     }
     if (inCodeBlock) continue;
-    // ATX headings: #, ##, ###, ####
     const atx = line.match(/^(#{1,4})\s+(.*)/);
     if (atx) {
       const level = atx[1].length;
@@ -44,7 +24,6 @@ function extractHeadings(markdown: string, file: string) {
       headings.push({ level, text, id, file });
       continue;
     }
-    // Setext headings: underlined with === or ---
     if (i > 0 && /^\s*(=+|-{2,})\s*$/.test(line)) {
       const prev = lines[i - 1].trim();
       if (prev && !/^\s*```/.test(prev)) {
@@ -80,29 +59,26 @@ function DocsTOC({ headings, onHeadingClick }: { headings: any[], onHeadingClick
   );
 }
 
-interface Doc {
-  file: string;
-  content: string;
-}
-
 export default function Docs() {
   const [query, setQuery] = useState('');
   const [answer, setAnswer] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [docs, setDocs] = useState<Doc[]>([]);
+  const [docs, setDocs] = useState<{ file: string; content: string }[]>([]);
+  const [filteredDocs, setFilteredDocs] = useState<{ file: string; content: string }[] | null>(null);
   const [headings, setHeadings] = useState<any[]>([]);
-  const [filteredDocs, setFilteredDocs] = useState<Doc[] | null>(null);
   const [filteredHeadings, setFilteredHeadings] = useState<any[] | null>(null);
-  const [sources, setSources] = useState<string[]>([]);
   const contentRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
+  // Fetch all docs from Pinecone on mount (fallback)
   useEffect(() => {
-    fetchDocs().then((docs) => {
-      setDocs(docs);
-      const allHeadings = docs.flatMap((doc: Doc) => extractHeadings(doc.content, doc.file));
-      setHeadings(allHeadings);
-    });
+    fetch('/api/ask-docs?all=true')
+      .then(res => res.json())
+      .then(data => {
+        setDocs(data.docs || []);
+        const allHeadings = (data.docs || []).flatMap((doc: any) => extractHeadings(doc.content, doc.file));
+        setHeadings(allHeadings);
+      });
   }, []);
 
   async function handleSearch(e: React.FormEvent) {
@@ -110,7 +86,8 @@ export default function Docs() {
     setLoading(true);
     setError('');
     setAnswer('');
-    setSources([]);
+    setFilteredDocs(null);
+    setFilteredHeadings(null);
     try {
       const res = await fetch('/api/ask-docs', {
         method: 'POST',
@@ -120,16 +97,9 @@ export default function Docs() {
       const data = await res.json();
       if (res.ok) {
         setAnswer(data.answer);
-        setSources(data.sources || []);
-        // Filter docs and headings
-        if (data.sources && data.sources.length > 0) {
-          const filtered = docs.filter((doc: Doc) => data.sources.includes(doc.file));
-          setFilteredDocs(filtered);
-          setFilteredHeadings(filtered.flatMap((doc: Doc) => extractHeadings(doc.content, doc.file)));
-        } else {
-          setFilteredDocs([]);
-          setFilteredHeadings([]);
-        }
+        const chunks = data.chunks || data.sources || [];
+        setFilteredDocs(chunks);
+        setFilteredHeadings(chunks.flatMap((doc: any) => extractHeadings(doc.content, doc.file)));
       } else {
         setError(data.error || 'Something went wrong.');
       }
@@ -151,12 +121,20 @@ export default function Docs() {
     setFilteredDocs(null);
     setFilteredHeadings(null);
     setAnswer('');
-    setSources([]);
+    setError('');
+    // Re-fetch all docs from the backend
+    fetch('/api/ask-docs?all=true')
+      .then(res => res.json())
+      .then(data => {
+        setDocs(data.docs || []);
+        const allHeadings = (data.docs || []).flatMap((doc: any) => extractHeadings(doc.content, doc.file));
+        setHeadings(allHeadings);
+      });
   }
 
-  function renderMarkdownWithAnchors(doc: Doc) {
-    const components: Components = {
-      h1: ({ children }) => {
+  function renderMarkdownWithAnchors(doc: { file: string; content: string }) {
+    const components = {
+      h1: ({ children }: any) => {
         const text = String(children);
         const id = `${doc.file.replace(/\W/g, '-')}-${text.replace(/\W/g, '-')}`;
         return (
@@ -165,7 +143,7 @@ export default function Docs() {
           </h1>
         );
       },
-      h2: ({ children }) => {
+      h2: ({ children }: any) => {
         const text = String(children);
         const id = `${doc.file.replace(/\W/g, '-')}-${text.replace(/\W/g, '-')}`;
         return (
@@ -174,7 +152,7 @@ export default function Docs() {
           </h2>
         );
       },
-      h3: ({ children }) => {
+      h3: ({ children }: any) => {
         const text = String(children);
         const id = `${doc.file.replace(/\W/g, '-')}-${text.replace(/\W/g, '-')}`;
         return (
@@ -183,7 +161,7 @@ export default function Docs() {
           </h3>
         );
       },
-      h4: ({ children }) => {
+      h4: ({ children }: any) => {
         const text = String(children);
         const id = `${doc.file.replace(/\W/g, '-')}-${text.replace(/\W/g, '-')}`;
         return (
@@ -192,19 +170,18 @@ export default function Docs() {
           </h4>
         );
       },
-      p: ({ children }) => (
+      p: ({ children }: any) => (
         <p className="text-sm text-docs-muted mb-4">{children}</p>
       ),
-      code: ({ children, className }) => {
+      code: ({ children, className }: any) => {
         const isInline = !className;
-        return isInline ? 
+        return isInline ?
           <code className="bg-docs-section px-1 py-0.5 rounded text-xs font-mono">{children}</code> :
           <pre className="bg-docs-section border border-docs-section-border rounded-lg p-4 font-mono text-xs text-docs-text overflow-x-auto my-4">
             {children}
-          </pre>
+          </pre>;
       },
     };
-
     return (
       <ReactMarkdown
         key={doc.file}
@@ -250,9 +227,7 @@ export default function Docs() {
               </button>
             )}
           </form>
-          
           {error && <div className="text-red-500 mb-4 text-sm">{error}</div>}
-          
           {answer && (
             <div className="bg-docs-section border border-docs-section-border rounded-lg p-4 mb-8">
               <h2 className="text-lg font-semibold mb-2 text-docs-text">Answer</h2>
@@ -260,19 +235,12 @@ export default function Docs() {
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {answer}
                 </ReactMarkdown>
-                {sources.length > 0 && (
-                  <div className="mt-4 text-xs text-docs-muted">
-                    <strong>Sources:</strong> {sources.join(', ')}
-                  </div>
-                )}
               </div>
             </div>
           )}
-
           {/* Render filtered or all docs */}
           {docsToShow.map(doc => renderMarkdownWithAnchors(doc))}
         </div>
-
         <div className="w-72 flex-shrink-0">
           <DocsTOC headings={tocToShow} onHeadingClick={handleTOCClick} />
         </div>

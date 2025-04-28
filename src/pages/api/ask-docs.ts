@@ -1,68 +1,46 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { promises as fs } from 'fs';
-import path from 'path';
-import matter from 'gray-matter';
+import { getPineconeIndex } from '../../../lib/pinecone';
+import { getEmbedding } from '../../../lib/openai-embedding';
 import OpenAI from 'openai';
-import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
 
-dotenv.config({ path: path.resolve(process.cwd(), '.local.env') });
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-// Utility: Recursively get all markdown files in /docs
-async function getAllMarkdownFiles(dir: string): Promise<string[]> {
-  let files: string[] = [];
-  const entries = await fs.readdir(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files = files.concat(await getAllMarkdownFiles(fullPath));
-    } else if (entry.isFile() && entry.name.endsWith('.md')) {
-      files.push(fullPath);
-    }
-  }
-  return files;
-}
-
-// Utility: Read and chunk markdown files
-async function loadAndChunkDocs(): Promise<{ file: string; content: string }[]> {
-  const docsDir = path.resolve(process.cwd(), 'docs');
-  const files = await getAllMarkdownFiles(docsDir);
-  const chunks: { file: string; content: string }[] = [];
-  for (const file of files) {
-    const raw = await fs.readFile(file, 'utf-8');
-    const { content } = matter(raw);
-    // Simple chunking: split by double newlines (paragraphs)
-    content.split(/\n\n+/).forEach((chunk) => {
-      if (chunk.trim().length > 0) {
-        chunks.push({ file: path.relative(docsDir, file), content: chunk.trim() });
-      }
-    });
-  }
-  return chunks;
-}
-
-// Utility: Get embedding for a string
-async function getEmbedding(text: string): Promise<number[]> {
-  const resp = await openai.embeddings.create({
-    model: 'text-embedding-ada-002',
-    input: text,
-  });
-  return resp.data[0].embedding;
-}
-
-// Utility: Cosine similarity
-function cosineSimilarity(a: number[], b: number[]): number {
-  let dot = 0, normA = 0, normB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
-  }
-  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
-}
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const pineconeIndex = getPineconeIndex();
+
+  if (req.method === 'GET' && req.query.all === 'true') {
+    try {
+      // Read vector IDs from file
+      const idsPath = path.join(process.cwd(), 'src/vector-ids.json');
+      const idsRaw = fs.readFileSync(idsPath, 'utf-8');
+      const allIds: string[] = JSON.parse(idsRaw);
+      if (!allIds.length) {
+        return res.status(200).json({ docs: [] });
+      }
+      // Fetch all vectors by ID (Pinecone fetch max 100 per call)
+      let docs: { file: string; content: string }[] = [];
+      for (let i = 0; i < allIds.length; i += 100) {
+        const batchIds = allIds.slice(i, i + 100);
+        try {
+          const fetchResult = await pineconeIndex.fetch({ ids: batchIds, includeMetadata: true });
+          docs.push(...Object.values(fetchResult.vectors || {}).map((v: any) => ({
+            file: v.metadata?.file,
+            content: v.metadata?.content,
+          })));
+        } catch (batchErr) {
+          console.error('Error fetching batch:', batchIds, batchErr);
+          continue;
+        }
+      }
+      return res.status(200).json({ docs });
+    } catch (err) {
+      console.error('Error fetching all docs:', err);
+      return res.status(500).json({ error: 'Failed to fetch all docs' });
+    }
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -72,45 +50,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Missing or invalid query' });
   }
 
-  // 1. Load and chunk docs
-  const chunks = await loadAndChunkDocs();
-
-  // 2. Get embeddings for all chunks (in-memory, not cached for now)
-  const chunkEmbeddings = await Promise.all(
-    chunks.map(async (chunk) => ({
-      ...chunk,
-      embedding: await getEmbedding(chunk.content.slice(0, 1000)), // Truncate for embedding API
-    }))
-  );
-
-  // 3. Get embedding for the query
+  // 1. Get embedding for the query
   const queryEmbedding = await getEmbedding(query);
 
-  // 4. Compute similarity and select top N chunks
-  const topChunks = chunkEmbeddings
-    .map(chunk => ({
-      ...chunk,
-      similarity: cosineSimilarity(chunk.embedding, queryEmbedding)
-    }))
-    .sort((a, b) => b.similarity - a.similarity)
-    .slice(0, 5); // Top 5 chunks
+  // 2. Query Pinecone for top matches
+  const pineconeResult = await pineconeIndex.query({
+    topK: 5,
+    vector: queryEmbedding,
+    includeMetadata: true,
+  });
 
-  // 5. Compose context for LLM
-  const context = topChunks.map(c => `From ${c.file}:
+  // 3. Gather context from Pinecone results
+  const topChunks = pineconeResult.matches.map((match: any) => ({
+    file: match.metadata?.file,
+    content: match.metadata?.content,
+  }));
+
+  const context = topChunks.map((c: any) => `From ${c.file}:
 ${c.content}`).join('\n---\n');
 
-  // 6. Call OpenAI completion API
+  // 4. Call OpenAI LLM as before
   const completion = await openai.chat.completions.create({
     model: 'gpt-3.5-turbo',
     messages: [
       {
         role: 'system',
-        content: `You are a helpful assistant for DcisionAI. 
-Only answer questions using the provided documentation context. 
-If the answer is not in the context, say you do not know.
-When possible, include code blocks, lists, or direct quotes from the context. 
-Cite the source file in your answer (e.g., "From interfaces.md: ..."). 
-Format your answer in markdown.`
+        content: `You are a helpful assistant for DcisionAI. \nOnly answer questions using the provided documentation context. \nIf the answer is not in the context, say you do not know.\nWhen possible, include code blocks, lists, or direct quotes from the context. \nCite the source file in your answer (e.g., "From interfaces.md: ..."). \nFormat your answer in markdown.`
       },
       {
         role: 'user',
@@ -125,6 +90,7 @@ Format your answer in markdown.`
 
   return res.status(200).json({
     answer,
-    sources: topChunks.map(c => c.file)
+    sources: topChunks.map((c: any) => c.file),
+    chunks: topChunks,
   });
 } 
