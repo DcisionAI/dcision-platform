@@ -1,10 +1,29 @@
 // Basic types
 export interface Variable {
   name: string;
-  type: 'number' | 'string' | 'boolean' | 'array' | 'object';
+  type: 'number' | 'string' | 'boolean' | 'array' | 'object' | 'datetime';
   description: string;
-  default: any;
-  required: boolean;
+  default?: any;
+  required?: boolean;
+  metadata?: {
+    properties?: Record<string, string>;
+  };
+}
+
+export interface Constraint {
+  type: string;
+  description: string;
+  operator: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'between';
+  field: string;
+  value: any;
+  priority: 'must' | 'should';
+}
+
+export interface Objective {
+  type: 'minimize' | 'maximize';
+  field: string;
+  description: string;
+  weight: number;
 }
 
 export type StepAction = 
@@ -52,9 +71,33 @@ export interface OrchestrationResult {
 // Main MCP type
 export interface MCP {
   id: string;
-  name: string;
-  description: string;
-  variables: Variable[];
+  sessionId: string;
+  version: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  created: string;
+  lastModified: string;
+  model: {
+    variables: Variable[];
+    constraints: Constraint[];
+    objective: Objective;
+  };
+  context: {
+    environment: {
+      region: string;
+      timezone: string;
+    };
+    dataset: {
+      internalSources: string[];
+      dataQuality?: 'good' | 'fair' | 'poor';
+      requiredFields?: string[];
+    };
+    problemType: string;
+    industry: string;
+  };
   protocol: Protocol;
-  metadata?: Record<string, any>;
+  metadata?: {
+    solver?: string;
+    timeLimit?: number;
+    solutionGap?: number;
+  };
 } 

@@ -1,4 +1,4 @@
-import { MCP, Variable, StepResult } from '../MCPTypes';
+import { MCP, Variable, StepResult } from '@/mcp/MCPTypes';
 
 export interface SessionState {
   variables: Record<string, any>;
@@ -15,7 +15,7 @@ export class OrchestrationContext {
   constructor(mcp: MCP) {
     this.mcp = mcp;
     this.state = {
-      variables: this.initializeVariables(mcp.variables),
+      variables: this.initializeVariables(mcp.model.variables),
       stepResults: {},
       currentStepIndex: 0,
       errors: [],

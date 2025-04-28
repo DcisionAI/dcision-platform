@@ -1,106 +1,102 @@
-import { useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { useAuth } from '../hooks/useAuth';
-import { AuthModal } from '../components/auth/AuthModal';
+import Layout from '@/components/Layout';
+import {
+  BeakerIcon,
+  BoltIcon,
+  ChartBarIcon,
+  CpuChipIcon,
+  LightBulbIcon,
+  ArrowPathRoundedSquareIcon,
+} from '@heroicons/react/24/outline';
+
+function FeatureCard({ icon: Icon, title, description }: {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="border border-docs-section-border shadow-sm rounded-xl p-6 bg-docs-section hover:bg-docs-section/80 transition-colors">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="p-2 bg-[#1F6FEB]/10 rounded-lg">
+          <Icon className="w-5 h-5 text-[#1F6FEB]" />
+        </div>
+        <h2 className="text-xl font-semibold text-docs-text">{title}</h2>
+      </div>
+      <p className="text-docs-muted">{description}</p>
+    </div>
+  );
+}
 
 export default function Home() {
-  const { 
-    isLoading, 
-    isAuthenticated, 
-    showAuthModal, 
-    authMode, 
-    openSignIn, 
-    openSignUp,
-    closeAuthModal, 
-    handleAuthSuccess,
-    setAuthMode 
-  } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      router.push('/dashboard');
+  const features = [
+    {
+      icon: CpuChipIcon,
+      title: "Intelligent Decision Agents",
+      description: "Our AI agents understand your business context, validate decisions against rules, and ensure optimal outcomes while maintaining explainability."
+    },
+    {
+      icon: BoltIcon,
+      title: "Real-time Optimization",
+      description: "Adapt to changing conditions instantly with dynamic re-optimization. Handle disruptions, new constraints, and opportunities in real-time."
+    },
+    {
+      icon: LightBulbIcon,
+      title: "Business-First Approach",
+      description: "No PhD required. Express your business rules naturally, and let our agents translate them into optimal decisions that align with your goals."
+    },
+    {
+      icon: ArrowPathRoundedSquareIcon,
+      title: "Continuous Learning",
+      description: "Your decisions get better over time. Our agents learn from outcomes, stakeholder feedback, and changing business conditions."
+    },
+    {
+      icon: BeakerIcon,
+      title: "Interactive Playground",
+      description: "Test and refine your decision workflows in a risk-free environment. Experiment with different scenarios and see results instantly."
+    },
+    {
+      icon: ChartBarIcon,
+      title: "Decision Intelligence",
+      description: "Get deep insights into your decisions. Understand trade-offs, identify opportunities, and quantify the impact of each choice."
     }
-  }, [isLoading, isAuthenticated, router]);
-
-  // Handle auth query parameter
-  useEffect(() => {
-    const authParam = router.query.auth as string;
-    if (authParam === 'signin') {
-      openSignIn();
-      // Remove the query parameter after opening modal
-      router.replace('/', undefined, { shallow: true });
-    } else if (authParam === 'signup') {
-      openSignUp();
-      // Remove the query parameter after opening modal
-      router.replace('/', undefined, { shallow: true });
-    }
-  }, [router.query.auth, openSignIn, openSignUp, router]);
-
-  if (isLoading) {
-    return null; // Or a loading spinner
-  }
+  ];
 
   return (
-    <div className="relative min-h-screen bg-docs-bg">
-      <div className={showAuthModal ? 'filter blur-sm' : ''}>
-        {/* Hero Section */}
-        <div className="relative px-6 lg:px-8">
-          <div className="mx-auto max-w-3xl pt-20 pb-32 sm:pt-48 sm:pb-40">
-            <div>
-              <div>
-                <h1 className="text-4xl font-bold tracking-tight text-docs-text sm:text-6xl">
-                  DcisionAI
-                </h1>
-                <p className="mt-6 text-lg leading-8 text-docs-muted">
-                  Transform complex business decisions into intelligent workflows. Powered by explainable AI agents that understand your business context.
-                </p>
-                <div className="mt-8 flex gap-x-4">
-                  <button
-                    onClick={openSignIn}
-                    className="inline-block rounded-lg bg-blue-600 px-4 py-1.5 text-base font-semibold leading-7 text-white shadow-sm hover:bg-blue-500"
-                  >
-                    Get started
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+    <Layout>
+      <div className="max-w-6xl mx-auto px-4 pt-2 pb-6">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold mb-3 text-docs-text bg-clip-text text-transparent bg-gradient-to-r from-[#1F6FEB] to-[#58A6FF]">
+            DcisionAI
+          </h1>
+          <p className="text-lg mb-6 text-docs-muted max-w-3xl mx-auto">
+            Transform complex business decisions into intelligent workflows. Powered by explainable AI agents that understand your business context.
+          </p>
         </div>
 
-        {/* Feature Section */}
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="rounded-lg bg-docs-section p-6">
-              <h3 className="text-lg font-semibold text-docs-text">Intelligent Decision Agents</h3>
-              <p className="mt-2 text-docs-muted">
-                Our AI agents understand your business context, validate decisions against rules, and ensure optimal outcomes while maintaining explainability.
-              </p>
-            </div>
-            <div className="rounded-lg bg-docs-section p-6">
-              <h3 className="text-lg font-semibold text-docs-text">Real-time Optimization</h3>
-              <p className="mt-2 text-docs-muted">
-                Adapt to changing conditions instantly with dynamic re-optimization. Handle disruptions, new constraints, and opportunities in real-time.
-              </p>
-            </div>
-            <div className="rounded-lg bg-docs-section p-6">
-              <h3 className="text-lg font-semibold text-docs-text">Business-First Approach</h3>
-              <p className="mt-2 text-docs-muted">
-                No PhD required. Express your business rules naturally, and let our agents translate them into optimal decisions that align with your goals.
-              </p>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          {features.map((feature, index) => (
+            <FeatureCard key={index} {...feature} />
+          ))}
+        </div>
+
+        <div className="border border-docs-section-border shadow-sm rounded-xl p-6 bg-docs-section">
+          <h2 className="text-xl font-semibold mb-3 text-docs-text">Get Started in Minutes</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            {[
+              { step: "1", text: "Connect your data sources" },
+              { step: "2", text: "Choose a decision workflow template" },
+              { step: "3", text: "Configure business rules and goals" },
+              { step: "4", text: "Deploy and monitor decisions" }
+            ].map((item) => (
+              <div key={item.step} className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full bg-[#1F6FEB]/10 flex items-center justify-center text-[#1F6FEB] font-semibold">
+                  {item.step}
+                </div>
+                <p className="text-docs-muted text-sm">{item.text}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
-
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={closeAuthModal}
-        mode={authMode}
-        onSuccess={handleAuthSuccess}
-        onModeChange={setAuthMode}
-      />
-    </div>
+    </Layout>
   );
 } 

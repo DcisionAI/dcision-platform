@@ -1,4 +1,4 @@
-import { MCP, OrchestrationResult } from '../MCPTypes';
+import { MCP, OrchestrationResult } from '@/mcp/MCPTypes';
 import { OrchestrationContext } from './OrchestrationContext';
 import { StepExecutor } from './StepExecutor';
 

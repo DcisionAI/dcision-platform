@@ -1,14 +1,14 @@
 import type { AppProps } from 'next/app';
-import { AuthProvider } from '../components/auth/AuthProvider';
-import { Layout } from '../components/layout/Layout';
-import '../styles/globals.css';
+import '@/styles/globals.css';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { AuthProvider } from '@/components/auth/AuthProvider';
 
 export default function App({ Component, pageProps }: AppProps) {
+  const supabase = createClientComponentClient();
+  
   return (
     <AuthProvider>
-      <Layout>
-        <Component {...pageProps} />
-      </Layout>
+      <Component {...pageProps} />
     </AuthProvider>
   );
 } 

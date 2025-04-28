@@ -1,4 +1,4 @@
-import { MCP, Variable, Step, StepAction, Protocol } from '../MCPTypes';
+import { MCP, Variable, Step, StepAction, Protocol } from '@/mcp/MCPTypes';
 
 export class MCPBuilder {
   private id: string;
@@ -634,9 +634,32 @@ export class MCPBuilder {
 
     return {
       id: this.id,
-      name: this.name,
-      description: this.description,
-      variables: [...this.variables],
+      sessionId: this.id, // Using id as sessionId for now
+      version: '1.0.0',
+      status: 'pending',
+      created: new Date().toISOString(),
+      lastModified: new Date().toISOString(),
+      model: {
+        variables: [...this.variables],
+        constraints: [],
+        objective: {
+          type: 'minimize',
+          field: '',
+          description: '',
+          weight: 1
+        }
+      },
+      context: {
+        environment: {
+          region: 'us-east-1',
+          timezone: 'UTC'
+        },
+        dataset: {
+          internalSources: []
+        },
+        problemType: '',
+        industry: ''
+      },
       protocol,
       metadata: Object.keys(this.metadata).length > 0 ? { ...this.metadata } : undefined
     };
