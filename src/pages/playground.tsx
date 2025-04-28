@@ -65,38 +65,7 @@ export default function PlaygroundPage() {
       problemType: problemType as ProblemType,
       dataFormat,
       sampleData,
-      steps: [
-        {
-          name: 'Problem Analysis',
-          description: 'Analyzing problem requirements and context',
-          status: 'pending' as AgentStatus,
-          agent: 'Intent Interpreter Agent'
-        },
-        {
-          name: 'Data Mapping',
-          description: 'Mapping input data to required schema',
-          status: 'pending' as AgentStatus,
-          agent: 'Data Mapping Agent'
-        },
-        {
-          name: 'Model Construction',
-          description: 'Building optimization model',
-          status: 'pending' as AgentStatus,
-          agent: 'Model Builder Agent'
-        },
-        {
-          name: 'Solution Generation',
-          description: 'Solving optimization model',
-          status: 'pending' as AgentStatus,
-          agent: 'Model Runner Agent'
-        },
-        {
-          name: 'Solution Explanation',
-          description: 'Explaining solution in business terms',
-          status: 'pending' as AgentStatus,
-          agent: 'Solution Explanation Agent'
-        }
-      ],
+      steps: baseSteps,
       startTime: new Date().toISOString(),
       lastModified: new Date().toISOString(),
       status: 'running' as AgentStatus
@@ -114,12 +83,20 @@ export default function PlaygroundPage() {
   };
 
   const runSession = async (sessionId: string) => {
+    const mockOutputs: Record<string, string | undefined> = {
+      'Intent Interpreter Agent': 'Analyzing your request for a vehicle routing optimization problem. Key objectives identified: minimize total distance, balance workload across vehicles, and meet delivery time windows.',
+      'Data Mapping Agent': 'Successfully mapped input data:\n- 15 delivery locations identified\n- 5 available vehicles\n- Time windows validated\n- Capacity constraints applied',
+      'Model Runner Agent': 'Optimization model solved successfully:\n- Total route distance: 213.5 miles\n- Average vehicle utilization: 85%\n- All time windows satisfied\n- Solution found in 2.3 seconds',
+      'Solution Explanation Agent': 'Your fleet optimization achieved:\n- 22% reduction in total distance\n- 15% improvement in delivery times\n- Balanced workload across all vehicles\n- All customer time windows respected\n\nRecommended routes have been generated for each vehicle.',
+    };
+
     for (let i = 0; i < baseSteps.length; i++) {
       updateStepStatus(sessionId, i, 'running');
-      await new Promise((resolve) => setTimeout(resolve, 1500)); // Simulate delay
-      updateStepStatus(sessionId, i, 'completed', `Output from ${baseSteps[i].name}`);
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      
+      const output = mockOutputs[baseSteps[i].name];
+      updateStepStatus(sessionId, i, 'completed', output);
     }
-    updateSolutionSummary(sessionId, 'Your fleet routes are optimized: 22% cost savings, 15% faster delivery.');
   };
 
   const updateStepStatus = (sessionId: string, stepIndex: number, status: AgentStatus, output?: string) => {
@@ -127,7 +104,11 @@ export default function PlaygroundPage() {
       prev.map((session) => {
         if (session.id !== sessionId) return session;
         const updatedSteps = [...session.steps];
-        updatedSteps[stepIndex] = { ...updatedSteps[stepIndex], status, output };
+        updatedSteps[stepIndex] = { 
+          ...updatedSteps[stepIndex], 
+          status, 
+          output: output || undefined // Only set output if provided
+        };
         return { ...session, steps: updatedSteps };
       })
     );
