@@ -1,3 +1,82 @@
+# DcisionAI Documentation
+
+Welcome to the DcisionAI documentation. This repository contains comprehensive documentation for the DcisionAI platform, including architecture, implementation details, and usage guides.
+
+## Documentation Structure
+
+### Architecture Documentation
+
+1. [Architecture Overview](./architecture/overview.md)
+   - High-level system architecture
+   - Component interactions
+   - System design principles
+
+2. [Model Context Protocol (MCP)](./architecture/mcp/protocol.md)
+   - Protocol specification
+   - Implementation details
+   - Best practices
+
+3. [Agent System](./architecture/mcp/agents.md)
+   - Agent architecture
+   - Agent types
+   - Communication patterns
+
+### Implementation Guides
+
+1. [Getting Started](./implementation/getting-started.md)
+   - Installation
+   - Configuration
+   - First steps
+
+2. [Development Guide](./implementation/development.md)
+   - Development environment
+   - Coding standards
+   - Testing guidelines
+
+3. [Deployment Guide](./implementation/deployment.md)
+   - Deployment process
+   - Configuration management
+   - Monitoring setup
+
+### API Documentation
+
+1. [REST API](./api/rest.md)
+   - API endpoints
+   - Authentication
+   - Error handling
+
+2. [WebSocket API](./api/websocket.md)
+   - Real-time communication
+   - Event types
+   - Connection management
+
+### User Guides
+
+1. [User Manual](./user/manual.md)
+   - Platform features
+   - Usage instructions
+   - Best practices
+
+2. [Tutorials](./user/tutorials.md)
+   - Step-by-step guides
+   - Example problems
+   - Solution walkthroughs
+
+## Contributing
+
+We welcome contributions to our documentation. Please see our [Contributing Guide](./CONTRIBUTING.md) for details on how to contribute.
+
+## Support
+
+For support, please:
+1. Check our [FAQ](./support/faq.md)
+2. Review our [Troubleshooting Guide](./support/troubleshooting.md)
+3. Contact our support team at support@dcisionai.com
+
+## License
+
+This documentation is licensed under the [MIT License](./LICENSE).
+
 # What is DcisionAI?
 
 DcisionAI is an enterprise-grade platform for intelligent, automated decision-making. It leverages a modular, agent-based architecture orchestrated by the Model Context Protocol (MCP). Each agent is responsible for a specific stage in the optimization workflow, enabling flexible, scalable, and explainable automation.

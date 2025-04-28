@@ -6,38 +6,20 @@ import type { Components } from 'react-markdown';
 
 // Utility to fetch all docs content from the backend
 async function fetchDocs() {
-  const files = [
-    'mcp/README.md',
-    'mcp/interfaces.md',
-    'mcp/migration.md',
-    'mcp/api/README.md',
-    'mcp/examples/README.md',
-  ];
-  
-  console.log('Attempting to fetch docs for files:', files);
-  
-  const docs = await Promise.all(
-    files.map(async (file) => {
-      try {
-        console.log(`Fetching ${file}...`);
-        const res = await fetch(`/api/docs?file=${encodeURIComponent(file)}`);
-        if (!res.ok) {
-          console.error(`Failed to fetch ${file}:`, res.status, await res.text());
-          return null;
-        }
-        const data = await res.json();
-        console.log(`Successfully fetched ${file}`);
-        return { file: data.file, content: data.content };
-      } catch (error) {
-        console.error(`Error fetching ${file}:`, error);
-        return null;
-      }
-    })
-  );
-  
-  const validDocs = docs.filter((d): d is { file: string; content: string } => d !== null);
-  console.log('Successfully loaded docs:', validDocs.length);
-  return validDocs;
+  try {
+    console.log('Fetching all docs from /api/docs...');
+    const res = await fetch('/api/docs');
+    if (!res.ok) {
+      console.error('Failed to fetch docs:', res.status, await res.text());
+      return [];
+    }
+    const data = await res.json();
+    console.log('Successfully loaded docs:', data.length);
+    return data;
+  } catch (error) {
+    console.error('Error fetching docs:', error);
+    return [];
+  }
 }
 
 // Improved heading extraction: handles ATX, Setext, ignores code blocks, trims/normalizes text
@@ -98,22 +80,28 @@ function DocsTOC({ headings, onHeadingClick }: { headings: any[], onHeadingClick
   );
 }
 
+interface Doc {
+  file: string;
+  content: string;
+}
+
 export default function Docs() {
   const [query, setQuery] = useState('');
   const [answer, setAnswer] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [docs, setDocs] = useState<{ file: string; content: string }[]>([]);
+  const [docs, setDocs] = useState<Doc[]>([]);
   const [headings, setHeadings] = useState<any[]>([]);
+  const [filteredDocs, setFilteredDocs] = useState<Doc[] | null>(null);
+  const [filteredHeadings, setFilteredHeadings] = useState<any[] | null>(null);
+  const [sources, setSources] = useState<string[]>([]);
   const contentRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     fetchDocs().then((docs) => {
       setDocs(docs);
-      const allHeadings = docs.flatMap((doc) => extractHeadings(doc.content, doc.file));
+      const allHeadings = docs.flatMap((doc: Doc) => extractHeadings(doc.content, doc.file));
       setHeadings(allHeadings);
-      console.log('Loaded docs:', docs);
-      console.log('Extracted headings:', allHeadings);
     });
   }, []);
 
@@ -122,6 +110,7 @@ export default function Docs() {
     setLoading(true);
     setError('');
     setAnswer('');
+    setSources([]);
     try {
       const res = await fetch('/api/ask-docs', {
         method: 'POST',
@@ -131,6 +120,16 @@ export default function Docs() {
       const data = await res.json();
       if (res.ok) {
         setAnswer(data.answer);
+        setSources(data.sources || []);
+        // Filter docs and headings
+        if (data.sources && data.sources.length > 0) {
+          const filtered = docs.filter((doc: Doc) => data.sources.includes(doc.file));
+          setFilteredDocs(filtered);
+          setFilteredHeadings(filtered.flatMap((doc: Doc) => extractHeadings(doc.content, doc.file)));
+        } else {
+          setFilteredDocs([]);
+          setFilteredHeadings([]);
+        }
       } else {
         setError(data.error || 'Something went wrong.');
       }
@@ -148,7 +147,14 @@ export default function Docs() {
     }
   }
 
-  function renderMarkdownWithAnchors(doc: { file: string; content: string }) {
+  function handleShowAllDocs() {
+    setFilteredDocs(null);
+    setFilteredHeadings(null);
+    setAnswer('');
+    setSources([]);
+  }
+
+  function renderMarkdownWithAnchors(doc: Doc) {
     const components: Components = {
       h1: ({ children }) => {
         const text = String(children);
@@ -210,6 +216,9 @@ export default function Docs() {
     );
   }
 
+  const docsToShow = filteredDocs !== null ? filteredDocs : docs;
+  const tocToShow = filteredHeadings !== null ? filteredHeadings : headings;
+
   return (
     <Layout>
       <div className="max-w-6xl mx-auto flex relative">
@@ -231,6 +240,15 @@ export default function Docs() {
             >
               {loading ? 'Searching...' : 'Ask'}
             </button>
+            {filteredDocs && (
+              <button
+                type="button"
+                className="ml-2 bg-gray-700 text-white px-3 py-2 rounded text-sm font-semibold transition"
+                onClick={handleShowAllDocs}
+              >
+                Show all docs
+              </button>
+            )}
           </form>
           
           {error && <div className="text-red-500 mb-4 text-sm">{error}</div>}
@@ -242,16 +260,21 @@ export default function Docs() {
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {answer}
                 </ReactMarkdown>
+                {sources.length > 0 && (
+                  <div className="mt-4 text-xs text-docs-muted">
+                    <strong>Sources:</strong> {sources.join(', ')}
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          {/* Render all docs */}
-          {docs.map(doc => renderMarkdownWithAnchors(doc))}
+          {/* Render filtered or all docs */}
+          {docsToShow.map(doc => renderMarkdownWithAnchors(doc))}
         </div>
 
         <div className="w-72 flex-shrink-0">
-          <DocsTOC headings={headings} onHeadingClick={handleTOCClick} />
+          <DocsTOC headings={tocToShow} onHeadingClick={handleTOCClick} />
         </div>
       </div>
     </Layout>
