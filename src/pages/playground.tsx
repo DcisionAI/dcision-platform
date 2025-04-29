@@ -842,8 +842,8 @@ ${result.output.details.critique.reasoning}`;
     <Layout>
       <div className="h-[calc(100vh-4rem)] bg-[#0D1117]">
         {showInput && (
-          <div className="max-w-4xl mx-auto p-8 space-y-8">
-            <div className="space-y-4">
+          <div className="max-w-6xl mx-auto p-8 space-y-8">
+            <div className="space-y-2">
               <h1 className="text-2xl font-medium text-white">DcisionAI Playground</h1>
               <p className="text-[#8B949E] text-sm">Define your business optimization challenge and let our AI assist you in finding the best solution.</p>
               
@@ -857,7 +857,7 @@ ${result.output.details.critique.reasoning}`;
                     <h3 className="text-white text-sm font-medium">Specialized AI Agents</h3>
                   </div>
                   <p className="text-[#8B949E] text-sm">
-                    Our multi-agent system works in harmony to solve complex optimization problems. Each agent specializes in a crucial aspect of the solution, from understanding intent to delivering actionable insights.
+                  DcisionAI uses a team of specialized agents — each responsible for a critical step in the decision workflow. From intent interpretation to model selection and solution explanation, our agents collaborate to automate complex optimization tasks with precision and transparency.
                   </p>
                 </div>
 
@@ -869,7 +869,7 @@ ${result.output.details.critique.reasoning}`;
                     <h3 className="text-white text-sm font-medium">Plug-in Architecture</h3>
                   </div>
                   <p className="text-[#8B949E] text-sm">
-                    Using Supabase as an example, we've set up a customer database to demonstrate our flexible plugin architecture—showcasing real data integration and extensibility for your business needs.
+                  Our plug-in architecture connects directly to your live databases. In this playground, we use Supabase to demonstrate how agents scan actual schema and map data in real time — enabling grounded optimization with no manual setup. Designed for secure, extensible enterprise integration.
                   </p>
                 </div>
 
@@ -881,7 +881,7 @@ ${result.output.details.critique.reasoning}`;
                     <h3 className="text-white text-sm font-medium">Model Context Protocol</h3>
                   </div>
                   <p className="text-[#8B949E] text-sm">
-                    MCP standardizes how AI agents understand and translate business context into optimization models, with built-in explainability and human validation at critical decision points.
+                  Model Context Protocol (MCP) is our orchestration layer for decision-making. It ensures agents operate with shared context — structuring goals, constraints, and data into optimization-ready inputs. With built-in explainability and human-in-the-loop validation, MCP makes decisions both auditable and trustworthy.
                   </p>
                  
                 </div>

@@ -6,14 +6,15 @@ import {
   UserGroupIcon, 
   CalendarIcon, 
   CubeIcon, 
-  DocumentDuplicateIcon,
   BeakerIcon,
   ArrowsPointingInIcon,
   LightBulbIcon,
-  ChartBarIcon,
-  CommandLineIcon,
+  CloudArrowUpIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  RectangleGroupIcon,
+  ChartBarIcon,
+  CodeBracketIcon
 } from '@heroicons/react/24/outline';
 
 const menu = [
@@ -29,11 +30,11 @@ const menu = [
   {
     section: 'PLATFORM CONCEPTS',
     items: [
-      { href: '/#', label: 'Agents', icon: BeakerIcon },
-      { href: '/#', label: 'Data Integration', icon: ArrowsPointingInIcon },
-      { href: '/#', label: 'Explainability', icon: LightBulbIcon },
-      { href: '/#', label: 'Sessions & Results', icon: ChartBarIcon },
-      { href: '/#', label: 'API Reference', icon: CommandLineIcon },
+      { href: '/dashboard', label: 'Dashboard', icon: ChartBarIcon },
+      { href: '/agents', label: 'Agents', icon: BeakerIcon },
+      { href: '/data-integration', label: 'Data Integration', icon: ArrowsPointingInIcon },
+      { href: '/explainability', label: 'Explainability', icon: LightBulbIcon },
+      { href: '/endpoints', label: 'Endpoints', icon: CloudArrowUpIcon },
     ],
   }
 ];
@@ -41,6 +42,11 @@ const menu = [
 export default function Sidebar() {
   const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(true);
+
+  const isActive = (href: string) => {
+    if (router.pathname === '/') return href === '/dashboard';
+    return router.pathname === href;
+  };
 
   return (
     <aside 
@@ -66,7 +72,7 @@ export default function Sidebar() {
                     className={`rounded-lg flex items-center gap-4 ${
                       isExpanded ? 'px-4 py-2.5' : 'p-2 justify-center'
                     } text-docs-text hover:bg-docs-sidebar-active hover:text-docs-accent transition font-medium group ${
-                      router.pathname === item.href ? 'bg-docs-sidebar-active text-docs-accent font-semibold' : ''
+                      isActive(item.href) ? 'bg-docs-sidebar-active text-docs-accent font-semibold' : ''
                     }`}
                     title={!isExpanded ? item.label : undefined}
                   >

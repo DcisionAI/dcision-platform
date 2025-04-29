@@ -4,6 +4,7 @@ import { Fragment } from 'react';
 import { Menu, Transition } from '@headlessui/react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
+import { Cog8ToothIcon } from '@heroicons/react/24/outline';
 import { useAuthContext } from './auth/AuthProvider';
 
 function classNames(...classes: string[]) {
@@ -33,32 +34,31 @@ export default function Navbar() {
   return (
     <header className="flex items-center justify-between px-8 h-16 bg-docs-bg border-b border-docs-section-border sticky top-0 z-20">
       <div className="flex items-center gap-2">
-        <Link href="/" legacyBehavior>
+        <Link href="/dashboard" legacyBehavior>
           <a className="font-bold text-lg text-docs-text">DcisionAI</a>
         </Link>
       </div>
       <nav className="flex items-center gap-8 text-sm">
         {/* Navigation Links */}
-        {user ? (
-          <>
-            <Link href="/playground" legacyBehavior>
-              <a className={router.pathname === '/playground' ? 'text-docs-accent font-semibold' : 'text-docs-muted hover:text-docs-accent'}>
-                Playground
-              </a>
-            </Link>
-            <Link href="/dashboard" legacyBehavior>
-              <a className={router.pathname === '/dashboard' ? 'text-docs-accent font-semibold' : 'text-docs-muted hover:text-docs-accent'}>
-                Dashboard
-              </a>
-            </Link>
-          </>
-        ) : null}
-        
         <Link href="/docs" legacyBehavior>
           <a className={router.pathname === '/docs' ? 'text-docs-accent font-semibold' : 'text-docs-muted hover:text-docs-accent'}>
             Docs
           </a>
         </Link>
+        <Link href="/docs" legacyBehavior>
+          <a className={router.pathname === '/docs' ? 'text-docs-accent font-semibold' : 'text-docs-muted hover:text-docs-accent'}>
+            API reference
+          </a>
+        </Link>
+
+        {/* Settings Link */}
+        {user && (
+          <Link href="/settings/organization" legacyBehavior>
+            <a className={`text-docs-muted hover:text-docs-accent ${router.pathname.startsWith('/settings') ? 'text-docs-accent' : ''}`}>
+              <Cog8ToothIcon className="h-5 w-5" />
+            </a>
+          </Link>
+        )}
         
         {/* Auth/Profile Menu */}
         {loading ? (
