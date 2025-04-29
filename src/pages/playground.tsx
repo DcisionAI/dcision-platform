@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Layout from '@/components/Layout';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { v4 as uuidv4 } from 'uuid';
@@ -83,6 +83,7 @@ export default function PlaygroundPage() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [showInput, setShowInput] = useState(true);
   const [responseFormat, setResponseFormat] = useState<'plain' | 'json'>('plain');
+  const agentOutputRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Default Agent Steps Template
   const baseSteps: AgentStep[] = [
@@ -700,18 +701,6 @@ ${result.output.details.critique.reasoning}`;
           <div className="p-1 space-y-6">
             <div>
             <h1 className="text-3xl font-bold mb-4 text-docs-text">Playground</h1>
-              <button
-                onClick={() => {
-                  setShowInput(true);
-                  setUserInput('');
-                  setDataFormat('json');
-                  setSampleData('');
-                  setShowAdvanced(false);
-                }}
-                className="px-4 py-2 text-sm text-[#2F81F7] hover:bg-[#2F81F7]/10 rounded transition-colors"
-              >
-                + New Session
-              </button>
               <textarea
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
@@ -730,20 +719,20 @@ ${result.output.details.critique.reasoning}`;
           </div>
         )}
         <div className="grid grid-cols-12 h-full">
-          
           {/* Left Sidebar: Session History */}
-          <aside className="col-span-2 bg-[#161B22] border-r border-[#30363D] overflow-y-auto">
+          <aside className="col-span-3 bg-[#161B22] border-r border-[#30363D] overflow-y-auto">
             <div className="p-6">
               <h2 className="text-2xl font-normal text-white mb-6">Sessions</h2>
-              {!showInput && (
-                <button
-                  className="mb-6 w-full bg-[#2F81F7] text-white py-2 rounded hover:bg-[#2F81F7]/90 transition-colors text-sm font-normal"
-                  onClick={handleNewSession}
-                >
-                  + New Session
-                </button>
-              )}
-              <div className="space-y-2">
+              
+              {/* New Session Button - Always at top */}
+              <button
+                className="mb-6 w-full bg-[#2F81F7] text-white py-3 rounded-md hover:bg-[#2F81F7]/90 transition-colors text-base font-normal flex items-center justify-center"
+                onClick={handleNewSession}
+              >
+                + New Session
+              </button>
+
+              <div className="space-y-4">
                 {sessions.map((session) => (
                   <div
                     key={session.id}
@@ -751,122 +740,53 @@ ${result.output.details.critique.reasoning}`;
                       setActiveSessionId(session.id);
                       setShowInput(false);
                     }}
-                    className={`p-3 rounded cursor-pointer ${
-                      session.id === activeSessionId ? 'bg-[#21262D]' : 'hover:bg-[#21262D]/50'
-                    }`}
+                    className={`p-4 rounded-lg bg-[#21262D] cursor-pointer`}
                   >
-                    <p className="text-sm font-normal text-white">Session {session.id.slice(-5)}</p>
-                    <p className="text-xs text-[#8B949E] truncate">{session.description}</p>
+                    {/* Session Header */}
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-base font-normal text-white">Session {session.id.slice(-5)}</p>
+                        <span className="text-sm text-[#2F81F7]">
+                          {session.status === 'running' ? 'Running' : ''}
+                        </span>
+                      </div>
+                      <p className="text-sm text-[#8B949E]">{session.description}</p>
+                    </div>
+
+                    {/* Agent Status List */}
+                    <div className="space-y-3">
+                      {session.steps.map((step, idx) => (
+                        <div
+                          key={idx}
+                          ref={el => { agentOutputRefs.current[idx] = el; }}
+                          className="flex items-center gap-3 cursor-pointer"
+                          onClick={e => {
+                            e.stopPropagation();
+                            // Scroll to the agent output in the right panel
+                            agentOutputRefs.current[idx]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }}
+                        >
+                          <div className={`w-2 h-2 rounded-full ${
+                            step.status === 'completed' ? 'bg-green-500' :
+                            step.status === 'running' ? 'bg-[#2F81F7]' :
+                            'bg-[#30363D]'
+                          }`} />
+                          <span className="text-sm text-white font-normal">{step.name}</span>
+                          {step.status === 'running' && (
+                            <div className="ml-auto w-4 h-4 border-2 border-[#2F81F7] border-t-transparent rounded-full animate-spin" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           </aside>
 
-          {/* Main Content */}
-          {/*
-          <main className={`${showInput ? 'col-span-10' : 'col-span-4'} bg-[#0D1117] overflow-y-auto`}>
-            {showInput ? (
-              <div className="p-6 space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-[#8B949E] mb-2">
-                    Problem Description
-                  </label>
-                  <textarea
-                    value={userInput}
-                    onChange={(e) => setUserInput(e.target.value)}
-                    placeholder="Describe your optimization problem... (e.g., Optimize delivery fleet for cost and time)"
-                    className="w-full p-4 border border-[#30363D] rounded-md h-32 bg-[#161B22] text-white placeholder-[#8B949E]/50"
-                    autoFocus
-                  />
-                </div>
-               
-                <button
-                  onClick={handleStartSession}
-                  disabled={!userInput.trim()}
-                  className="w-full mt-6 px-6 py-3 bg-[#2F81F7] text-white rounded hover:bg-[#2F81F7]/90 transition-colors disabled:opacity-50"
-                >
-                  Start Optimization
-                </button>
-              </div>
-            ) : (
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-normal text-white">Agent Execution Timeline</h2>
-                  <button
-                    onClick={() => {
-                      setShowInput(true);
-                      setUserInput('');
-                      setDataFormat('json');
-                      setSampleData('');
-                      setShowAdvanced(false);
-                    }}
-                    className="px-4 py-2 text-sm text-[#2F81F7] hover:bg-[#2F81F7]/10 rounded transition-colors"
-                  >
-                    + New Session
-                  </button>
-                </div>
-                
-                <div className="space-y-4">
-                  {getCurrentSession()?.steps.map((step, idx) => (
-                    <div
-                      key={idx}
-                      className={`transition-all duration-700 ease-in-out overflow-hidden p-4 rounded-lg bg-[#161B22] ${
-                        step.status === 'completed' 
-                          ? 'border border-green-500/20' 
-                          : step.status === 'running'
-                          ? 'border border-[#2F81F7]/20'
-                          : 'border border-[#30363D]'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="flex items-center gap-3">
-                            <h3 className="font-normal text-white">{step.name}</h3>
-                            <span className="text-xs text-[#8B949E] px-2 py-1 rounded bg-[#30363D]/50">
-                              {step.agent}
-                            </span>
-                          </div>
-                          <p className="text-sm text-[#8B949E] mt-1">{step.description}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {step.status === 'pending' && (
-                            <span className="text-[#8B949E]">Pending</span>
-                          )}
-                          {step.status === 'running' && (
-                            <>
-                              <div className="w-4 h-4 border-2 border-[#2F81F7] border-t-transparent rounded-full animate-spin" />
-                              <span className="text-[#2F81F7]">Running</span>
-                            </>
-                          )}
-                          {step.status === 'completed' && (
-                            <>
-                              <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                              <span className="text-green-500">Completed</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {step.output && (
-                        <div className="mt-4 p-4 rounded bg-[#0D1117] border border-[#30363D]">
-                          <pre className="text-sm text-[#8B949E] whitespace-pre-wrap">
-                            {typeof step.output === 'string' ? step.output : JSON.stringify(step.output, null, 2)}
-                          </pre>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </main>
-            */}
-          {/* Right Panel: Agent Logs */}
+          {/* Right Panel: Agent Communication */}
           {activeSessionId && !showInput && (
-            <aside className="col-span-10 bg-[#161B22] border-l border-[#30363D] overflow-y-auto">
+            <aside className="col-span-9 bg-[#161B22] overflow-y-auto">
               <div className="p-6">
                 <h2 className="text-2xl font-normal text-white mb-6">Agent Interaction Log</h2>
                 
@@ -884,7 +804,11 @@ ${result.output.details.critique.reasoning}`;
                     <h3 className="text-lg font-normal text-white mb-3">Agent Communication</h3>
                     <div className="space-y-4">
                       {getCurrentSession()?.steps.map((step, idx) => (
-                        <div key={idx} className="space-y-2">
+                        <div
+                          key={idx}
+                          ref={el => { agentOutputRefs.current[idx] = el; }}
+                          className="space-y-2"
+                        >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <div className={`w-2 h-2 rounded-full ${
@@ -933,16 +857,6 @@ ${result.output.details.critique.reasoning}`;
                       ))}
                     </div>
                   </div>
-
-                  {/* 
-                  <div>
-                    <h3 className="text-lg font-normal text-white mb-3">Raw Session Data</h3>
-                    <div className="bg-[#0D1117] rounded-lg p-4">
-                      <pre className="text-xs text-[#8B949E] whitespace-pre-wrap overflow-x-auto font-mono">
-                        {JSON.stringify(getCurrentSession(), null, 2)}
-                      </pre>
-                    </div>
-                  </div> */}
                 </div>
               </div>
             </aside>
