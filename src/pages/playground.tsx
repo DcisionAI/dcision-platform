@@ -55,6 +55,24 @@ interface Alternative {
   };
 }
 
+interface Factor {
+  name: string;
+  description: string;
+}
+
+interface Tradeoff {
+  pros: string[];
+  cons: string[];
+}
+
+interface StreamingOutput {
+  plainEnglish: string;
+  json: {
+    warnings?: string[];
+    [key: string]: any;
+  };
+}
+
 export default function PlaygroundPage() {
   const [userInput, setUserInput] = useState('');
   const [problemType, setProblemType] = useState('custom');
@@ -64,6 +82,7 @@ export default function PlaygroundPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [showInput, setShowInput] = useState(true);
+  const [responseFormat, setResponseFormat] = useState<'plain' | 'json'>('plain');
 
   // Default Agent Steps Template
   const baseSteps: AgentStep[] = [
@@ -183,29 +202,58 @@ export default function PlaygroundPage() {
             const reasoning = result.output.details.reasoning as IntentReasoning;
             const alternatives = result.output.details.alternatives as Alternative[];
             
-            // Create a color based on confidence
-            const confidenceColor = confidence.overall >= 0.9 ? 'text-green-500' : 
-                                  confidence.overall >= 0.7 ? 'text-yellow-500' : 
-                                  'text-red-500';
+            // Generate an executive summary based on the main points
+            const summary = `Executive Summary:\nBased on your business needs, I recommend a solution that will ${reasoning.businessBenefits[0].toLowerCase()}. ` +
+                           `I'm highly confident this approach will work well for your specific case. ` +
+                           `To ensure success, we should focus on ${reasoning.potentialChallenges[0].toLowerCase()}.`;
+
+            const outputData = {
+              plainEnglish: `${summary}\n\n` +
+                           `Detailed Analysis:\n\n` +
+                           `I've analyzed your business requirements and identified the best approach to solve your challenges. ` +
+                           `Here's my comprehensive assessment:\n\n` +
+                           `Key Business Drivers:\n` +
+                           reasoning.keyFactors.map((f: string) => `• ${f}`).join('\n') + '\n\n' +
+                           `Expected Business Outcomes:\n` +
+                           reasoning.businessBenefits.map((b: string) => `• ${b}`).join('\n') + '\n\n' +
+                           `Implementation Considerations:\n` +
+                           reasoning.potentialChallenges.map((c: string) => `• ${c}`).join('\n') + '\n\n' +
+                           `Assessment Confidence:\n` +
+                           Object.entries(confidence.factors)
+                             .map(([factor, score]) => {
+                               const numScore = typeof score === 'number' ? score : parseFloat(String(score));
+                               return `• ${factor.replace(/([A-Z])/g, ' $1').toLowerCase()}: ${(numScore * 100).toFixed(1)}%`;
+                             })
+                             .join('\n') + '\n\n' +
+                           `Alternative Solutions Considered:\n` +
+                           alternatives.map((alt: Alternative) => 
+                             `${alt.type}\n` +
+                             `Context: ${alt.reasoning}\n\n` +
+                             `Benefits:\n${alt.tradeoffs.pros.map((p: string) => `• ${p}`).join('\n')}\n\n` +
+                             `Limitations:\n${alt.tradeoffs.cons.map((c: string) => `• ${c}`).join('\n')}`
+                           ).join('\n\n'),
+              json: {
+                selectedModel: result.output.selectedModel,
+                confidence: {
+                  overall: confidence.overall,
+                  factors: confidence.factors
+                },
+                reasoning: {
+                  mainReason: reasoning.mainReason,
+                  keyFactors: reasoning.keyFactors,
+                  businessBenefits: reasoning.businessBenefits,
+                  potentialChallenges: reasoning.potentialChallenges
+                },
+                alternatives: alternatives.map(alt => ({
+                  type: alt.type,
+                  confidence: alt.confidence,
+                  reasoning: alt.reasoning,
+                  tradeoffs: alt.tradeoffs
+                }))
+              }
+            };
             
-            output = `Problem Type: ${result.output.selectedModel}\n\n` +
-                    `Confidence Analysis:\n` +
-                    `Overall: ${(confidence.overall * 100).toFixed(1)}%\n` +
-                    Object.entries(confidence.factors)
-                      .map(([factor, score]) => `${factor}: ${(Number(score) * 100).toFixed(1)}%`)
-                      .join('\n') +
-                    '\n\nReasoning:\n' +
-                    `${reasoning.mainReason}\n\n` +
-                    'Key Factors:\n' + reasoning.keyFactors.map((f: string) => `• ${f}`).join('\n') + '\n\n' +
-                    'Business Benefits:\n' + reasoning.businessBenefits.map((b: string) => `• ${b}`).join('\n') + '\n\n' +
-                    'Potential Challenges:\n' + reasoning.potentialChallenges.map((c: string) => `• ${c}`).join('\n') + '\n\n' +
-                    'Alternative Approaches:\n' +
-                    alternatives.map((alt: Alternative) => 
-                      `${alt.type} (${(alt.confidence * 100).toFixed(1)}% confidence)\n` +
-                      `Reasoning: ${alt.reasoning}\n` +
-                      'Pros:\n' + alt.tradeoffs.pros.map((p: string) => `• ${p}`).join('\n') + '\n' +
-                      'Cons:\n' + alt.tradeoffs.cons.map((c: string) => `• ${c}`).join('\n')
-                    ).join('\n\n');
+            output = JSON.stringify(outputData);
             
             // Update the session's problem type
             setSessions(prev => prev.map(s => 
@@ -217,18 +265,29 @@ export default function PlaygroundPage() {
             // Update the session object for subsequent steps
             session.problemType = result.output.selectedModel as ProblemType;
           } else {
-            output = `Error: ${result.output?.error || 'Unknown error'}`;
+            const errorData = {
+              plainEnglish: `Sorry, I encountered an error while analyzing your request: ${result.output?.error || 'Unknown error'}`,
+              json: {
+                error: result.output?.error || 'Unknown error'
+              }
+            };
+            output = JSON.stringify(errorData);
           }
         } catch (error) {
           console.error('Intent interpreter error:', error);
-          output = `Error: ${error instanceof Error ? error.message : 'Failed to interpret intent'}`;
+          const errorData = {
+            plainEnglish: `Sorry, I ran into a problem while trying to understand your request: ${error instanceof Error ? error.message : 'Failed to interpret intent'}`,
+            json: {
+              error: error instanceof Error ? error.message : 'Failed to interpret intent'
+            }
+          };
+          output = JSON.stringify(errorData);
         }
       }
 
       // Call data mapping API for the second step
       if (baseSteps[i].name === 'DataMappingAgent') {
         try {          
-          // Create EventSource for streaming response
           const response = await fetch('/api/mcp/map', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -240,13 +299,16 @@ export default function PlaygroundPage() {
             })
           });
 
-          // Create a ReadableStream from the response
           const reader = response.body?.getReader();
           if (!reader) {
             throw new Error('Stream not available');
           }
 
-          let streamingOutput = '';
+          let streamingOutput: StreamingOutput = {
+            plainEnglish: '',
+            json: {}
+          };
+          
           const decoder = new TextDecoder();
 
           while (true) {
@@ -263,66 +325,138 @@ export default function PlaygroundPage() {
                   
                   switch (data.type) {
                     case 'start':
-                      streamingOutput = `Starting Data Mapping Process\n` +
-                                      `Problem Type: ${data.problemType}\n` +
-                                      `User Input: ${data.userInput}\n\n`;
+                      streamingOutput.plainEnglish = `Starting Data Mapping Process\n` +
+                                                   `I'll analyze your ${data.problemType} problem based on your description: "${data.userInput}"\n\n`;
+                      streamingOutput.json = {
+                        type: 'start',
+                        problemType: data.problemType,
+                        userInput: data.userInput
+                      };
                       break;
                     
                     case 'progress':
-                      streamingOutput += `${data.message}\n`;
+                      streamingOutput.plainEnglish += `${data.message}\n`;
                       if (data.stage) {
-                        streamingOutput += `Stage: ${data.stage}\n`;
+                        streamingOutput.plainEnglish += `Currently working on: ${data.stage}\n`;
                       }
                       if (data.customerFields) {
-                        streamingOutput += `Customer Fields: ${data.customerFields.join(', ')}\n`;
+                        streamingOutput.plainEnglish += `I found these fields in your data: ${data.customerFields.join(', ')}\n`;
                       }
                       if (data.requiredFields) {
-                        streamingOutput += `Required Fields: ${data.requiredFields.join(', ')}\n`;
+                        streamingOutput.plainEnglish += `The optimization model needs these fields: ${data.requiredFields.join(', ')}\n`;
                       }
+                      
+                      streamingOutput.json = {
+                        ...streamingOutput.json,
+                        progress: {
+                          message: data.message,
+                          stage: data.stage,
+                          customerFields: data.customerFields,
+                          requiredFields: data.requiredFields
+                        }
+                      };
                       break;
                     
                     case 'warning':
-                      streamingOutput += `Warning: ${data.message}\n`;
+                      streamingOutput.plainEnglish += `⚠️ Warning: ${data.message}\n`;
+                      streamingOutput.json = {
+                        ...streamingOutput.json,
+                        warnings: [...(streamingOutput.json.warnings || []), data.message]
+                      };
                       break;
                     
                     case 'complete':
                       if (data.output?.success) {
                         const { fieldRequirements, mappings, unmappedFields, suggestedActions } = data.output;
                         
-                        streamingOutput += '\nField Requirements Analysis:\n' +
-                                         JSON.stringify(fieldRequirements, null, 2) + '\n\n' +
-                                         'Field Mappings:\n' +
-                                         JSON.stringify(mappings, null, 2) + '\n\n';
+                        // Generate an executive summary of the data analysis
+                        const totalFields = (Object.values(fieldRequirements) as Record<string, any>[]).reduce(
+                          (acc: number, category: Record<string, any>) => acc + Object.keys(category).length, 
+                          0
+                        );
+                        const mappedFields = Object.keys(mappings).length;
+                        const unmappedCount = unmappedFields?.length || 0;
+                        
+                        const summary = `Executive Summary:\nI've analyzed your business data and identified ${mappedFields} key data points we can use immediately. ` +
+                                       `${unmappedCount > 0 ? `There are ${unmappedCount} additional data points we could leverage to enhance the solution. ` : ''}` +
+                                       `${suggestedActions?.length ? `To maximize value, consider ${suggestedActions[0].toLowerCase()}.` : ''}`;
+
+                        // Plain English format
+                        streamingOutput.plainEnglish = `${summary}\n\n` +
+                                                      `Detailed Analysis:\n\n` +
+                                                      `Here's a breakdown of how we can use your business data:\n\n` +
+                                                      `Required Information:\n`;
+                        Object.entries(fieldRequirements).forEach(([category, fields]: [string, any]) => {
+                          streamingOutput.plainEnglish += `\n${category}:\n`;
+                          Object.entries(fields).forEach(([fieldName, details]: [string, any]) => {
+                            streamingOutput.plainEnglish += `• ${fieldName}:\n`;
+                            streamingOutput.plainEnglish += `  - Purpose: ${details.description}\n`;
+                            streamingOutput.plainEnglish += `  - Format: ${details.data_type}\n`;
+                            streamingOutput.plainEnglish += `  - Priority: ${details.importance}\n`;
+                            if (details.validation?.length > 0) {
+                              streamingOutput.plainEnglish += `  - Data Quality Needs: ${details.validation.join(', ')}\n`;
+                            }
+                          });
+                        });
+                        
+                        streamingOutput.plainEnglish += '\nHow your data maps to what we need:\n';
+                        Object.entries(mappings).forEach(([source, target]) => {
+                          streamingOutput.plainEnglish += `• Your "${source}" field will be used as our "${target}"\n`;
+                        });
                         
                         if (unmappedFields?.length > 0) {
-                          streamingOutput += `Unmapped Fields: ${unmappedFields.join(', ')}\n`;
+                          streamingOutput.plainEnglish += `\nFields we couldn't map yet: ${unmappedFields.join(', ')}\n`;
                         }
                         
                         if (suggestedActions?.length > 0) {
-                          streamingOutput += `\nSuggested Actions:\n${suggestedActions.join('\n')}\n`;
+                          streamingOutput.plainEnglish += `\nRecommended next steps:\n${suggestedActions.map((action: string) => `• ${action}`).join('\n')}\n`;
                         }
 
                         if (data.thoughtProcess) {
-                          streamingOutput += `\nThought Process:\n${data.thoughtProcess}\n`;
+                          streamingOutput.plainEnglish += `\nMy thinking process:\n${data.thoughtProcess}\n`;
                         }
                         
-                        output = streamingOutput;
+                        // JSON format
+                        streamingOutput.json = {
+                          ...streamingOutput.json,
+                          fieldRequirements,
+                          mappings,
+                          unmappedFields,
+                          suggestedActions,
+                          thoughtProcess: data.thoughtProcess
+                        };
+                        
+                        output = JSON.stringify(streamingOutput);
                         updateStepStatus(sessionId, i, 'completed', output);
                       } else {
-                        output = `Error: ${data.output?.error || 'Unknown error'}`;
+                        const errorMsg = `Error: ${data.output?.error || 'Unknown error'}`;
+                        streamingOutput.plainEnglish += `\n${errorMsg}`;
+                        streamingOutput.json = {
+                          ...streamingOutput.json,
+                          error: data.output?.error
+                        };
+                        output = JSON.stringify(streamingOutput);
                         updateStepStatus(sessionId, i, 'error', output);
                       }
                       break;
                     
                     case 'error':
-                      output = `Error: ${data.error}\nDetails: ${data.details || 'No details available'}`;
+                      const errorDetails = `Error: ${data.error}\nDetails: ${data.details || 'No details available'}`;
+                      streamingOutput.plainEnglish += `\n${errorDetails}`;
+                      streamingOutput.json = {
+                        ...streamingOutput.json,
+                        error: data.error,
+                        errorDetails: data.details
+                      };
+                      output = JSON.stringify(streamingOutput);
                       updateStepStatus(sessionId, i, 'error', output);
                       break;
                   }
                   
                   // Update status for non-complete/error events
                   if (!['complete', 'error'].includes(data.type)) {
-                    updateStepStatus(sessionId, i, 'running', streamingOutput);
+                    output = JSON.stringify(streamingOutput);
+                    updateStepStatus(sessionId, i, 'running', output);
                   }
                 } catch (e) {
                   console.warn('Failed to parse SSE data:', e);
@@ -332,7 +466,10 @@ export default function PlaygroundPage() {
           }
         } catch (error) {
           console.error('Data mapping error:', error);
-          output = `Error: ${error instanceof Error ? error.message : 'Failed to map data'}`;
+          output = JSON.stringify({
+            plainEnglish: `Error: ${error instanceof Error ? error.message : 'Failed to map data'}`,
+            json: { error: error instanceof Error ? error.message : 'Failed to map data' }
+          });
           updateStepStatus(sessionId, i, 'error', output);
         }
       }
@@ -393,6 +530,168 @@ export default function PlaygroundPage() {
       prev.map((session) => (session.id === sessionId ? { ...session, solutionSummary: summary } : session))
     );
   };
+
+  // Helper function to format the response in plain English
+  const formatPlainEnglish = (result: any) => {
+    const confidence = result.output.details.confidence;
+    const reasoning = result.output.details.reasoning;
+    const alternatives = result.output.details.alternatives;
+    
+    return `Based on your request, I recommend using the ${result.output.selectedModel} approach.
+
+I'm ${(confidence.overall * 100).toFixed(1)}% confident in this recommendation because:
+${reasoning.mainReason}
+
+Here's my detailed analysis:
+
+Key Factors:
+${reasoning.keyFactors.map((factor: string) => `• ${factor}`).join('\n')}
+
+Business Benefits:
+${reasoning.businessBenefits.map((benefit: string) => `• ${benefit}`).join('\n')}
+
+Potential Challenges to Consider:
+${reasoning.potentialChallenges.map((challenge: string) => `• ${challenge}`).join('\n')}
+
+My confidence is based on:
+${Object.entries(confidence.factors)
+  .map(([factor, score]) => {
+    const numScore = typeof score === 'number' ? score : parseFloat(String(score));
+    return `• ${factor.replace(/([A-Z])/g, ' $1').toLowerCase()}: ${(numScore * 100).toFixed(1)}%`;
+  })
+  .join('\n')}
+
+Alternative Approaches:
+${alternatives.map((alt: Alternative) => `
+${alt.type} (${(alt.confidence * 100).toFixed(1)}% confidence)
+${alt.reasoning}
+
+Pros:
+${alt.tradeoffs.pros.map((pro: string) => `• ${pro}`).join('\n')}
+
+Cons:
+${alt.tradeoffs.cons.map((con: string) => `• ${con}`).join('\n')}`).join('\n')}
+
+Expert Critique:
+${result.output.details.critique.reasoning}`;
+  };
+
+  // Helper function to format the response as JSON
+  const formatJson = (result: any) => {
+    return JSON.stringify(result.output.details, null, 2);
+  };
+
+  // Add these helper functions before the return statement
+  const formatPlainOutput = (output: string) => {
+    try {
+      const data = JSON.parse(output);
+      // If the output has our new format with plainEnglish field
+      if (data.plainEnglish) {
+        return data.plainEnglish;
+      }
+      // Fallback to old format
+      return output;
+    } catch (e) {
+      return output;
+    }
+  };
+
+  const formatJsonOutput = (output: string) => {
+    try {
+      const data = JSON.parse(output);
+      // If the output has our new format with json field
+      if (data.json) {
+        return JSON.stringify(data.json, null, 2);
+      }
+      // Fallback to raw output
+      return JSON.stringify(data, null, 2);
+    } catch (e) {
+      return output;
+    }
+  };
+
+  // Update the agent step display component
+  const AgentStepCard = ({ step, idx }: { step: AgentStep; idx: number }) => (
+    <div
+      key={idx}
+      className={`transition-all duration-700 ease-in-out overflow-hidden p-6 rounded-lg bg-[#161B22] ${
+        step.status === 'completed' 
+          ? 'border-2 border-green-500/20' 
+          : step.status === 'running'
+          ? 'border-2 border-[#2F81F7]/20'
+          : 'border border-[#30363D]'
+      }`}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <h3 className="text-lg font-normal text-white">{step.name}</h3>
+            <span className="text-xs text-[#8B949E] px-2 py-1 rounded-full bg-[#30363D]/50">
+              {step.agent}
+            </span>
+          </div>
+          <p className="text-sm text-[#8B949E]">{step.description}</p>
+        </div>
+        <div className="flex items-center gap-4">
+          {/* Format toggle buttons */}
+          {step.output && (
+            <div className="flex items-center gap-2 mr-4">
+              <button
+                onClick={() => setResponseFormat('plain')}
+                className={`px-2 py-1 text-xs rounded ${
+                  responseFormat === 'plain' 
+                    ? 'bg-[#2F81F7] text-white' 
+                    : 'text-[#8B949E] hover:bg-[#30363D]'
+                }`}
+              >
+                Plain English
+              </button>
+              <button
+                onClick={() => setResponseFormat('json')}
+                className={`px-2 py-1 text-xs rounded ${
+                  responseFormat === 'json' 
+                    ? 'bg-[#2F81F7] text-white' 
+                    : 'text-[#8B949E] hover:bg-[#30363D]'
+                }`}
+              >
+                JSON
+              </button>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            {step.status === 'pending' && (
+              <span className="text-[#8B949E]">Pending</span>
+            )}
+            {step.status === 'running' && (
+              <>
+                <div className="w-4 h-4 border-2 border-[#2F81F7] border-t-transparent rounded-full animate-spin" />
+                <span className="text-[#2F81F7]">Running</span>
+              </>
+            )}
+            {step.status === 'completed' && (
+              <>
+                <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="text-green-500">Completed</span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {step.output && (
+        <div className="mt-4 p-4 rounded bg-[#0D1117] border border-[#30363D]">
+          <pre className="text-sm text-[#8B949E] whitespace-pre-wrap font-mono">
+            {responseFormat === 'plain' 
+              ? formatPlainOutput(step.output)
+              : formatJsonOutput(step.output)
+            }
+          </pre>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <Layout>
@@ -584,17 +883,48 @@ export default function PlaygroundPage() {
                     <div className="space-y-4">
                       {getCurrentSession()?.steps.map((step, idx) => (
                         <div key={idx} className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${
-                              step.status === 'completed' ? 'bg-green-500' :
-                              step.status === 'running' ? 'bg-[#2F81F7]' :
-                              step.status === 'error' ? 'bg-red-500' : 'bg-[#8B949E]'
-                            }`} />
-                            <span className="text-sm font-normal text-white">{step.name}</span>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-2 h-2 rounded-full ${
+                                step.status === 'completed' ? 'bg-green-500' :
+                                step.status === 'running' ? 'bg-[#2F81F7]' :
+                                step.status === 'error' ? 'bg-red-500' : 'bg-[#8B949E]'
+                              }`} />
+                              <span className="text-sm font-normal text-white">{step.name}</span>
+                            </div>
+                            {step.output && (
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => setResponseFormat('plain')}
+                                  className={`px-2 py-1 text-xs rounded ${
+                                    responseFormat === 'plain' 
+                                      ? 'bg-[#2F81F7] text-white' 
+                                      : 'text-[#8B949E] hover:bg-[#30363D]'
+                                  }`}
+                                >
+                                  Plain English
+                                </button>
+                                <button
+                                  onClick={() => setResponseFormat('json')}
+                                  className={`px-2 py-1 text-xs rounded ${
+                                    responseFormat === 'json' 
+                                      ? 'bg-[#2F81F7] text-white' 
+                                      : 'text-[#8B949E] hover:bg-[#30363D]'
+                                  }`}
+                                >
+                                  JSON
+                                </button>
+                              </div>
+                            )}
                           </div>
                           {step.output && (
                             <div className="ml-4 pl-4 border-l border-[#30363D]">
-                              <pre className="text-xs text-[#8B949E] whitespace-pre-wrap font-mono bg-[#0D1117] p-3 rounded">{step.output}</pre>
+                              <pre className="text-xs text-[#8B949E] whitespace-pre-wrap font-mono bg-[#0D1117] p-3 rounded">
+                                {responseFormat === 'plain' 
+                                  ? formatPlainOutput(step.output)
+                                  : formatJsonOutput(step.output)
+                                }
+                              </pre>
                             </div>
                           )}
                         </div>
