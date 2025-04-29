@@ -14,24 +14,70 @@ export const AuthContext = createContext<AuthContextType>({
   resetPassword: async () => {}
 });
 
+const DEMO_USER = {
+  email: 'amdhavle@me.com',
+  password: 'demouser123'
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const supabase = createClientComponentClient();
 
+  const signInDemoUser = async () => {
+    try {
+      console.log('Attempting to sign in demo user...');
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: DEMO_USER.email,
+        password: DEMO_USER.password,
+      });
+      
+      if (error) {
+        console.error('Demo user sign in failed:', error.message);
+        return;
+      }
+
+      if (data?.user) {
+        console.log('Demo user signed in successfully');
+        setUser(data.user);
+      }
+    } catch (error) {
+      console.error('Error during demo user sign in:', error);
+    }
+  };
+
   useEffect(() => {
     // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session?.user) {
+          // No active session, attempt demo user sign in
+          await signInDemoUser();
+        } else {
+          setUser(session.user);
+        }
+      } catch (error) {
+        console.error('Error checking session:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // Listen for changes on auth state (signed in, signed out, etc.)
+    initializeAuth();
+
+    // Listen for changes on auth state
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+      } else {
+        // If signed out, attempt demo user sign in
+        await signInDemoUser();
+      }
       setLoading(false);
     });
 

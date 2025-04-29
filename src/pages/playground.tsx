@@ -844,7 +844,7 @@ ${result.output.details.critique.reasoning}`;
         {showInput && (
           <div className="max-w-4xl mx-auto p-8 space-y-8">
             <div className="space-y-4">
-              <h1 className="text-2xl font-medium text-white">Decision Optimization Playground</h1>
+              <h1 className="text-2xl font-medium text-white">DcisionAI Playground</h1>
               <p className="text-[#8B949E] text-sm">Define your business optimization challenge and let our AI assist you in finding the best solution.</p>
               
               {/* How it works section */}
@@ -866,7 +866,7 @@ ${result.output.details.critique.reasoning}`;
                     <svg className="w-5 h-5 text-[#2F81F7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
-                    <h3 className="text-white text-sm font-medium">Real Data Integration</h3>
+                    <h3 className="text-white text-sm font-medium">Plug-in Architecture</h3>
                   </div>
                   <p className="text-[#8B949E] text-sm">
                     Using Supabase as an example, we've set up a customer database to demonstrate our flexible plugin architecture—showcasing real data integration and extensibility for your business needs.
@@ -883,11 +883,7 @@ ${result.output.details.critique.reasoning}`;
                   <p className="text-[#8B949E] text-sm">
                     MCP standardizes how AI agents understand and translate business context into optimization models, with built-in explainability and human validation at critical decision points.
                   </p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-[#2F81F7]/10 text-[#2F81F7]">Context</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-[#2F81F7]/10 text-[#2F81F7]">Model</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-[#2F81F7]/10 text-[#2F81F7]">Protocol</span>
-                  </div>
+                 
                 </div>
               </div>
 
@@ -910,7 +906,7 @@ ${result.output.details.critique.reasoning}`;
                   </svg>
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-[#2F81F7]"></div>
-                    <span>Model Selection</span>
+                    <span>DcisionAI Model Selection</span>
                   </div>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
