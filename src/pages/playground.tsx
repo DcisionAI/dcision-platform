@@ -356,71 +356,7 @@ export default function PlaygroundPage() {
                     autoFocus
                   />
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-[#8B949E] mb-2">
-                    Problem Type
-                  </label>
-                  <select
-                    value={problemType}
-                    onChange={(e) => setProblemType(e.target.value)}
-                    className="w-full p-3 border border-[#30363D] rounded-md bg-[#161B22] text-white"
-                  >
-                    <option value="custom">Custom Problem</option>
-                    <option value="vehicle_routing">Vehicle Routing</option>
-                    <option value="job_shop">Job Shop Scheduling</option>
-                    <option value="bin_packing">Bin Packing</option>
-                    <option value="resource_scheduling">Resource Scheduling</option>
-                    <option value="fleet_scheduling">Fleet Scheduling</option>
-                    <option value="project_scheduling">Project Scheduling</option>
-                    <option value="nurse_scheduling">Nurse Scheduling</option>
-                    <option value="production_planning">Production Planning</option>
-                  </select>
-                </div>
-
-                <div>
-                  <button
-                    onClick={() => setShowAdvanced(!showAdvanced)}
-                    className="text-[#2F81F7] hover:text-[#2F81F7]/90 transition-colors text-sm flex items-center gap-2"
-                  >
-                    {showAdvanced ? 'Hide' : 'Show'} Advanced Options
-                    <svg className={`w-4 h-4 transform transition-transform ${showAdvanced ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                </div>
-
-                {showAdvanced && (
-                  <div className="space-y-6 pt-4">
-                    <div>
-                      <label className="block text-sm font-medium text-[#8B949E] mb-2">
-                        Data Format
-                      </label>
-                      <select
-                        value={dataFormat}
-                        onChange={(e) => setDataFormat(e.target.value)}
-                        className="w-full p-3 border border-[#30363D] rounded-md bg-[#161B22] text-white"
-                      >
-                        <option value="json">JSON</option>
-                        <option value="csv">CSV</option>
-                        <option value="excel">Excel</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-[#8B949E] mb-2">
-                        Sample Data (Optional)
-                      </label>
-                      <textarea
-                        value={sampleData}
-                        onChange={(e) => setSampleData(e.target.value)}
-                        placeholder="Paste your sample data here..."
-                        className="w-full p-4 border border-[#30363D] rounded-md h-48 bg-[#161B22] text-white placeholder-[#8B949E]/50 font-mono text-sm"
-                      />
-                    </div>
-                  </div>
-                )}
-
+               
                 <button
                   onClick={handleStartSession}
                   disabled={!userInput.trim()}
@@ -437,7 +373,6 @@ export default function PlaygroundPage() {
                     onClick={() => {
                       setShowInput(true);
                       setUserInput('');
-                      setProblemType('custom');
                       setDataFormat('json');
                       setSampleData('');
                       setShowAdvanced(false);
