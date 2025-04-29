@@ -696,37 +696,39 @@ ${result.output.details.critique.reasoning}`;
   return (
     <Layout>
       <div className="h-[calc(100vh-4rem)] bg-[#0D1117]">
-              <div className="p-1 space-y-6">
-                <div>
-                <h1 className="text-3xl font-bold mb-4 text-docs-text">Playground</h1>
-                  <button
-                    onClick={() => {
-                      setShowInput(true);
-                      setUserInput('');
-                      setDataFormat('json');
-                      setSampleData('');
-                      setShowAdvanced(false);
-                    }}
-                    className="px-4 py-2 text-sm text-[#2F81F7] hover:bg-[#2F81F7]/10 rounded transition-colors"
-                  >
-                    + New Session
-                  </button>
-                  <textarea
-                    value={userInput}
-                    onChange={(e) => setUserInput(e.target.value)}
-                    placeholder="Describe what you are trying to decide... (e.g., Optimize delivery fleet for cost and time)"
-                    className="w-full p-4 border border-[#30363D] rounded-md h-32 bg-[#161B22] text-white placeholder-[#8B949E]/50"
-                    autoFocus
-                  />
-                </div>
-                <button
-                  onClick={handleStartSession}
-                  disabled={!userInput.trim()}
-                  className="w-full mt-6 px-6 py-3 bg-[#2F81F7] text-white rounded hover:bg-[#2F81F7]/90 transition-colors disabled:opacity-50"
-                >
-                  Start Optimization
-                </button>
-              </div>
+        {showInput && (
+          <div className="p-1 space-y-6">
+            <div>
+            <h1 className="text-3xl font-bold mb-4 text-docs-text">Playground</h1>
+              <button
+                onClick={() => {
+                  setShowInput(true);
+                  setUserInput('');
+                  setDataFormat('json');
+                  setSampleData('');
+                  setShowAdvanced(false);
+                }}
+                className="px-4 py-2 text-sm text-[#2F81F7] hover:bg-[#2F81F7]/10 rounded transition-colors"
+              >
+                + New Session
+              </button>
+              <textarea
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
+                placeholder="Describe what you are trying to decide... (e.g., Optimize delivery fleet for cost and time)"
+                className="w-full p-4 border border-[#30363D] rounded-md h-32 bg-[#161B22] text-white placeholder-[#8B949E]/50"
+                autoFocus
+              />
+            </div>
+            <button
+              onClick={handleStartSession}
+              disabled={!userInput.trim()}
+              className="w-full mt-6 px-6 py-3 bg-[#2F81F7] text-white rounded hover:bg-[#2F81F7]/90 transition-colors disabled:opacity-50"
+            >
+              Start DcisionAI
+            </button>
+          </div>
+        )}
         <div className="grid grid-cols-12 h-full">
           
           {/* Left Sidebar: Session History */}
