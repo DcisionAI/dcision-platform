@@ -68,7 +68,10 @@ interface Tradeoff {
 interface StreamingOutput {
   plainEnglish: string;
   json: {
-    warnings?: string[];
+    warnings?: Array<{
+      message: string;
+      details?: string;
+    }>;
     [key: string]: any;
   };
 }
@@ -83,7 +86,15 @@ export default function PlaygroundPage() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [showInput, setShowInput] = useState(true);
   const [responseFormat, setResponseFormat] = useState<'plain' | 'json'>('plain');
+  const [expandedAgents, setExpandedAgents] = useState<Set<number>>(new Set([0]));
   const agentOutputRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Add effect to ensure intent agent is expanded initially
+  useEffect(() => {
+    if (activeSessionId) {
+      setExpandedAgents(new Set([0]));
+    }
+  }, [activeSessionId]);
 
   // Default Agent Steps Template
   const baseSteps: AgentStep[] = [
@@ -158,6 +169,8 @@ export default function PlaygroundPage() {
     setSessions([...sessions, newSession]);
     setActiveSessionId(newSession.id);
     setShowInput(false);
+    // Ensure IntentInterpreterAgent is expanded
+    setExpandedAgents(new Set([0]));
     runSession(newSession.id, newSession);
   };
 
@@ -296,9 +309,13 @@ export default function PlaygroundPage() {
               sessionId: session.sessionId,
               problemType: session.problemType,
               userInput: session.description,
-              sampleData: session.sampleData
+              sampleData: session.sampleData || '{}'  // Ensure we always send some data
             })
           });
+
+          if (!response.ok) {
+            throw new Error(`Data mapping failed with status: ${response.status}`);
+          }
 
           const reader = response.body?.getReader();
           if (!reader) {
@@ -307,17 +324,28 @@ export default function PlaygroundPage() {
 
           let streamingOutput: StreamingOutput = {
             plainEnglish: '',
-            json: {}
+            json: {
+              progress: [],
+              warnings: [],
+              mappings: {},
+              fieldRequirements: {},
+              unmappedFields: []
+            }
           };
           
           const decoder = new TextDecoder();
+          let accumulatedData = '';
 
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
 
             const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split('\n');
+            accumulatedData += chunk;
+            
+            // Process complete lines
+            const lines = accumulatedData.split('\n');
+            accumulatedData = lines.pop() || ''; // Keep the incomplete line for next iteration
 
             for (let line of lines) {
               if (line.startsWith('data: ')) {
@@ -326,9 +354,12 @@ export default function PlaygroundPage() {
                   
                   switch (data.type) {
                     case 'start':
-                      streamingOutput.plainEnglish = `Starting Data Mapping Process\n` +
-                                                   `I'll analyze your ${data.problemType} problem based on your description: "${data.userInput}"\n\n`;
+                      streamingOutput.plainEnglish = `🔍 Starting Data Mapping Analysis\n\n` +
+                                                   `Problem Type: ${data.problemType}\n` +
+                                                   `Request: "${data.userInput}"\n\n` +
+                                                   `I'll analyze your data structure and map it to our optimization model requirements.\n\n`;
                       streamingOutput.json = {
+                        ...streamingOutput.json,
                         type: 'start',
                         problemType: data.problemType,
                         userInput: data.userInput
@@ -336,33 +367,97 @@ export default function PlaygroundPage() {
                       break;
                     
                     case 'progress':
-                      streamingOutput.plainEnglish += `${data.message}\n`;
+                      const progressMsg = `${data.message}\n`;
                       if (data.stage) {
-                        streamingOutput.plainEnglish += `Currently working on: ${data.stage}\n`;
+                        // Convert technical stages to user-friendly messages
+                        const stageMessages: { [key: string]: string } = {
+                          'field_requirements': 'Analyzing required data fields...',
+                          'field_requirements_complete': 'Field requirements analysis complete',
+                          'field_mapping': 'Mapping your data fields...',
+                          'field_mapping_complete': 'Field mapping complete'
+                        };
+                        const friendlyStage = stageMessages[data.stage] || data.stage;
+                        streamingOutput.plainEnglish += `📊 ${friendlyStage}\n`;
                       }
                       if (data.customerFields) {
-                        streamingOutput.plainEnglish += `I found these fields in your data: ${data.customerFields.join(', ')}\n`;
+                        streamingOutput.plainEnglish += `\nDetected Fields:\n${data.customerFields.map((f: string) => `• ${f}`).join('\n')}\n`;
                       }
                       if (data.requiredFields) {
-                        streamingOutput.plainEnglish += `The optimization model needs these fields: ${data.requiredFields.join(', ')}\n`;
+                        streamingOutput.plainEnglish += `\nRequired Fields:\n${data.requiredFields.map((f: string) => `• ${f}`).join('\n')}\n`;
                       }
                       
+                      // Only include technical details in JSON output
                       streamingOutput.json = {
                         ...streamingOutput.json,
-                        progress: {
+                        progress: [...(streamingOutput.json.progress || []), {
                           message: data.message,
                           stage: data.stage,
                           customerFields: data.customerFields,
-                          requiredFields: data.requiredFields
-                        }
+                          requiredFields: data.requiredFields,
+                          details: data.details
+                        }]
                       };
+
+                      // If we have field requirements, format them in a user-friendly way
+                      if (data.details?.fieldRequirements) {
+                        const { required_fields, nice_to_have_fields } = data.details.fieldRequirements;
+                        
+                        if (required_fields) {
+                          streamingOutput.plainEnglish += '\nRequired Fields:\n';
+                          Object.entries(required_fields).forEach(([field, details]: [string, any]) => {
+                            streamingOutput.plainEnglish += `• ${field}\n  - ${details.description}\n`;
+                          });
+                        }
+                        
+                        if (nice_to_have_fields) {
+                          streamingOutput.plainEnglish += '\nOptional Fields:\n';
+                          Object.entries(nice_to_have_fields).forEach(([field, details]: [string, any]) => {
+                            streamingOutput.plainEnglish += `• ${field}\n  - ${details.description}\n`;
+                            if (details.benefits?.length > 0) {
+                              streamingOutput.plainEnglish += `  - Benefits: ${details.benefits.join(', ')}\n`;
+                            }
+                          });
+                        }
+                      }
+
+                      // If we have mapping results, format them in a user-friendly way
+                      if (data.details?.mappingResult) {
+                        const { mappings, unmapped_required_fields, suggested_actions } = data.details.mappingResult;
+                        
+                        if (mappings?.length > 0) {
+                          streamingOutput.plainEnglish += '\nSuccessfully Mapped Fields:\n';
+                          mappings.forEach((mapping: any) => {
+                            streamingOutput.plainEnglish += `• ${mapping.customerField} ✓\n`;
+                          });
+                        }
+
+                        if (unmapped_required_fields?.length > 0) {
+                          streamingOutput.plainEnglish += '\nMissing Required Fields:\n';
+                          unmapped_required_fields.forEach((field: string) => {
+                            streamingOutput.plainEnglish += `• ${field}\n`;
+                          });
+                        }
+
+                        if (suggested_actions?.length > 0) {
+                          streamingOutput.plainEnglish += '\nSuggested Actions:\n';
+                          suggested_actions.forEach((action: string) => {
+                            streamingOutput.plainEnglish += `• ${action}\n`;
+                          });
+                        }
+                      }
                       break;
                     
                     case 'warning':
-                      streamingOutput.plainEnglish += `⚠️ Warning: ${data.message}\n`;
+                      streamingOutput.plainEnglish += `\n⚠️ Warning: ${data.message}\n`;
+                      if (data.details) {
+                        streamingOutput.plainEnglish += `Details: ${data.details}\n`;
+                      }
                       streamingOutput.json = {
                         ...streamingOutput.json,
-                        warnings: [...(streamingOutput.json.warnings || []), data.message]
+                        warnings: [...(streamingOutput.json.warnings || []), {
+                          message: data.message,
+                          details: data.details
+                        }]
                       };
                       break;
                     
@@ -370,95 +465,87 @@ export default function PlaygroundPage() {
                       if (data.output?.success) {
                         const { fieldRequirements, mappings, unmappedFields, suggestedActions } = data.output;
                         
-                        // Generate an executive summary of the data analysis
-                        const totalFields = (Object.values(fieldRequirements) as Record<string, any>[]).reduce(
-                          (acc: number, category: Record<string, any>) => acc + Object.keys(category).length, 
-                          0
-                        );
-                        const mappedFields = Object.keys(mappings).length;
+                        // Generate detailed summary
+                        const mappedFieldsCount = Object.keys(mappings || {}).length;
                         const unmappedCount = unmappedFields?.length || 0;
-                        
-                        const summary = `Executive Summary:\nI've analyzed your business data and identified ${mappedFields} key data points we can use immediately. ` +
-                                       `${unmappedCount > 0 ? `There are ${unmappedCount} additional data points we could leverage to enhance the solution. ` : ''}` +
-                                       `${suggestedActions?.length ? `To maximize value, consider ${suggestedActions[0].toLowerCase()}.` : ''}`;
+                        const totalRequiredFields = Object.values(fieldRequirements || {})
+                          .reduce((acc: number, category: any) => acc + Object.keys(category).length, 0);
 
-                        // Plain English format
-                        streamingOutput.plainEnglish = `${summary}\n\n` +
-                                                      `Detailed Analysis:\n\n` +
-                                                      `Here's a breakdown of how we can use your business data:\n\n` +
-                                                      `Required Information:\n`;
-                        Object.entries(fieldRequirements).forEach(([category, fields]: [string, any]) => {
+                        streamingOutput.plainEnglish += `\n✅ Data Mapping Complete\n\n` +
+                          `Summary:\n` +
+                          `• ${mappedFieldsCount} fields successfully mapped\n` +
+                          `• ${unmappedCount} fields need attention\n` +
+                          `• ${totalRequiredFields} total required fields identified\n\n` +
+                          
+                          `Detailed Field Requirements:\n`;
+
+                        Object.entries(fieldRequirements || {}).forEach(([category, fields]: [string, any]) => {
                           streamingOutput.plainEnglish += `\n${category}:\n`;
                           Object.entries(fields).forEach(([fieldName, details]: [string, any]) => {
-                            streamingOutput.plainEnglish += `• ${fieldName}:\n`;
-                            streamingOutput.plainEnglish += `  - Purpose: ${details.description}\n`;
-                            streamingOutput.plainEnglish += `  - Format: ${details.data_type}\n`;
-                            streamingOutput.plainEnglish += `  - Priority: ${details.importance}\n`;
-                            if (details.validation?.length > 0) {
-                              streamingOutput.plainEnglish += `  - Data Quality Needs: ${details.validation.join(', ')}\n`;
-                            }
+                            streamingOutput.plainEnglish += 
+                              `• ${fieldName}:\n` +
+                              `  - Purpose: ${details.description}\n` +
+                              `  - Type: ${details.data_type}\n` +
+                              `  - Required: ${details.importance === 'required' ? 'Yes' : 'No'}\n` +
+                              (details.validation?.length > 0 
+                                ? `  - Validation: ${details.validation.join(', ')}\n` 
+                                : '');
                           });
                         });
-                        
-                        streamingOutput.plainEnglish += '\nHow your data maps to what we need:\n';
-                        Object.entries(mappings).forEach(([source, target]) => {
-                          streamingOutput.plainEnglish += `• Your "${source}" field will be used as our "${target}"\n`;
-                        });
-                        
-                        if (unmappedFields?.length > 0) {
-                          streamingOutput.plainEnglish += `\nFields we couldn't map yet: ${unmappedFields.join(', ')}\n`;
-                        }
-                        
-                        if (suggestedActions?.length > 0) {
-                          streamingOutput.plainEnglish += `\nRecommended next steps:\n${suggestedActions.map((action: string) => `• ${action}`).join('\n')}\n`;
+
+                        if (Object.keys(mappings || {}).length > 0) {
+                          streamingOutput.plainEnglish += `\nField Mappings:\n`;
+                          Object.entries(mappings || {}).forEach(([source, target]) => {
+                            streamingOutput.plainEnglish += `• "${source}" → "${target}"\n`;
+                          });
                         }
 
-                        if (data.thoughtProcess) {
-                          streamingOutput.plainEnglish += `\nMy thinking process:\n${data.thoughtProcess}\n`;
+                        if (unmappedFields?.length > 0) {
+                          streamingOutput.plainEnglish += `\nUnmapped Fields (Require Attention):\n` +
+                            unmappedFields.map((field: string) => `• ${field}`).join('\n') + '\n';
                         }
-                        
-                        // JSON format
+
+                        if (suggestedActions?.length > 0) {
+                          streamingOutput.plainEnglish += `\nRecommended Actions:\n` +
+                            suggestedActions.map((action: string) => `• ${action}`).join('\n') + '\n';
+                        }
+
                         streamingOutput.json = {
                           ...streamingOutput.json,
                           fieldRequirements,
                           mappings,
                           unmappedFields,
                           suggestedActions,
-                          thoughtProcess: data.thoughtProcess
+                          summary: {
+                            mappedFields: mappedFieldsCount,
+                            unmappedFields: unmappedCount,
+                            totalRequired: totalRequiredFields
+                          }
                         };
-                        
-                        output = JSON.stringify(streamingOutput);
-                        updateStepStatus(sessionId, i, 'completed', output);
                       } else {
-                        const errorMsg = `Error: ${data.output?.error || 'Unknown error'}`;
-                        streamingOutput.plainEnglish += `\n${errorMsg}`;
+                        const errorMsg = `❌ Error: ${data.output?.error || 'Unknown error'}`;
+                        streamingOutput.plainEnglish += `\n${errorMsg}\n`;
                         streamingOutput.json = {
                           ...streamingOutput.json,
                           error: data.output?.error
                         };
-                        output = JSON.stringify(streamingOutput);
-                        updateStepStatus(sessionId, i, 'error', output);
                       }
                       break;
                     
                     case 'error':
-                      const errorDetails = `Error: ${data.error}\nDetails: ${data.details || 'No details available'}`;
-                      streamingOutput.plainEnglish += `\n${errorDetails}`;
+                      const errorDetails = `❌ Error: ${data.error}\n${data.details ? `Details: ${data.details}` : ''}`;
+                      streamingOutput.plainEnglish += `\n${errorDetails}\n`;
                       streamingOutput.json = {
                         ...streamingOutput.json,
                         error: data.error,
                         errorDetails: data.details
                       };
-                      output = JSON.stringify(streamingOutput);
-                      updateStepStatus(sessionId, i, 'error', output);
                       break;
                   }
                   
-                  // Update status for non-complete/error events
-                  if (!['complete', 'error'].includes(data.type)) {
-                    output = JSON.stringify(streamingOutput);
-                    updateStepStatus(sessionId, i, 'running', output);
-                  }
+                  // Update status for all events
+                  output = JSON.stringify(streamingOutput);
+                  updateStepStatus(sessionId, i, 'running', output);
                 } catch (e) {
                   console.warn('Failed to parse SSE data:', e);
                 }
@@ -467,10 +554,14 @@ export default function PlaygroundPage() {
           }
         } catch (error) {
           console.error('Data mapping error:', error);
-          output = JSON.stringify({
-            plainEnglish: `Error: ${error instanceof Error ? error.message : 'Failed to map data'}`,
-            json: { error: error instanceof Error ? error.message : 'Failed to map data' }
-          });
+          const errorOutput = {
+            plainEnglish: `❌ Data Mapping Error: ${error instanceof Error ? error.message : 'Failed to map data'}\n\nPlease check your input data and try again.`,
+            json: { 
+              error: error instanceof Error ? error.message : 'Failed to map data',
+              status: 'error'
+            }
+          };
+          output = JSON.stringify(errorOutput);
           updateStepStatus(sessionId, i, 'error', output);
         }
       }
@@ -519,11 +610,28 @@ export default function PlaygroundPage() {
         updatedSteps[stepIndex] = { 
           ...updatedSteps[stepIndex], 
           status, 
-          output: output || undefined // Only set output if provided
+          output: output || undefined
         };
         return { ...session, steps: updatedSteps };
       })
     );
+
+    // Auto-collapse previous steps when a new one starts running
+    if (status === 'running') {
+      setExpandedAgents(new Set([0, stepIndex])); // Keep intent agent and running agent expanded
+    }
+    // When an agent completes, keep it expanded briefly then collapse
+    // Don't auto-collapse IntentInterpreterAgent
+    if (status === 'completed' && stepIndex !== 0) {
+      setTimeout(() => {
+        setExpandedAgents(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(stepIndex);
+          newSet.add(0); // Ensure IntentInterpreterAgent stays expanded
+          return newSet;
+        });
+      }, 3000);
+    }
   };
 
   const updateSolutionSummary = (sessionId: string, summary: string) => {
@@ -611,257 +719,390 @@ ${result.output.details.critique.reasoning}`;
     }
   };
 
+  // Modify toggleAgentExpanded to properly handle IntentInterpreterAgent
+  const toggleAgentExpanded = (idx: number) => {
+    setExpandedAgents(prev => {
+      const newSet = new Set(prev);
+      if (idx === 0) {
+        // For IntentInterpreterAgent, we'll allow toggling but ensure it's expanded when needed
+        if (newSet.has(idx)) {
+          newSet.delete(idx);
+        } else {
+          newSet.add(idx);
+        }
+      } else {
+        // For other agents, keep existing toggle behavior
+        if (newSet.has(idx)) {
+          newSet.delete(idx);
+        } else {
+          newSet.add(idx);
+        }
+      }
+      return newSet;
+    });
+  };
+
   // Update the agent step display component
-  const AgentStepCard = ({ step, idx }: { step: AgentStep; idx: number }) => (
-    <div
-      key={idx}
-      className={`transition-all duration-700 ease-in-out overflow-hidden p-6 rounded-lg bg-[#161B22] ${
-        step.status === 'completed' 
-          ? 'border-2 border-green-500/20' 
-          : step.status === 'running'
-          ? 'border-2 border-[#2F81F7]/20'
-          : 'border border-[#30363D]'
-      }`}
-    >
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <h3 className="text-lg font-normal text-white">{step.name}</h3>
-            <span className="text-xs text-[#8B949E] px-2 py-1 rounded-full bg-[#30363D]/50">
-              {step.agent}
-            </span>
-          </div>
-          <p className="text-sm text-[#8B949E]">{step.description}</p>
-        </div>
-        <div className="flex items-center gap-4">
-          {/* Format toggle buttons */}
-          {step.output && (
-            <div className="flex items-center gap-2 mr-4">
-              <button
-                onClick={() => setResponseFormat('plain')}
-                className={`px-2 py-1 text-xs rounded ${
-                  responseFormat === 'plain' 
-                    ? 'bg-[#2F81F7] text-white' 
-                    : 'text-[#8B949E] hover:bg-[#30363D]'
-                }`}
-              >
-                Plain English
-              </button>
-              <button
-                onClick={() => setResponseFormat('json')}
-                className={`px-2 py-1 text-xs rounded ${
-                  responseFormat === 'json' 
-                    ? 'bg-[#2F81F7] text-white' 
-                    : 'text-[#8B949E] hover:bg-[#30363D]'
-                }`}
-              >
-                JSON
-              </button>
+  const AgentStepCard = ({ step, idx }: { step: AgentStep; idx: number }) => {
+    // Ensure IntentInterpreterAgent is expanded when running or has output
+    useEffect(() => {
+      if (idx === 0 && (step.status === 'running' || step.output)) {
+        setExpandedAgents(prev => {
+          const newSet = new Set(prev);
+          newSet.add(0);
+          return newSet;
+        });
+      }
+    }, [idx, step.status, step.output]);
+
+    return (
+      <div
+        key={idx}
+        className={`transition-all duration-700 ease-in-out overflow-hidden p-6 rounded-lg bg-[#161B22] ${
+          step.status === 'completed' 
+            ? 'border-2 border-green-500/20' 
+            : step.status === 'running'
+            ? 'border-2 border-[#2F81F7]/20'
+            : 'border border-[#30363D]'
+        }`}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <h3 className="text-lg font-normal text-white">{step.name}</h3>
+              <span className="text-xs text-[#8B949E] px-2 py-1 rounded-full bg-[#30363D]/50">
+                {step.agent}
+              </span>
             </div>
-          )}
-          <div className="flex items-center gap-2">
-            {step.status === 'pending' && (
-              <span className="text-[#8B949E]">Pending</span>
+            <p className="text-sm text-[#8B949E]">{step.description}</p>
+          </div>
+          <div className="flex items-center gap-4">
+            {/* Format toggle buttons */}
+            {step.output && (
+              <div className="flex items-center gap-2 mr-4">
+                <button
+                  onClick={() => setResponseFormat('plain')}
+                  className={`px-2 py-1 text-xs rounded ${
+                    responseFormat === 'plain' 
+                      ? 'bg-[#2F81F7] text-white' 
+                      : 'text-[#8B949E] hover:bg-[#30363D]'
+                  }`}
+                >
+                  Plain English
+                </button>
+                <button
+                  onClick={() => setResponseFormat('json')}
+                  className={`px-2 py-1 text-xs rounded ${
+                    responseFormat === 'json' 
+                      ? 'bg-[#2F81F7] text-white' 
+                      : 'text-[#8B949E] hover:bg-[#30363D]'
+                  }`}
+                >
+                  JSON
+                </button>
+              </div>
             )}
-            {step.status === 'running' && (
-              <>
-                <div className="w-4 h-4 border-2 border-[#2F81F7] border-t-transparent rounded-full animate-spin" />
-                <span className="text-[#2F81F7]">Running</span>
-              </>
-            )}
-            {step.status === 'completed' && (
-              <>
-                <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span className="text-green-500">Completed</span>
-              </>
-            )}
+            <div className="flex items-center gap-2">
+              {step.status === 'pending' && (
+                <span className="text-[#8B949E]">Pending</span>
+              )}
+              {step.status === 'running' && (
+                <>
+                  <div className="w-4 h-4 border-2 border-[#2F81F7] border-t-transparent rounded-full animate-spin" />
+                  <span className="text-[#2F81F7]">Running</span>
+                </>
+              )}
+              {step.status === 'completed' && (
+                <>
+                  <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-green-500">Completed</span>
+                </>
+              )}
+            </div>
           </div>
         </div>
+        
+        {step.output && (
+          <div className="mt-4 p-4 rounded bg-[#0D1117] border border-[#30363D]">
+            <pre className="text-sm text-[#8B949E] whitespace-pre-wrap font-mono">
+              {responseFormat === 'plain' 
+                ? formatPlainOutput(step.output)
+                : formatJsonOutput(step.output)
+              }
+            </pre>
+          </div>
+        )}
       </div>
-      
-      {step.output && (
-        <div className="mt-4 p-4 rounded bg-[#0D1117] border border-[#30363D]">
-          <pre className="text-sm text-[#8B949E] whitespace-pre-wrap font-mono">
-            {responseFormat === 'plain' 
-              ? formatPlainOutput(step.output)
-              : formatJsonOutput(step.output)
-            }
-          </pre>
-        </div>
-      )}
-    </div>
-  );
+    );
+  };
 
   return (
     <Layout>
       <div className="h-[calc(100vh-4rem)] bg-[#0D1117]">
         {showInput && (
-          <div className="p-1 space-y-6">
-            <div>
-            <h1 className="text-3xl font-bold mb-4 text-docs-text">Playground</h1>
+          <div className="max-w-4xl mx-auto p-8 space-y-8">
+            <div className="space-y-4">
+              <h1 className="text-2xl font-medium text-white">Decision Optimization Playground</h1>
+              <p className="text-[#8B949E] text-sm">Define your business optimization challenge and let our AI assist you in finding the best solution.</p>
+              
+              {/* How it works section */}
+              <div className="grid grid-cols-3 gap-4 my-8">
+                <div className="bg-[#161B22] p-6 rounded-lg border border-[#30363D] space-y-3">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5 text-[#2F81F7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
+                    </svg>
+                    <h3 className="text-white text-sm font-medium">Specialized AI Agents</h3>
+                  </div>
+                  <p className="text-[#8B949E] text-sm">
+                    Our multi-agent system works in harmony to solve complex optimization problems. Each agent specializes in a crucial aspect of the solution, from understanding intent to delivering actionable insights.
+                  </p>
+                </div>
+
+                <div className="bg-[#161B22] p-6 rounded-lg border border-[#30363D] space-y-3">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5 text-[#2F81F7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    <h3 className="text-white text-sm font-medium">Real Data Integration</h3>
+                  </div>
+                  <p className="text-[#8B949E] text-sm">
+                    Using Supabase as an example, we've set up a customer database to demonstrate our flexible plugin architecture—showcasing real data integration and extensibility for your business needs.
+                  </p>
+                </div>
+
+                <div className="bg-[#161B22] p-6 rounded-lg border border-[#30363D] space-y-3">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5 text-[#2F81F7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                    </svg>
+                    <h3 className="text-white text-sm font-medium">Model Context Protocol</h3>
+                  </div>
+                  <p className="text-[#8B949E] text-sm">
+                    MCP standardizes how AI agents understand and translate business context into optimization models, with built-in explainability and human validation at critical decision points.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-[#2F81F7]/10 text-[#2F81F7]">Context</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-[#2F81F7]/10 text-[#2F81F7]">Model</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-[#2F81F7]/10 text-[#2F81F7]">Protocol</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Process visualization */}
+              <div className="bg-[#161B22] p-6 rounded-lg border border-[#30363D] mb-6">
+                <div className="flex items-center justify-between text-sm text-[#8B949E]">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-[#2F81F7]"></div>
+                    <span>Intent Analysis</span>
+                  </div>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-[#2F81F7]"></div>
+                    <span>Data Mapping</span>
+                  </div>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-[#2F81F7]"></div>
+                    <span>Model Selection</span>
+                  </div>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-[#2F81F7]"></div>
+                    <span>Explainable Decisions</span>
+                  </div>
+                </div>
+              </div>
+
               <textarea
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
                 placeholder="Describe what you are trying to decide... (e.g., Optimize delivery fleet for cost and time)"
-                className="w-full p-4 border border-[#30363D] rounded-md h-32 bg-[#161B22] text-white placeholder-[#8B949E]/50"
+                className="w-full p-4 border border-[#30363D] rounded-lg h-24 bg-[#161B22] text-white placeholder-[#8B949E]/50 text-sm focus:border-[#2F81F7] focus:ring-1 focus:ring-[#2F81F7] transition-colors"
                 autoFocus
               />
             </div>
             <button
               onClick={handleStartSession}
               disabled={!userInput.trim()}
-              className="w-full mt-6 px-6 py-3 bg-[#2F81F7] text-white rounded hover:bg-[#2F81F7]/90 transition-colors disabled:opacity-50"
+              className="w-full px-6 py-2.5 bg-[#2F81F7] text-white text-sm font-medium rounded-lg hover:bg-[#2F81F7]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Start DcisionAI
+              See DecisionAI in Action
             </button>
           </div>
         )}
-        <div className="grid grid-cols-12 h-full">
-          {/* Left Sidebar: Session History */}
-          <aside className="col-span-3 bg-[#161B22] border-r border-[#30363D] overflow-y-auto">
-            <div className="p-6">
-              <h2 className="text-2xl font-normal text-white mb-6">Sessions</h2>
-              
-              {/* New Session Button - Always at top */}
-              <button
-                className="mb-6 w-full bg-[#2F81F7] text-white py-3 rounded-md hover:bg-[#2F81F7]/90 transition-colors text-base font-normal flex items-center justify-center"
-                onClick={handleNewSession}
-              >
-                + New Session
-              </button>
-
-              <div className="space-y-4">
-                {sessions.map((session) => (
-                  <div
-                    key={session.id}
-                    onClick={() => {
-                      setActiveSessionId(session.id);
-                      setShowInput(false);
-                    }}
-                    className={`p-4 rounded-lg bg-[#21262D] cursor-pointer`}
-                  >
-                    {/* Session Header */}
-                    <div className="mb-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-base font-normal text-white">Session {session.id.slice(-5)}</p>
-                        <span className="text-sm text-[#2F81F7]">
-                          {session.status === 'running' ? 'Running' : ''}
-                        </span>
-                      </div>
-                      <p className="text-sm text-[#8B949E]">{session.description}</p>
-                    </div>
-
-                    {/* Agent Status List */}
-                    <div className="space-y-3">
-                      {session.steps.map((step, idx) => (
-                        <div
-                          key={idx}
-                          ref={el => { agentOutputRefs.current[idx] = el; }}
-                          className="flex items-center gap-3 cursor-pointer"
-                          onClick={e => {
-                            e.stopPropagation();
-                            // Scroll to the agent output in the right panel
-                            agentOutputRefs.current[idx]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                          }}
-                        >
-                          <div className={`w-2 h-2 rounded-full ${
-                            step.status === 'completed' ? 'bg-green-500' :
-                            step.status === 'running' ? 'bg-[#2F81F7]' :
-                            'bg-[#30363D]'
-                          }`} />
-                          <span className="text-sm text-white font-normal">{step.name}</span>
-                          {step.status === 'running' && (
-                            <div className="ml-auto w-4 h-4 border-2 border-[#2F81F7] border-t-transparent rounded-full animate-spin" />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </aside>
-
-          {/* Right Panel: Agent Communication */}
-          {activeSessionId && !showInput && (
-            <aside className="col-span-9 bg-[#161B22] overflow-y-auto">
+        {(!showInput || sessions.length > 0) && (
+          <div className="grid grid-cols-12 h-full">
+            {/* Left Sidebar: Session History */}
+            <aside className="col-span-3 bg-[#161B22] border-r border-[#30363D] overflow-y-auto">
               <div className="p-6">
-                <h2 className="text-2xl font-normal text-white mb-6">Agent Interaction Log</h2>
+                <h2 className="text-2xl font-normal text-white mb-6">Sessions</h2>
                 
-                <div className="space-y-4">
-                  {/* Original Request */}
-                  <div>
-                    <h3 className="text-lg font-normal text-white mb-3">Original Request</h3>
-                    <div className="bg-[#0D1117] rounded-lg p-4">
-                      <p className="text-[#8B949E]">{getCurrentSession()?.description}</p>
-                    </div>
-                  </div>
+                {/* New Session Button - Always at top */}
+                <button
+                  className="mb-6 w-full bg-[#2F81F7] text-white py-3 rounded-md hover:bg-[#2F81F7]/90 transition-colors text-base font-normal flex items-center justify-center"
+                  onClick={handleNewSession}
+                >
+                  + New Session
+                </button>
 
-                  {/* Agent Communication */}
-                  <div>
-                    <h3 className="text-lg font-normal text-white mb-3">Agent Communication</h3>
-                    <div className="space-y-4">
-                      {getCurrentSession()?.steps.map((step, idx) => (
-                        <div
-                          key={idx}
-                          ref={el => { agentOutputRefs.current[idx] = el; }}
-                          className="space-y-2"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className={`w-2 h-2 rounded-full ${
-                                step.status === 'completed' ? 'bg-green-500' :
-                                step.status === 'running' ? 'bg-[#2F81F7]' :
-                                step.status === 'error' ? 'bg-red-500' : 'bg-[#8B949E]'
-                              }`} />
-                              <span className="text-sm font-normal text-white">{step.name}</span>
-                            </div>
-                            {step.output && (
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => setResponseFormat('plain')}
-                                  className={`px-2 py-1 text-xs rounded ${
-                                    responseFormat === 'plain' 
-                                      ? 'bg-[#2F81F7] text-white' 
-                                      : 'text-[#8B949E] hover:bg-[#30363D]'
-                                  }`}
-                                >
-                                  Plain English
-                                </button>
-                                <button
-                                  onClick={() => setResponseFormat('json')}
-                                  className={`px-2 py-1 text-xs rounded ${
-                                    responseFormat === 'json' 
-                                      ? 'bg-[#2F81F7] text-white' 
-                                      : 'text-[#8B949E] hover:bg-[#30363D]'
-                                  }`}
-                                >
-                                  JSON
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                          {step.output && (
-                            <div className="ml-4 pl-4 border-l border-[#30363D]">
-                              <pre className="text-xs text-[#8B949E] whitespace-pre-wrap font-mono bg-[#0D1117] p-3 rounded">
-                                {responseFormat === 'plain' 
-                                  ? formatPlainOutput(step.output)
-                                  : formatJsonOutput(step.output)
-                                }
-                              </pre>
-                            </div>
-                          )}
+                <div className="space-y-4">
+                  {sessions.map((session) => (
+                    <div
+                      key={session.id}
+                      onClick={() => {
+                        setActiveSessionId(session.id);
+                        setShowInput(false);
+                      }}
+                      className={`p-4 rounded-lg bg-[#21262D] cursor-pointer`}
+                    >
+                      {/* Session Header */}
+                      <div className="mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-base font-normal text-white">Session {session.id.slice(-5)}</p>
+                          <span className="text-sm text-[#2F81F7]">
+                            {session.status === 'running' ? 'Running' : ''}
+                          </span>
                         </div>
-                      ))}
+                        <p className="text-sm text-[#8B949E]">{session.description}</p>
+                      </div>
+
+                      {/* Agent Status List */}
+                      <div className="space-y-3">
+                        {session.steps.map((step, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center gap-3 cursor-pointer"
+                            onClick={e => {
+                              e.stopPropagation();
+                              // Expand the clicked agent's output and scroll to it
+                              setExpandedAgents(prev => new Set([...Array.from(prev), idx]));
+                              agentOutputRefs.current[idx]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }}
+                          >
+                            <div className={`w-2 h-2 rounded-full ${
+                              step.status === 'completed' ? 'bg-green-500' :
+                              step.status === 'running' ? 'bg-[#2F81F7]' :
+                              step.status === 'error' ? 'bg-red-500' : 'bg-[#8B949E]'
+                            }`} />
+                            <span className="text-sm text-white font-normal">{step.name}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             </aside>
-          )}
-        </div>
+
+            {/* Right Panel: Agent Communication */}
+            {activeSessionId && !showInput && (
+              <aside className="col-span-9 bg-[#161B22] overflow-y-auto">
+                <div className="p-6">
+                  <h2 className="text-2xl font-normal text-white mb-6">Agent Interaction Log</h2>
+                  
+                  <div className="space-y-4">
+                    {/* Original Request */}
+                    <div>
+                      <h3 className="text-lg font-normal text-white mb-3">Original Request</h3>
+                      <div className="bg-[#0D1117] rounded-lg p-4">
+                        <p className="text-[#8B949E]">{getCurrentSession()?.description}</p>
+                      </div>
+                    </div>
+
+                    {/* Agent Communication */}
+                    <div>
+                      <h3 className="text-lg font-normal text-white mb-3">Agent Communication</h3>
+                      <div className="space-y-4">
+                        {getCurrentSession()?.steps.map((step, idx) => (
+                          <div
+                            key={idx}
+                            ref={el => { agentOutputRefs.current[idx] = el; }}
+                            className="space-y-2"
+                          >
+                            <div 
+                              className="flex items-center justify-between cursor-pointer"
+                              onClick={() => toggleAgentExpanded(idx)}
+                            >
+                              <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${
+                                  step.status === 'completed' ? 'bg-green-500' :
+                                  step.status === 'running' ? 'bg-[#2F81F7]' :
+                                  step.status === 'error' ? 'bg-red-500' : 'bg-[#8B949E]'
+                                }`} />
+                                <span className="text-sm font-normal text-white">{step.name}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {step.output && (
+                                  <>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setResponseFormat('plain');
+                                        }}
+                                        className={`px-2 py-1 text-xs rounded ${
+                                          responseFormat === 'plain' 
+                                            ? 'bg-[#2F81F7] text-white' 
+                                            : 'text-[#8B949E] hover:bg-[#30363D]'
+                                        }`}
+                                      >
+                                        Plain English
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setResponseFormat('json');
+                                        }}
+                                        className={`px-2 py-1 text-xs rounded ${
+                                          responseFormat === 'json' 
+                                            ? 'bg-[#2F81F7] text-white' 
+                                            : 'text-[#8B949E] hover:bg-[#30363D]'
+                                        }`}
+                                      >
+                                        JSON
+                                      </button>
+                                    </div>
+                                    <svg 
+                                      className={`w-5 h-5 text-[#8B949E] transform transition-transform ${expandedAgents.has(idx) ? 'rotate-180' : ''}`} 
+                                      fill="none" 
+                                      stroke="currentColor" 
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                            {(step.output && (expandedAgents.has(idx) || step.status === 'running')) && (
+                              <div className="ml-4 pl-4 border-l border-[#30363D] transition-all duration-300">
+                                <pre className="text-xs text-[#8B949E] whitespace-pre-wrap font-mono bg-[#0D1117] p-3 rounded">
+                                  {responseFormat === 'plain' 
+                                    ? formatPlainOutput(step.output)
+                                    : formatJsonOutput(step.output)
+                                  }
+                                </pre>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+            )}
+          </div>
+        )}
       </div>
     </Layout>
   );
