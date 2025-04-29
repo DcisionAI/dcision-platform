@@ -67,6 +67,7 @@ Respond in JSON: { "isBestFit": true/false, "suggestedType": "...", "reasoning":
         details: {
           userInput,
           confidence: llmResponse.confidence || 1.0,
+          reasoning: llmResponse.reasoning || 'No reasoning provided',
           alternativeTypes: llmResponse.alternativeTypes || []
         }
       },

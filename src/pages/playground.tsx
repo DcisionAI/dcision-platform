@@ -43,14 +43,54 @@ export default function PlaygroundPage() {
 
   // Default Agent Steps Template
   const baseSteps: AgentStep[] = [
-    { name: 'Intent Interpreter Agent', description: 'Understand the business request', status: 'pending', agent: 'Intent Interpreter Agent' },
-    { name: 'Data Mapping Agent', description: 'Map customer fields to required schema', status: 'pending', agent: 'Data Mapping Agent' },
-    { name: 'Data Integration Agent', description: 'Fetch and align internal data', status: 'pending', agent: 'Data Integration Agent' },
-    { name: 'Data Enrichment Agent', description: 'Suggest and fetch external data', status: 'pending', agent: 'Data Enrichment Agent' },
-    { name: 'Model Runner Agent', description: 'Build and solve optimization model', status: 'pending', agent: 'Model Runner Agent' },
-    { name: 'Solution Explanation Agent', description: 'Explain solution in business terms', status: 'pending', agent: 'Solution Explanation Agent' },
-    { name: 'Human-in-the-Loop Agent', description: 'Facilitate human review (if enabled)', status: 'pending', agent: 'Human-in-the-Loop Agent' },
-    { name: 'Process Automation Agent', description: 'Deploy as API or scheduled workflow', status: 'pending', agent: 'Process Automation Agent' },
+    { 
+      name: 'IntentInterpreterAgent', 
+      description: 'Analyzes business request and classifies the optimization problem type (e.g., vehicle routing, job shop scheduling)',
+      status: 'pending', 
+      agent: 'IntentInterpreterAgent'
+    },
+    { 
+      name: 'DataMappingAgent', 
+      description: 'Maps customer data fields to optimization schema, validates field requirements, and suggests transformations',
+      status: 'pending', 
+      agent: 'DataMappingAgent'
+    },
+    { 
+      name: 'DataIntegrationAgent', 
+      description: 'Connects to data sources, collects required data, and performs feature engineering for optimization model',
+      status: 'pending', 
+      agent: 'DataIntegrationAgent'
+    },
+    { 
+      name: 'DataEnrichmentAgent', 
+      description: 'Enhances dataset with external data sources (weather, traffic, market data) to improve optimization',
+      status: 'pending', 
+      agent: 'DataEnrichmentAgent'
+    },
+    { 
+      name: 'ModelRunnerAgent', 
+      description: 'Constructs and solves optimization model using appropriate solver (OR-Tools) based on problem type',
+      status: 'pending', 
+      agent: 'ModelRunnerAgent'
+    },
+    { 
+      name: 'SolutionExplanationAgent', 
+      description: 'Translates optimization results into business insights and actionable recommendations',
+      status: 'pending', 
+      agent: 'SolutionExplanationAgent'
+    },
+    { 
+      name: 'HumanInTheLoopAgent', 
+      description: 'Manages review workflow for solutions requiring human validation or adjustment',
+      status: 'pending', 
+      agent: 'HumanInTheLoopAgent'
+    },
+    { 
+      name: 'ProcessAutomationAgent', 
+      description: 'Deploys solution as API endpoint or scheduled optimization workflow with monitoring',
+      status: 'pending', 
+      agent: 'ProcessAutomationAgent'
+    }
   ];
 
   const getCurrentSession = (): Session | undefined =>
@@ -84,9 +124,9 @@ export default function PlaygroundPage() {
 
   const runSession = async (sessionId: string, initialSession?: Session) => {
     const mockOutputs: Record<string, string | undefined> = {
-      'Intent Interpreter Agent': undefined,
-      'Model Runner Agent': 'Optimization model solved successfully:\n- Total route distance: 213.5 miles\n- Average vehicle utilization: 85%\n- All time windows satisfied\n- Solution found in 2.3 seconds',
-      'Solution Explanation Agent': 'Your fleet optimization achieved:\n- 22% reduction in total distance\n- 15% improvement in delivery times\n- Balanced workload across all vehicles\n- All customer time windows respected\n\nRecommended routes have been generated for each vehicle.',
+      'IntentInterpreterAgent': undefined,
+      'ModelRunnerAgent': 'Optimization model solved successfully:\n- Total route distance: 213.5 miles\n- Average vehicle utilization: 85%\n- All time windows satisfied\n- Solution found in 2.3 seconds',
+      'SolutionExplanationAgent': 'Your fleet optimization achieved:\n- 22% reduction in total distance\n- 15% improvement in delivery times\n- Balanced workload across all vehicles\n- All customer time windows respected\n\nRecommended routes have been generated for each vehicle.',
     };
 
     // Get the initial session data
@@ -103,7 +143,7 @@ export default function PlaygroundPage() {
       let output = mockOutputs[baseSteps[i].name];
       
       // Call intent interpreter API for the first step
-      if (baseSteps[i].name === 'Intent Interpreter Agent') {
+      if (baseSteps[i].name === 'IntentInterpreterAgent') {
         try {          
           const response = await fetch('/api/mcp/intent', {
             method: 'POST',
@@ -136,7 +176,7 @@ export default function PlaygroundPage() {
       }
 
       // Call data mapping API for the second step
-      if (baseSteps[i].name === 'Data Mapping Agent') {
+      if (baseSteps[i].name === 'DataMappingAgent') {
         try {          
           // Create EventSource for streaming response
           const response = await fetch('/api/mcp/map', {
@@ -248,7 +288,7 @@ export default function PlaygroundPage() {
       }
       
       // Call data integration API for the third step
-      if (baseSteps[i].name === 'Data Integration Agent') {
+      if (baseSteps[i].name === 'DataIntegrationAgent') {
         try {          
           const response = await fetch('/api/mcp/integrate', {
             method: 'POST',

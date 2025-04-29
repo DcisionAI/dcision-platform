@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { IntentInterpreterAgent } from '@server/mcp/agents/IntentInterpreterAgent';
 import { MCP } from '@server/mcp/types';
+import { callOpenAI } from '../../../../server/mcp/agents/llm/openai';
 
 const agent = new IntentInterpreterAgent();
 
@@ -58,7 +59,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const result = await agent.run(
       { action: 'interpret_intent', description: 'Interpret user intent', required: true },
-      mcp
+      mcp,
+      { llm: callOpenAI }
     );
 
     return res.status(200).json(result);
