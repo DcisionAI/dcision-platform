@@ -307,11 +307,9 @@ export default function PlaygroundPage() {
   return (
     <Layout>
       <div className="h-[calc(100vh-4rem)] bg-[#0D1117]">
-              <div className="p-6 space-y-6">
+              <div className="p-1 space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-[#8B949E] mb-2">
-                    Problem Description
-                  </label>
+                <h1 className="text-3xl font-bold mb-4 text-docs-text">Playground</h1>
                   <button
                     onClick={() => {
                       setShowInput(true);
@@ -327,7 +325,7 @@ export default function PlaygroundPage() {
                   <textarea
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
-                    placeholder="Describe your optimization problem... (e.g., Optimize delivery fleet for cost and time)"
+                    placeholder="Describe what you are trying to decide... (e.g., Optimize delivery fleet for cost and time)"
                     className="w-full p-4 border border-[#30363D] rounded-md h-32 bg-[#161B22] text-white placeholder-[#8B949E]/50"
                     autoFocus
                   />
