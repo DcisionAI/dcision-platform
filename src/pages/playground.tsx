@@ -307,7 +307,41 @@ export default function PlaygroundPage() {
   return (
     <Layout>
       <div className="h-[calc(100vh-4rem)] bg-[#0D1117]">
+              <div className="p-6 space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-[#8B949E] mb-2">
+                    Problem Description
+                  </label>
+                  <button
+                    onClick={() => {
+                      setShowInput(true);
+                      setUserInput('');
+                      setDataFormat('json');
+                      setSampleData('');
+                      setShowAdvanced(false);
+                    }}
+                    className="px-4 py-2 text-sm text-[#2F81F7] hover:bg-[#2F81F7]/10 rounded transition-colors"
+                  >
+                    + New Session
+                  </button>
+                  <textarea
+                    value={userInput}
+                    onChange={(e) => setUserInput(e.target.value)}
+                    placeholder="Describe your optimization problem... (e.g., Optimize delivery fleet for cost and time)"
+                    className="w-full p-4 border border-[#30363D] rounded-md h-32 bg-[#161B22] text-white placeholder-[#8B949E]/50"
+                    autoFocus
+                  />
+                </div>
+                <button
+                  onClick={handleStartSession}
+                  disabled={!userInput.trim()}
+                  className="w-full mt-6 px-6 py-3 bg-[#2F81F7] text-white rounded hover:bg-[#2F81F7]/90 transition-colors disabled:opacity-50"
+                >
+                  Start Optimization
+                </button>
+              </div>
         <div className="grid grid-cols-12 h-full">
+          
           {/* Left Sidebar: Session History */}
           <aside className="col-span-2 bg-[#161B22] border-r border-[#30363D] overflow-y-auto">
             <div className="p-6">
@@ -341,6 +375,7 @@ export default function PlaygroundPage() {
           </aside>
 
           {/* Main Content */}
+          {/*
           <main className={`${showInput ? 'col-span-10' : 'col-span-4'} bg-[#0D1117] overflow-y-auto`}>
             {showInput ? (
               <div className="p-6 space-y-6">
@@ -439,10 +474,10 @@ export default function PlaygroundPage() {
               </div>
             )}
           </main>
-
+            */}
           {/* Right Panel: Agent Logs */}
           {activeSessionId && !showInput && (
-            <aside className="col-span-6 bg-[#161B22] border-l border-[#30363D] overflow-y-auto">
+            <aside className="col-span-10 bg-[#161B22] border-l border-[#30363D] overflow-y-auto">
               <div className="p-6">
                 <h2 className="text-2xl font-normal text-white mb-6">Agent Interaction Log</h2>
                 
@@ -479,7 +514,7 @@ export default function PlaygroundPage() {
                     </div>
                   </div>
 
-                  {/* Raw Session Data */}
+                  {/* 
                   <div>
                     <h3 className="text-lg font-normal text-white mb-3">Raw Session Data</h3>
                     <div className="bg-[#0D1117] rounded-lg p-4">
@@ -487,7 +522,7 @@ export default function PlaygroundPage() {
                         {JSON.stringify(getCurrentSession(), null, 2)}
                       </pre>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </aside>
