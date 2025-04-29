@@ -18,6 +18,16 @@ const nextConfig = {
     return config
   },
   swcMinify: true,
+  // Add redirect configuration
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/playground',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 module.exports = withBundleAnalyzer(nextConfig) 

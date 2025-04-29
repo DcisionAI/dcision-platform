@@ -21,8 +21,8 @@ const menu = [
   {
     section: '',
     items: [
-      { href: '/dashboard', label: 'Dashboard', icon: ChartBarIcon },
       { href: '/playground', label: 'Playground', icon: CodeBracketIcon },
+      { href: '/dashboard', label: 'Dashboard', icon: ChartBarIcon },
       { href: '/agents', label: 'Agents', icon: BeakerIcon },
       { href: '/data-integration', label: 'Data Integration', icon: ArrowsPointingInIcon },
       { href: '/explainability', label: 'Explainability', icon: LightBulbIcon },
@@ -46,7 +46,7 @@ export default function Sidebar() {
   const [isExpanded, setIsExpanded] = useState(true);
 
   const isActive = (href: string) => {
-    if (router.pathname === '/') return href === '/dashboard';
+    if (router.pathname === '/') return href === '/playground';
     return router.pathname === href;
   };
 
