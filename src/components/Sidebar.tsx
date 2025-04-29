@@ -19,16 +19,7 @@ import {
 
 const menu = [
   {
-    section: 'DECISION WORKFLOWS',
-    items: [
-      { href: '/fleet-routing', label: 'Fleet & Routing', icon: TruckIcon },
-      { href: '/workforce-scheduling', label: 'Workforce Scheduling', icon: UserGroupIcon },
-      { href: '/project-scheduling', label: 'Project Scheduling', icon: CalendarIcon },
-      { href: '/resource-allocation', label: 'Resource Allocation', icon: CubeIcon },
-    ],
-  },
-  {
-    section: 'PLATFORM CONCEPTS',
+    section: '',
     items: [
       { href: '/dashboard', label: 'Dashboard', icon: ChartBarIcon },
       { href: '/agents', label: 'Agents', icon: BeakerIcon },
@@ -36,7 +27,17 @@ const menu = [
       { href: '/explainability', label: 'Explainability', icon: LightBulbIcon },
       { href: '/endpoints', label: 'Endpoints', icon: CloudArrowUpIcon },
     ],
+  },
+  {
+    section: 'DECISION WORKFLOWS',
+    items: [
+      { href: '/fleet-routing', label: 'Fleet & Routing', icon: TruckIcon },
+      { href: '/workforce-scheduling', label: 'Workforce Scheduling', icon: UserGroupIcon },
+      { href: '/project-scheduling', label: 'Project Scheduling', icon: CalendarIcon },
+      { href: '/resource-allocation', label: 'Resource Allocation', icon: CubeIcon },
+    ],
   }
+  
 ];
 
 export default function Sidebar() {
