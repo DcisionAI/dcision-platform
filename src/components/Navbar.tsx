@@ -40,6 +40,12 @@ export default function Navbar() {
       </div>
       <nav className="flex items-center gap-8 text-sm">
         {/* Navigation Links */}
+        <Link href="/playground" legacyBehavior>
+          <a className={router.pathname === '/playground' ? 'text-docs-accent font-semibold' : 'text-docs-muted hover:text-docs-accent'}>
+            Playground
+          </a>
+        </Link>
+        
         <Link href="/docs" legacyBehavior>
           <a className={router.pathname === '/docs' ? 'text-docs-accent font-semibold' : 'text-docs-muted hover:text-docs-accent'}>
             Docs

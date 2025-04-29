@@ -22,6 +22,7 @@ const menu = [
     section: '',
     items: [
       { href: '/dashboard', label: 'Dashboard', icon: ChartBarIcon },
+      { href: '/playground', label: 'Playground', icon: CodeBracketIcon },
       { href: '/agents', label: 'Agents', icon: BeakerIcon },
       { href: '/data-integration', label: 'Data Integration', icon: ArrowsPointingInIcon },
       { href: '/explainability', label: 'Explainability', icon: LightBulbIcon },
