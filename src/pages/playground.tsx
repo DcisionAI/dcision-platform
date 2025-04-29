@@ -85,10 +85,16 @@ export default function PlaygroundPage() {
   const runSession = async (sessionId: string, initialSession?: Session) => {
     const mockOutputs: Record<string, string | undefined> = {
       'Intent Interpreter Agent': undefined,
-      'Data Mapping Agent': 'Successfully mapped input data:\n- 15 delivery locations identified\n- 5 available vehicles\n- Time windows validated\n- Capacity constraints applied',
       'Model Runner Agent': 'Optimization model solved successfully:\n- Total route distance: 213.5 miles\n- Average vehicle utilization: 85%\n- All time windows satisfied\n- Solution found in 2.3 seconds',
       'Solution Explanation Agent': 'Your fleet optimization achieved:\n- 22% reduction in total distance\n- 15% improvement in delivery times\n- Balanced workload across all vehicles\n- All customer time windows respected\n\nRecommended routes have been generated for each vehicle.',
     };
+
+    // Get the initial session data
+    const session = initialSession || sessions.find(s => s.id === sessionId);
+    if (!session) {
+      console.error('Session not found:', sessionId);
+      return;
+    }
 
     for (let i = 0; i < baseSteps.length; i++) {
       updateStepStatus(sessionId, i, 'running');
@@ -98,10 +104,7 @@ export default function PlaygroundPage() {
       
       // Call intent interpreter API for the first step
       if (baseSteps[i].name === 'Intent Interpreter Agent') {
-        try {
-          const session = initialSession || sessions.find(s => s.id === sessionId);
-          if (!session) throw new Error('Session not found');
-          
+        try {          
           const response = await fetch('/api/mcp/intent', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -120,12 +123,159 @@ export default function PlaygroundPage() {
                 ? { ...s, problemType: result.output.selectedModel as ProblemType }
                 : s
             ));
+            
+            // Update the session object for subsequent steps
+            session.problemType = result.output.selectedModel as ProblemType;
           } else {
             output = `Error: ${result.output?.error || 'Unknown error'}`;
           }
         } catch (error) {
           console.error('Intent interpreter error:', error);
           output = `Error: ${error instanceof Error ? error.message : 'Failed to interpret intent'}`;
+        }
+      }
+
+      // Call data mapping API for the second step
+      if (baseSteps[i].name === 'Data Mapping Agent') {
+        try {          
+          // Create EventSource for streaming response
+          const response = await fetch('/api/mcp/map', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sessionId: session.sessionId,
+              problemType: session.problemType,
+              userInput: session.description,
+              sampleData: session.sampleData
+            })
+          });
+
+          // Create a ReadableStream from the response
+          const reader = response.body?.getReader();
+          if (!reader) {
+            throw new Error('Stream not available');
+          }
+
+          let streamingOutput = '';
+          const decoder = new TextDecoder();
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+
+            for (let line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  
+                  switch (data.type) {
+                    case 'start':
+                      streamingOutput = `Starting Data Mapping Process\n` +
+                                      `Problem Type: ${data.problemType}\n` +
+                                      `User Input: ${data.userInput}\n\n`;
+                      break;
+                    
+                    case 'progress':
+                      streamingOutput += `${data.message}\n`;
+                      if (data.stage) {
+                        streamingOutput += `Stage: ${data.stage}\n`;
+                      }
+                      if (data.customerFields) {
+                        streamingOutput += `Customer Fields: ${data.customerFields.join(', ')}\n`;
+                      }
+                      if (data.requiredFields) {
+                        streamingOutput += `Required Fields: ${data.requiredFields.join(', ')}\n`;
+                      }
+                      break;
+                    
+                    case 'warning':
+                      streamingOutput += `Warning: ${data.message}\n`;
+                      break;
+                    
+                    case 'complete':
+                      if (data.output?.success) {
+                        const { fieldRequirements, mappings, unmappedFields, suggestedActions } = data.output;
+                        
+                        streamingOutput += '\nField Requirements Analysis:\n' +
+                                         JSON.stringify(fieldRequirements, null, 2) + '\n\n' +
+                                         'Field Mappings:\n' +
+                                         JSON.stringify(mappings, null, 2) + '\n\n';
+                        
+                        if (unmappedFields?.length > 0) {
+                          streamingOutput += `Unmapped Fields: ${unmappedFields.join(', ')}\n`;
+                        }
+                        
+                        if (suggestedActions?.length > 0) {
+                          streamingOutput += `\nSuggested Actions:\n${suggestedActions.join('\n')}\n`;
+                        }
+
+                        if (data.thoughtProcess) {
+                          streamingOutput += `\nThought Process:\n${data.thoughtProcess}\n`;
+                        }
+                        
+                        output = streamingOutput;
+                        updateStepStatus(sessionId, i, 'completed', output);
+                      } else {
+                        output = `Error: ${data.output?.error || 'Unknown error'}`;
+                        updateStepStatus(sessionId, i, 'error', output);
+                      }
+                      break;
+                    
+                    case 'error':
+                      output = `Error: ${data.error}\nDetails: ${data.details || 'No details available'}`;
+                      updateStepStatus(sessionId, i, 'error', output);
+                      break;
+                  }
+                  
+                  // Update status for non-complete/error events
+                  if (!['complete', 'error'].includes(data.type)) {
+                    updateStepStatus(sessionId, i, 'running', streamingOutput);
+                  }
+                } catch (e) {
+                  console.warn('Failed to parse SSE data:', e);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Data mapping error:', error);
+          output = `Error: ${error instanceof Error ? error.message : 'Failed to map data'}`;
+          updateStepStatus(sessionId, i, 'error', output);
+        }
+      }
+      
+      // Call data integration API for the third step
+      if (baseSteps[i].name === 'Data Integration Agent') {
+        try {          
+          const response = await fetch('/api/mcp/integrate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sessionId: session.sessionId,
+              problemType: session.problemType,
+              userInput: session.description
+            })
+          });
+          
+          if (!response.ok) throw new Error('Data integration failed');
+          
+          const result = await response.json();
+          if (result.output?.success) {
+            const { featureSet, fieldMappings, collectedData, featureEngineeringReport } = result.output;
+            
+            output = `Data Integration Results:\n\n` +
+                    `Feature Set:\n${JSON.stringify(featureSet, null, 2)}\n\n` +
+                    `Field Mappings:\n${JSON.stringify(fieldMappings, null, 2)}\n\n` +
+                    `Feature Engineering Report:\n${featureEngineeringReport}`;
+          } else {
+            output = `Error: ${result.output?.error || 'Unknown error'}`;
+          }
+        } catch (error) {
+          console.error('Data integration error:', error);
+          output = `Error: ${error instanceof Error ? error.message : 'Failed to integrate data'}`;
         }
       }
       

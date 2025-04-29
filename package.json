@@ -4,13 +4,19 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "NODE_OPTIONS='--max-old-space-size=4096' next build",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
     "create-demo-user": "ts-node scripts/create-demo-user.ts",
-    "db:migrate": "supabase db push"
+    "db:migrate": "supabase db push",
+    "build:dev": "NODE_OPTIONS='--max-old-space-size=4096' next build",
+    "build:prod": "npm run clean && NODE_OPTIONS='--max-old-space-size=4096' NODE_ENV=production next build",
+    "build:analyze": "ANALYZE=true next build",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf .next && rm -rf node_modules/.cache",
+    "clean:all": "npm run clean && rm -rf node_modules && npm install"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.2",
@@ -53,6 +59,7 @@
     "zod": "^3.24.3"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^15.3.1",
     "@types/express": "^5.0.1",
     "@types/jest": "^29.5.14",
     "@types/json-schema": "^7.0.15",

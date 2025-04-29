@@ -1,13 +1,23 @@
 import { StepAction, ProtocolStep, MCP } from '../types';
 
 export interface AgentRunContext {
-  llm?: (prompt: string, config?: any) => Promise<any>;
+  llm?: (prompt: string) => Promise<string>;
+  onProgress?: (update: {
+    type: 'progress' | 'warning' | 'error';
+    message: string;
+    details?: any;
+  }) => void;
   // Add more context fields as needed (user, session, etc.)
 }
 
 export interface AgentRunResult {
-  output: any;
-  thoughtProcess?: string;
+  output: {
+    success: boolean;
+    error?: string;
+    details?: any;
+    [key: string]: any;
+  };
+  thoughtProcess: string;
   feedbackUrl?: string;
 }
 
