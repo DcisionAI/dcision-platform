@@ -31,6 +31,30 @@ interface Session {
   status: AgentStatus;
 }
 
+interface IntentReasoning {
+  mainReason: string;
+  keyFactors: string[];
+  businessBenefits: string[];
+  potentialChallenges: string[];
+}
+
+interface ConfidenceFactors {
+  problemClarity: number;
+  dataAvailability: number;
+  constraintComplexity: number;
+  domainMatch: number;
+}
+
+interface Alternative {
+  type: string;
+  reasoning: string;
+  confidence: number;
+  tradeoffs: {
+    pros: string[];
+    cons: string[];
+  };
+}
+
 export default function PlaygroundPage() {
   const [userInput, setUserInput] = useState('');
   const [problemType, setProblemType] = useState('custom');
@@ -155,7 +179,33 @@ export default function PlaygroundPage() {
           
           const result = await response.json();
           if (result.output?.success) {
-            output = `Problem Type: ${result.output.selectedModel}\nConfidence: ${(result.output.details.confidence * 100).toFixed(1)}%\n\nReasoning: ${result.output.details.reasoning}\n\nAlternative Types: ${result.output.details.alternativeTypes.join(', ')}`;
+            const confidence = result.output.details.confidence as { overall: number; factors: ConfidenceFactors };
+            const reasoning = result.output.details.reasoning as IntentReasoning;
+            const alternatives = result.output.details.alternatives as Alternative[];
+            
+            // Create a color based on confidence
+            const confidenceColor = confidence.overall >= 0.9 ? 'text-green-500' : 
+                                  confidence.overall >= 0.7 ? 'text-yellow-500' : 
+                                  'text-red-500';
+            
+            output = `Problem Type: ${result.output.selectedModel}\n\n` +
+                    `Confidence Analysis:\n` +
+                    `Overall: ${(confidence.overall * 100).toFixed(1)}%\n` +
+                    Object.entries(confidence.factors)
+                      .map(([factor, score]) => `${factor}: ${(Number(score) * 100).toFixed(1)}%`)
+                      .join('\n') +
+                    '\n\nReasoning:\n' +
+                    `${reasoning.mainReason}\n\n` +
+                    'Key Factors:\n' + reasoning.keyFactors.map((f: string) => `• ${f}`).join('\n') + '\n\n' +
+                    'Business Benefits:\n' + reasoning.businessBenefits.map((b: string) => `• ${b}`).join('\n') + '\n\n' +
+                    'Potential Challenges:\n' + reasoning.potentialChallenges.map((c: string) => `• ${c}`).join('\n') + '\n\n' +
+                    'Alternative Approaches:\n' +
+                    alternatives.map((alt: Alternative) => 
+                      `${alt.type} (${(alt.confidence * 100).toFixed(1)}% confidence)\n` +
+                      `Reasoning: ${alt.reasoning}\n` +
+                      'Pros:\n' + alt.tradeoffs.pros.map((p: string) => `• ${p}`).join('\n') + '\n' +
+                      'Cons:\n' + alt.tradeoffs.cons.map((c: string) => `• ${c}`).join('\n')
+                    ).join('\n\n');
             
             // Update the session's problem type
             setSessions(prev => prev.map(s => 

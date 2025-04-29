@@ -29,7 +29,7 @@ export class IntentInterpreterAgent implements MCPAgent {
       llmResponse = JSON.parse(cleanJson);
       
       thoughtProcess.push(`Identified problem type: ${llmResponse.problemType}`);
-      thoughtProcess.push(`Reasoning: ${llmResponse.reasoning}`);
+      thoughtProcess.push(`Reasoning: ${llmResponse.reasoning.mainReason}`);
 
       // LLM-based validation/critique
       const critiquePrompt = `
@@ -41,11 +41,29 @@ Respond in JSON: { "isBestFit": true/false, "suggestedType": "...", "reasoning":
       const critiqueRaw = context?.llm
         ? await context.llm(critiquePrompt)
         : await callOpenAI(critiquePrompt);
-      const critique = JSON.parse(extractJsonFromMarkdown(critiqueRaw));
-      thoughtProcess.push(`LLM critique: ${critique.reasoning}`);
-      if (!critique.isBestFit) {
-        thoughtProcess.push(`Warning: LLM suggests a better fit: ${critique.suggestedType}`);
+      const critiqueResponse = JSON.parse(extractJsonFromMarkdown(critiqueRaw));
+      thoughtProcess.push(`LLM critique: ${critiqueResponse.reasoning}`);
+      if (!critiqueResponse.isBestFit) {
+        thoughtProcess.push(`Warning: LLM suggests a better fit: ${critiqueResponse.suggestedType}`);
       }
+
+      return {
+        output: {
+          success: true,
+          selectedModel: llmResponse.problemType || 'unknown',
+          details: {
+            userInput,
+            confidence: {
+              overall: llmResponse.confidence?.overall || 1.0,
+              factors: llmResponse.confidence?.factors || {},
+            },
+            reasoning: llmResponse.reasoning || { mainReason: 'No reasoning provided' },
+            alternatives: llmResponse.alternatives || [],
+            critique: critiqueResponse
+          }
+        },
+        thoughtProcess: thoughtProcess.join('\n')
+      };
     } catch (error: any) {
       const errorMessage = error?.message || 'Unknown error occurred';
       thoughtProcess.push(`LLM call or parsing failed: ${errorMessage}`);
@@ -59,20 +77,6 @@ Respond in JSON: { "isBestFit": true/false, "suggestedType": "...", "reasoning":
         thoughtProcess: thoughtProcess.join('\n')
       };
     }
-
-    return {
-      output: {
-        success: true,
-        selectedModel: llmResponse.problemType || 'unknown',
-        details: {
-          userInput,
-          confidence: llmResponse.confidence || 1.0,
-          reasoning: llmResponse.reasoning || 'No reasoning provided',
-          alternativeTypes: llmResponse.alternativeTypes || []
-        }
-      },
-      thoughtProcess: thoughtProcess.join('\n')
-    };
   }
 
   private buildPrompt(userInput: string): string {
@@ -98,9 +102,32 @@ Consider the following problem types:
 Respond in JSON format with:
 {
   "problemType": "selected_type",
-  "reasoning": "detailed explanation of why this type fits best",
-  "confidence": 0.95,
-  "alternativeTypes": ["other_possible_type1", "other_possible_type2"]
+  "reasoning": {
+    "mainReason": "Primary reason for selecting this type",
+    "keyFactors": ["factor1", "factor2", "factor3"],
+    "businessBenefits": ["benefit1", "benefit2"],
+    "potentialChallenges": ["challenge1", "challenge2"]
+  },
+  "confidence": {
+    "overall": 0.95,
+    "factors": {
+      "problemClarity": 0.9,
+      "dataAvailability": 0.8,
+      "constraintComplexity": 0.85,
+      "domainMatch": 0.95
+    }
+  },
+  "alternatives": [
+    {
+      "type": "alternative_type1",
+      "reasoning": "Why this could be an alternative",
+      "confidence": 0.8,
+      "tradeoffs": {
+        "pros": ["pro1", "pro2"],
+        "cons": ["con1", "con2"]
+      }
+    }
+  ]
 }`;
   }
 } 
