@@ -31,6 +31,12 @@ const settingsNav = [
     description: 'Manage team members and roles'
   },
   {
+    href: '/settings/llm',
+    label: 'LLM Config',
+    icon: BellIcon,
+    description: 'Configure LLM preferences'
+  },
+  {
     href: '/settings/notifications',
     label: 'Notifications',
     icon: BellIcon,
