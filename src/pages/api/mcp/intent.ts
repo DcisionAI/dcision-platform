@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { IntentInterpreterAgent } from '@server/mcp/agents/IntentInterpreterAgent';
 import { MCP } from '@server/mcp/types';
-import { callOpenAI } from '../../../../server/mcp/agents/llm/openai';
+import { LLMProviderFactory } from '@server/mcp/agents/llm/providers/LLMProviderFactory';
 
 const agent = new IntentInterpreterAgent();
 
@@ -57,13 +57,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     };
 
+    // Create LLM provider based on environment configuration
+    const providerType = process.env.LLM_PROVIDER || 'anthropic';
+    const apiKey = providerType === 'anthropic' 
+      ? process.env.ANTHROPIC_API_KEY 
+      : process.env.OPENAI_API_KEY;
+    
+    if (!apiKey) {
+      throw new Error(`API key is required for ${providerType} provider`);
+    }
+
+    const llmProvider = LLMProviderFactory.createProvider(providerType as 'openai' | 'anthropic', apiKey);
+    
     const result = await agent.run(
       { action: 'interpret_intent', description: 'Interpret user intent', required: true },
       mcp,
-      { llm: callOpenAI }
+      { llm: (prompt: string) => llmProvider.call(prompt) }
     );
 
-    return res.status(200).json(result);
+    // Add provider information to the response
+    const responseWithProvider = {
+      ...result,
+      provider: {
+        type: providerType,
+        model: providerType === 'anthropic' ? 'claude-3-opus-20240229' : 'gpt-4-turbo-preview'
+      }
+    };
+
+    return res.status(200).json(responseWithProvider);
   } catch (error) {
     console.error('Intent interpretation error:', error);
     return res.status(500).json({

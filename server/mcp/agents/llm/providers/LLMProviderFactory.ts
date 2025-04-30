@@ -16,13 +16,11 @@ export class LLMProviderFactory {
       throw new Error(`API key is required for ${type} provider`);
     }
 
-    switch (type) {
-      case 'openai':
-        return new OpenAIProvider(apiKey);
-      case 'anthropic':
-        return new AnthropicProvider(apiKey);
-      default:
-        throw new Error(`Unsupported LLM provider: ${type}`);
-    }
+    const provider = type === 'openai' 
+      ? new OpenAIProvider(apiKey)
+      : new AnthropicProvider(apiKey);
+    
+    console.log(`Successfully created ${type} provider`);
+    return provider;
   }
 } 

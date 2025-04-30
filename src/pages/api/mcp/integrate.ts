@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@supabase/supabase-js';
 import { DataIntegrationAgent } from '../../../../server/mcp/agents/DataIntegrationAgent';
 import { MCP, Dataset, ProtocolStep, Environment } from '../../../../server/mcp/types';
-import { callOpenAI } from '../../../../server/mcp/agents/llm/openai';
+import { LLMProviderFactory } from '../../../../server/mcp/agents/llm/providers/LLMProviderFactory';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -74,6 +74,18 @@ export default async function handler(
       }
     };
 
+    // Create LLM provider based on environment configuration
+    const providerType = process.env.LLM_PROVIDER || 'anthropic';
+    const apiKey = providerType === 'anthropic' 
+      ? process.env.ANTHROPIC_API_KEY 
+      : process.env.OPENAI_API_KEY;
+    
+    if (!apiKey) {
+      throw new Error(`API key is required for ${providerType} provider`);
+    }
+
+    const llmProvider = LLMProviderFactory.createProvider(providerType as 'openai' | 'anthropic', apiKey);
+
     // Initialize and run DataIntegrationAgent
     const agent = new DataIntegrationAgent();
     const result = await agent.run(
@@ -99,9 +111,8 @@ export default async function handler(
       mcp,
       {
         llm: async (prompt: string) => {
-          // Use OpenAI for LLM calls
-          return await callOpenAI(prompt, {
-            model: 'gpt-4-turbo-preview',
+          return await llmProvider.call(prompt, {
+            model: providerType === 'anthropic' ? 'claude-3-opus-20240229' : 'gpt-4-turbo-preview',
             temperature: 0.2
           });
         }

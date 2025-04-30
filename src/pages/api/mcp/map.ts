@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { MCP as CoreMCP, MCPStatus, ProblemType, IndustryVertical, Protocol } from '@server/mcp/types/core';
 import { DataMappingAgent } from '@server/mcp/agents/DataMappingAgent';
 import { AgentRunContext, AgentRunResult } from '@server/mcp/agents/AgentRegistry';
-import { callOpenAI } from '@server/mcp/agents/llm/openai';
+import { LLMProviderFactory } from '@server/mcp/agents/llm/providers/LLMProviderFactory';
 
 interface SSEUpdate {
   type: 'progress' | 'complete' | 'error';
@@ -138,6 +138,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       intentDetails
     };
 
+    // Create LLM provider based on environment configuration
+    const providerType = process.env.LLM_PROVIDER || 'anthropic';
+    const apiKey = providerType === 'anthropic' 
+      ? process.env.ANTHROPIC_API_KEY 
+      : process.env.OPENAI_API_KEY;
+    
+    if (!apiKey) {
+      throw new Error(`API key is required for ${providerType} provider`);
+    }
+
+    const llmProvider = LLMProviderFactory.createProvider(providerType as 'openai' | 'anthropic', apiKey);
+    
     const agent = new DataMappingAgent();
     
     const result = await agent.run({
@@ -147,7 +159,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       agent: 'DataMappingAgent',
       parameters: {}
     }, mcp, {
-      llm: callOpenAI,
+      llm: (prompt: string) => llmProvider.call(prompt),
       onProgress: (update: { type: 'progress' | 'warning' | 'error'; message: string; details?: any }) => {
         console.log(`[${update.type}] ${update.message}`, update.details);
         // Send progress updates via SSE

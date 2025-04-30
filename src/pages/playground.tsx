@@ -34,8 +34,53 @@ interface Session {
 interface IntentReasoning {
   mainReason: string;
   keyFactors: string[];
-  businessBenefits: string[];
-  potentialChallenges: string[];
+  mathematicalFormulation: string;
+  complexity: string;
+  modelBenefits: string;
+  industryAdoption: string;
+  decisionProcess: string;
+  technicalAnalysis: {
+    mathematicalFormulation: string;
+    complexity: string;
+    keyFactors: string[];
+  };
+}
+
+interface IntentConfidence {
+  overall: number;
+  factors: {
+    [key: string]: number;
+  };
+}
+
+interface Alternative {
+  type: string;
+  confidence: number;
+  reasoning: string;
+  tradeoffs: {
+    pros: string[];
+    cons: string[];
+  };
+}
+
+interface IntentCritique {
+  reasoning: string;
+}
+
+interface IntentDetails {
+  confidence: IntentConfidence;
+  reasoning: IntentReasoning;
+  alternatives: Alternative[];
+  critique: IntentCritique;
+}
+
+interface IntentOutput {
+  selectedModel: string;
+  details: IntentDetails;
+}
+
+interface IntentResponse {
+  output: IntentOutput;
 }
 
 interface ConfidenceFactors {
@@ -43,16 +88,6 @@ interface ConfidenceFactors {
   dataAvailability: number;
   constraintComplexity: number;
   domainMatch: number;
-}
-
-interface Alternative {
-  type: string;
-  reasoning: string;
-  confidence: number;
-  tradeoffs: {
-    pros: string[];
-    cons: string[];
-  };
 }
 
 interface Factor {
@@ -74,6 +109,13 @@ interface StreamingOutput {
     }>;
     [key: string]: any;
   };
+}
+
+interface Reasoning {
+  mainReason: string;
+  keyFactors: string[];
+  mathematicalFormulation: string;
+  complexity: string;
 }
 
 export default function PlaygroundPage() {
@@ -211,41 +253,37 @@ export default function PlaygroundPage() {
           if (!response.ok) throw new Error('Intent interpretation failed');
           
           const result = await response.json();
-          if (result.output?.success) {
+          
+          // Check if the response has the expected structure
+          if (result.output?.success && result.output.details) {
             const confidence = result.output.details.confidence as { overall: number; factors: ConfidenceFactors };
             const reasoning = result.output.details.reasoning as IntentReasoning;
             const alternatives = result.output.details.alternatives as Alternative[];
             
             // Generate an executive summary based on the main points
-            const summary = `Executive Summary:\nBased on your business needs, I recommend a solution that will ${reasoning.businessBenefits[0].toLowerCase()}. ` +
-                           `I'm highly confident this approach will work well for your specific case. ` +
-                           `To ensure success, we should focus on ${reasoning.potentialChallenges[0].toLowerCase()}.`;
+            const summary = `DcisionAI Analysis:\n\n` +
+                           `1. Recommendation:\n` +
+                           `Based on your inputs, DcisionAI recommends using the ${result.output.selectedModel} approach.\n\n` +
+                           `2. Model Benefits:\n` +
+                           `${reasoning.modelBenefits}\n\n` +
+                           `3. Industry Adoption:\n` +
+                           `${reasoning.industryAdoption}\n\n` +
+                           `4. Decision Process:\n` +
+                           `${reasoning.decisionProcess}\n\n` +
+                           `5. Technical Analysis:\n` +
+                           `• Mathematical Approach: ${reasoning.technicalAnalysis.mathematicalFormulation}\n` +
+                           `• Complexity: ${reasoning.technicalAnalysis.complexity}\n` +
+                           `• Key Factors:\n` +
+                           reasoning.technicalAnalysis.keyFactors.map((f: string) => `  - ${f}`).join('\n') + '\n\n' +
+                           `6. Confidence Assessment:\n` +
+                           `• Overall Confidence: ${(confidence.overall * 100).toFixed(1)}%\n` +
+                           `• Factor Breakdown:\n` +
+                           Object.entries(confidence.factors).map(([factor, value]) => 
+                             `  - ${factor}: ${(value * 100).toFixed(1)}%`
+                           ).join('\n');
 
             const outputData = {
-              plainEnglish: `${summary}\n\n` +
-                           `Detailed Analysis:\n\n` +
-                           `I've analyzed your business requirements and identified the best approach to solve your challenges. ` +
-                           `Here's my comprehensive assessment:\n\n` +
-                           `Key Business Drivers:\n` +
-                           reasoning.keyFactors.map((f: string) => `• ${f}`).join('\n') + '\n\n' +
-                           `Expected Business Outcomes:\n` +
-                           reasoning.businessBenefits.map((b: string) => `• ${b}`).join('\n') + '\n\n' +
-                           `Implementation Considerations:\n` +
-                           reasoning.potentialChallenges.map((c: string) => `• ${c}`).join('\n') + '\n\n' +
-                           `Assessment Confidence:\n` +
-                           Object.entries(confidence.factors)
-                             .map(([factor, score]) => {
-                               const numScore = typeof score === 'number' ? score : parseFloat(String(score));
-                               return `• ${factor.replace(/([A-Z])/g, ' $1').toLowerCase()}: ${(numScore * 100).toFixed(1)}%`;
-                             })
-                             .join('\n') + '\n\n' +
-                           `Alternative Solutions Considered:\n` +
-                           alternatives.map((alt: Alternative) => 
-                             `${alt.type}\n` +
-                             `Context: ${alt.reasoning}\n\n` +
-                             `Benefits:\n${alt.tradeoffs.pros.map((p: string) => `• ${p}`).join('\n')}\n\n` +
-                             `Limitations:\n${alt.tradeoffs.cons.map((c: string) => `• ${c}`).join('\n')}`
-                           ).join('\n\n'),
+              plainEnglish: summary,
               json: {
                 selectedModel: result.output.selectedModel,
                 confidence: {
@@ -255,8 +293,8 @@ export default function PlaygroundPage() {
                 reasoning: {
                   mainReason: reasoning.mainReason,
                   keyFactors: reasoning.keyFactors,
-                  businessBenefits: reasoning.businessBenefits,
-                  potentialChallenges: reasoning.potentialChallenges
+                  mathematicalFormulation: reasoning.mathematicalFormulation,
+                  complexity: reasoning.complexity
                 },
                 alternatives: alternatives.map(alt => ({
                   type: alt.type,
@@ -279,10 +317,13 @@ export default function PlaygroundPage() {
             // Update the session object for subsequent steps
             session.problemType = result.output.selectedModel as ProblemType;
           } else {
+            // Handle case where response structure is different
+            console.error('Unexpected response structure:', result);
             const errorData = {
-              plainEnglish: `Sorry, I encountered an error while analyzing your request: ${result.output?.error || 'Unknown error'}`,
+              plainEnglish: `Sorry, I encountered an error while analyzing your request. The response format was unexpected.`,
               json: {
-                error: result.output?.error || 'Unknown error'
+                error: 'Unexpected response format',
+                details: result
               }
             };
             output = JSON.stringify(errorData);
@@ -292,7 +333,8 @@ export default function PlaygroundPage() {
           const errorData = {
             plainEnglish: `Sorry, I ran into a problem while trying to understand your request: ${error instanceof Error ? error.message : 'Failed to interpret intent'}`,
             json: {
-              error: error instanceof Error ? error.message : 'Failed to interpret intent'
+              error: error instanceof Error ? error.message : 'Failed to interpret intent',
+              details: error
             }
           };
           output = JSON.stringify(errorData);
@@ -377,7 +419,7 @@ export default function PlaygroundPage() {
                           'field_mapping_complete': 'Field mapping complete'
                         };
                         const friendlyStage = stageMessages[data.stage] || data.stage;
-                        streamingOutput.plainEnglish += `📊 ${friendlyStage}\n`;
+                        streamingOutput.plainEnglish += `�� ${friendlyStage}\n`;
                       }
                       if (data.customerFields) {
                         streamingOutput.plainEnglish += `\nDetected Fields:\n${data.customerFields.map((f: string) => `• ${f}`).join('\n')}\n`;
@@ -641,48 +683,68 @@ export default function PlaygroundPage() {
   };
 
   // Helper function to format the response in plain English
-  const formatPlainEnglish = (result: any) => {
-    const confidence = result.output.details.confidence;
-    const reasoning = result.output.details.reasoning;
-    const alternatives = result.output.details.alternatives;
+  const formatPlainEnglish = (result: IntentResponse) => {
+    const { selectedModel, details } = result.output;
+    const { confidence, reasoning, alternatives, critique } = details;
     
-    return `Based on your request, I recommend using the ${result.output.selectedModel} approach.
+    // Helper function to get confidence color
+    const getConfidenceColor = (score: number) => {
+      if (score >= 0.9) return 'text-green-500';
+      if (score >= 0.7) return 'text-yellow-500';
+      return 'text-red-500';
+    };
 
-I'm ${(confidence.overall * 100).toFixed(1)}% confident in this recommendation because:
-${reasoning.mainReason}
+    // Helper function to get confidence bar
+    const getConfidenceBar = (score: number) => {
+      const width = Math.round(score * 100);
+      const color = score >= 0.9 ? 'bg-green-500' : score >= 0.7 ? 'bg-yellow-500' : 'bg-red-500';
+      return (
+        <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
+          <div className={`h-full ${color}`} style={{ width: `${width}%` }} />
+        </div>
+      );
+    };
 
-Here's my detailed analysis:
-
-Key Factors:
-${reasoning.keyFactors.map((factor: string) => `• ${factor}`).join('\n')}
-
-Business Benefits:
-${reasoning.businessBenefits.map((benefit: string) => `• ${benefit}`).join('\n')}
-
-Potential Challenges to Consider:
-${reasoning.potentialChallenges.map((challenge: string) => `• ${challenge}`).join('\n')}
-
-My confidence is based on:
-${Object.entries(confidence.factors)
-  .map(([factor, score]) => {
-    const numScore = typeof score === 'number' ? score : parseFloat(String(score));
-    return `• ${factor.replace(/([A-Z])/g, ' $1').toLowerCase()}: ${(numScore * 100).toFixed(1)}%`;
-  })
-  .join('\n')}
-
-Alternative Approaches:
-${alternatives.map((alt: Alternative) => `
-${alt.type} (${(alt.confidence * 100).toFixed(1)}% confidence)
-${alt.reasoning}
-
-Pros:
-${alt.tradeoffs.pros.map((pro: string) => `• ${pro}`).join('\n')}
-
-Cons:
-${alt.tradeoffs.cons.map((con: string) => `• ${con}`).join('\n')}`).join('\n')}
-
-Expert Critique:
-${result.output.details.critique.reasoning}`;
+    return `
+      Recommendation: ${selectedModel}
+      
+      Model Benefits:
+      ${reasoning.modelBenefits}
+      
+      Industry Adoption:
+      ${reasoning.industryAdoption}
+      
+      Decision Process:
+      ${reasoning.decisionProcess}
+      
+      Technical Analysis:
+      - Mathematical Formulation: ${reasoning.technicalAnalysis.mathematicalFormulation}
+      - Complexity: ${reasoning.technicalAnalysis.complexity}
+      - Key Factors:
+        ${reasoning.technicalAnalysis.keyFactors.map((factor: string) => `      • ${factor}`).join('\n')}
+      
+      Confidence Assessment:
+      - Overall Confidence: ${(confidence.overall * 100).toFixed(1)}%
+        ${getConfidenceBar(confidence.overall)}
+      - Factor Breakdown:
+        ${Object.entries(confidence.factors).map(([factor, value]) => `
+          • ${factor}: ${(value * 100).toFixed(1)}%
+            ${getConfidenceBar(value)}
+        `).join('\n')}
+      
+      Alternative Approaches:
+      ${alternatives.map((alt: Alternative) => `
+        ${alt.type} (${(alt.confidence * 100).toFixed(1)}% confidence)
+        ${alt.reasoning}
+        Pros:
+        ${alt.tradeoffs.pros.map((pro: string) => `        • ${pro}`).join('\n')}
+        Cons:
+        ${alt.tradeoffs.cons.map((con: string) => `        • ${con}`).join('\n')}
+      `).join('\n')}
+      
+      Expert Critique:
+      ${critique.reasoning}
+    `;
   };
 
   // Helper function to format the response as JSON
