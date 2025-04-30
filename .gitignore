@@ -45,4 +45,4 @@ logs/
 # Build artifacts
 dist/
 build/
-*.tgz 
+*.tgz .local.env
