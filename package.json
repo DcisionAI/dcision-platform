@@ -19,6 +19,7 @@
     "clean:all": "npm run clean && rm -rf node_modules && npm install"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.40.1",
     "@headlessui/react": "^2.2.2",
     "@heroicons/react": "^2.2.0",
     "@monaco-editor/react": "^4.6.0",
