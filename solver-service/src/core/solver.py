@@ -667,6 +667,18 @@ class SolverService:
             if not all(key in model for key in ["variables", "constraints", "objective"]):
                 raise ValueError("Model missing required components: variables, constraints, or objective")
             
+            # Validate variables
+            if not isinstance(model["variables"], list):
+                raise ValueError("Variables must be a list")
+            
+            # Validate constraints
+            if not isinstance(model["constraints"], list):
+                raise ValueError("Constraints must be a list")
+            
+            # Validate objective
+            if not isinstance(model["objective"], dict):
+                raise ValueError("Objective must be a dictionary")
+            
             # Initialize parameters if not present
             if "parameters" not in model:
                 model["parameters"] = {}
