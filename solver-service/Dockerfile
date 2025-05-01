@@ -1,0 +1,31 @@
+# Use Python 3.9 slim image
+FROM python:3.9-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first to leverage Docker cache
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY src/ src/
+COPY tests/ tests/
+COPY setup.py .
+RUN pip install -e .
+
+# Expose port
+EXPOSE 8080
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV PORT=8080
+ENV HOST=0.0.0.0
+
+# Run the application
+CMD ["uvicorn", "src.api.routes:app", "--host", "0.0.0.0", "--port", "8080"] 
