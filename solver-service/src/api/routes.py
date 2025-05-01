@@ -1,0 +1,127 @@
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import List, Dict, Any
+from src.core.solver import SolverService
+from src.core.templates import (
+    VehicleAssignmentRequest, FleetMixRequest, MaintenanceScheduleRequest,
+    FuelOptimizationRequest, EmployeeScheduleRequest, TaskAssignmentRequest,
+    BreakScheduleRequest, LaborCostRequest, WorkforceCapacityRequest,
+    ShiftCoverageRequest
+)
+
+app = FastAPI()
+solver_service = SolverService()
+
+@app.post("/solve/vehicle-assignment")
+def solve_vehicle_assignment(request: VehicleAssignmentRequest):
+    try:
+        result = solver_service.solve({
+            "type": "vap",
+            **request.dict()
+        })
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/solve/fleet-mix")
+def solve_fleet_mix(request: FleetMixRequest):
+    try:
+        result = solver_service.solve({
+            "type": "fleet_mix",
+            **request.dict()
+        })
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/solve/maintenance")
+async def solve_maintenance(request: MaintenanceScheduleRequest):
+    try:
+        result = await solver_service.solve({
+            "type": "maintenance",
+            **request.dict()
+        })
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/solve/fuel")
+async def solve_fuel(request: FuelOptimizationRequest):
+    try:
+        result = await solver_service.solve({
+            "type": "fuel",
+            **request.dict()
+        })
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/solve/employee-schedule")
+async def solve_employee_schedule(request: EmployeeScheduleRequest):
+    try:
+        result = await solver_service.solve({
+            "type": "employee_schedule",
+            **request.dict()
+        })
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/solve/task-assignment")
+async def solve_task_assignment(request: TaskAssignmentRequest):
+    try:
+        result = await solver_service.solve({
+            "type": "task_assignment",
+            **request.dict()
+        })
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/solve/break-schedule")
+async def solve_break_schedule(request: BreakScheduleRequest):
+    try:
+        result = await solver_service.solve({
+            "type": "break_schedule",
+            **request.dict()
+        })
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/solve/labor-cost")
+async def solve_labor_cost(request: LaborCostRequest):
+    try:
+        result = await solver_service.solve({
+            "type": "labor_cost",
+            **request.dict()
+        })
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/solve/workforce-capacity")
+async def solve_workforce_capacity(request: WorkforceCapacityRequest):
+    try:
+        result = await solver_service.solve({
+            "type": "workforce_capacity",
+            **request.dict()
+        })
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/solve/shift-coverage")
+async def solve_shift_coverage(request: ShiftCoverageRequest):
+    try:
+        result = await solver_service.solve({
+            "type": "shift_coverage",
+            **request.dict()
+        })
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"} 
