@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import PlaygroundEditor from './PlaygroundEditor';
 import PlaygroundSettings from './PlaygroundSettings';
 import { MCPExamples } from './MCPExamples';
+import AgentResponse from './AgentResponse';
 import { MCP } from '@/mcp/MCPTypes';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import {
@@ -199,8 +200,9 @@ export default function Playground() {
       solutionGap: 1
     }
   });
-  const [response, setResponse] = useState<MCPResponse | null>(null);
-  const [loading, setLoading] = useState(false);
+
+  const [agentResponse, setAgentResponse] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
@@ -223,35 +225,32 @@ export default function Playground() {
 
   const handleSubmit = async () => {
     try {
-      setLoading(true);
-      // Validate required fields before submission
-      if (!mcpConfig.context?.problemType) {
-        setResponse({
-          error: "Invalid MCP configuration",
-          details: "Missing required field: context.problemType"
-        });
-        return;
-      }
-
-      const result = await fetch('/api/mcp/submit', {
+      const response = await fetch('/api/mcp/run', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          config: mcpConfig,
-        }),
+        body: JSON.stringify(mcpConfig),
       });
-      const data = await result.json();
-      setResponse(data);
-    } catch (err: any) {
-      console.error('Error submitting MCP:', err);
-      setResponse({
-        error: "Submission failed",
-        details: err?.message || "An unknown error occurred"
-      });
-    } finally {
-      setLoading(false);
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to process request');
+      }
+
+      // Check if the response is from DataMappingAgent
+      if (data.output && data.output.fieldRequirements) {
+        setAgentResponse(data.output);
+      } else {
+        // Handle other agent responses
+        setAgentResponse(data);
+      }
+      
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      setAgentResponse(null);
     }
   };
 
@@ -259,70 +258,72 @@ export default function Playground() {
   const currentInfo = exampleInfo[problemType as keyof typeof exampleInfo] || exampleInfo.vehicle_routing;
 
   return (
-    <div className="flex flex-col h-full">
-      
-      <div className="mt-8">
-        <h2 className="text-white font-medium mb-4">How It Works</h2>
-        <div className="grid grid-cols-3 gap-4">
-          {currentInfo.cards.map((card, index) => (
-            <InfoCard key={index} {...card} />
-          ))}
-        </div>
-      </div>
-
-      {/* Main Content Section - Reduced top margin */}
-      <div className="px-4 pb-10 flex gap-4">
-        {/* Examples Section */}
-        <div className="w-1/4">
-          <div className="mb-3">
-            <h2 className="text-lg font-semibold text-white">EXAMPLES</h2>
-          </div>
-          <div className="bg-[#161B22] rounded-lg p-3">
-            <MCPExamples onSelect={handleExampleSelect} />
+    <div className="min-h-screen bg-[#0D1117] text-gray-300 p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        <div className="mt-8">
+          <h2 className="text-white font-medium mb-4">How It Works</h2>
+          <div className="grid grid-cols-3 gap-4">
+            {currentInfo.cards.map((card, index) => (
+              <InfoCard key={index} {...card} />
+            ))}
           </div>
         </div>
 
-        {/* Configuration Section */}
-        <div className="flex-1">
-          <div className="mb-3">
-            <h2 className="text-lg font-semibold text-white">
-              MCP Configuration
-            </h2>
-            <p className="text-sm text-[#8B949E] mt-0.5">
-              Select an example from the sidebar or create your own MCP configuration
-            </p>
-          </div>
-          <div className="bg-[#161B22] rounded-lg p-4">
-            <PlaygroundEditor
-              config={mcpConfig}
-              onConfigChange={handleConfigChange}
-            />
-            <div className="mt-3">
-              <button 
-                className={`px-4 py-2 bg-[#4F46E5] text-white rounded hover:bg-[#4338CA] focus:outline-none ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                onClick={handleSubmit}
-                disabled={loading}
-              >
-                {loading ? 'Processing...' : 'Submit MCP'}
-              </button>
+        <div className="flex gap-8">
+          <div className="w-1/4">
+            <div className="mb-3">
+              <h2 className="text-lg font-semibold text-white">EXAMPLES</h2>
+            </div>
+            <div className="bg-[#161B22] rounded-lg p-3">
+              <MCPExamples onSelect={handleExampleSelect} />
             </div>
           </div>
-          {response && (
-            <div className="mt-4">
-              <h3 className="text-lg font-medium text-white mb-2">
-                Response
-              </h3>
-              <div className="bg-[#161B22] rounded-lg p-4 overflow-auto max-h-96">
-                <pre className="text-sm text-[#8B949E]">
-                  {JSON.stringify(response, null, 2)}
-                </pre>
+
+          <div className="flex-1">
+            <div className="grid grid-cols-2 gap-8">
+              <div>
+                <PlaygroundEditor
+                  config={mcpConfig}
+                  onConfigChange={handleConfigChange}
+                />
+                <div className="mt-4">
+                  <button
+                    className="px-4 py-2 bg-[#4F46E5] text-white rounded hover:bg-[#4338CA] focus:outline-none"
+                    onClick={handleSubmit}
+                  >
+                    Run MCP
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-6">
+                <PlaygroundSettings
+                  config={mcpConfig}
+                  onConfigChange={handleConfigChange}
+                />
+                
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 text-red-400">
+                    {error}
+                  </div>
+                )}
+
+                {agentResponse && agentResponse.fieldRequirements && (
+                  <AgentResponse response={agentResponse} />
+                )}
+
+                {agentResponse && !agentResponse.fieldRequirements && (
+                  <div className="bg-gray-800 rounded-lg p-4">
+                    <pre className="whitespace-pre-wrap text-sm">
+                      {JSON.stringify(agentResponse, null, 2)}
+                    </pre>
+                  </div>
+                )}
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
 
-      {/* Floating Settings Panel */}
       <div 
         className={`fixed top-20 right-0 transition-transform duration-300 transform ${
           showSettings ? 'translate-x-0' : 'translate-x-full'
