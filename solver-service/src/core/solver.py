@@ -660,12 +660,19 @@ class SolverService:
     def run_model(self, model: Dict[str, Any], run_request: Dict[str, Any] = None) -> Dict[str, Any]:
         """Run an optimization model with optional parameters."""
         try:
+            # Ensure model has required fields
+            if not isinstance(model, dict):
+                raise ValueError("Model must be a dictionary")
+            
+            if not all(key in model for key in ["variables", "constraints", "objective"]):
+                raise ValueError("Model missing required components: variables, constraints, or objective")
+            
             # Initialize parameters if not present
             if "parameters" not in model:
                 model["parameters"] = {}
             
             # Update model parameters if provided
-            if run_request and "parameters" in run_request:
+            if run_request and isinstance(run_request, dict) and "parameters" in run_request:
                 model["parameters"].update(run_request["parameters"])
             
             # Determine the appropriate solver based on variable types
