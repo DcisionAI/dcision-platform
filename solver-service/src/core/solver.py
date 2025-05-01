@@ -582,7 +582,7 @@ class SolverService:
                 "variables": request["variables"],
                 "constraints": request["constraints"],
                 "objective": request["objective"],
-                "parameters": request.get("parameters", {}),
+                "parameters": {},  # Initialize parameters as empty dict
                 "metadata": {
                     "name": request.get("name", "Unnamed Model"),
                     "description": request.get("description", ""),
