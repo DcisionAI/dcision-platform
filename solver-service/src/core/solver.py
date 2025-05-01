@@ -597,6 +597,10 @@ class SolverService:
     def run_model(self, model: Dict[str, Any], run_request: Dict[str, Any] = None) -> Dict[str, Any]:
         """Run an optimization model with optional parameters."""
         try:
+            # Initialize parameters if not present
+            if "parameters" not in model:
+                model["parameters"] = {}
+            
             # Update model parameters if provided
             if run_request and "parameters" in run_request:
                 model["parameters"].update(run_request["parameters"])
