@@ -42,8 +42,71 @@ class SolverService:
 
     def _solve_lp(self, data: Dict[str, Any]) -> Dict[str, Any]:
         solver = pywraplp.Solver.CreateSolver('GLOP')
-        # Implementation for linear programming
-        return {"status": "success", "solution": {}}
+        if not solver:
+            raise Exception("Failed to create solver")
+        
+        # Create variables
+        variables = {}
+        for var in data["variables"]:
+            name = var["name"]
+            bounds = var["bounds"]
+            variables[name] = solver.NumVar(bounds[0], bounds[1], name)
+        
+        # Add constraints
+        for constraint in data["constraints"]:
+            expr = constraint["expression"]
+            # Parse the expression (this is a simplified version)
+            # In a real implementation, you would need a proper expression parser
+            if "<=" in expr:
+                lhs, rhs = expr.split("<=")
+                lhs = lhs.strip()
+                rhs = float(rhs.strip())
+                if "*" in lhs:
+                    coeff, var = lhs.split("*")
+                    coeff = float(coeff.strip())
+                    var = var.strip()
+                    solver.Add(variables[var] * coeff <= rhs)
+                else:
+                    var = lhs.strip()
+                    solver.Add(variables[var] <= rhs)
+        
+        # Set objective
+        obj_expr = data["objective"]["expression"]
+        if data["objective"]["type"] == "maximize":
+            if "*" in obj_expr:
+                coeff, var = obj_expr.split("*")
+                coeff = float(coeff.strip())
+                var = var.strip()
+                solver.Maximize(variables[var] * coeff)
+            else:
+                var = obj_expr.strip()
+                solver.Maximize(variables[var])
+        else:
+            if "*" in obj_expr:
+                coeff, var = obj_expr.split("*")
+                coeff = float(coeff.strip())
+                var = var.strip()
+                solver.Minimize(variables[var] * coeff)
+            else:
+                var = obj_expr.strip()
+                solver.Minimize(variables[var])
+        
+        # Solve
+        status = solver.Solve()
+        
+        if status == pywraplp.Solver.OPTIMAL:
+            solution = {name: var.solution_value() for name, var in variables.items()}
+            return {
+                "status": "optimal",
+                "solution": solution,
+                "objective_value": solver.Objective().Value()
+            }
+        elif status == pywraplp.Solver.INFEASIBLE:
+            return {"status": "infeasible"}
+        elif status == pywraplp.Solver.UNBOUNDED:
+            return {"status": "unbounded"}
+        else:
+            return {"status": "unknown"}
 
     def _solve_mip(self, data: Dict[str, Any]) -> Dict[str, Any]:
         solver = pywraplp.Solver.CreateSolver('SCIP')
