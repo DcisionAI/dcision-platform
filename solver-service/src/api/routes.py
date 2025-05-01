@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Any
 from src.core.solver import SolverService
-from src.core.model_store import model_store
+from src.core.model_store import model_store, ModelStore
 from src.api.models import ModelBuildRequest, ModelRunRequest
 from src.core.templates import (
     VehicleAssignmentRequest, FleetMixRequest, MaintenanceScheduleRequest,
@@ -10,31 +10,41 @@ from src.core.templates import (
     BreakScheduleRequest, LaborCostRequest, WorkforceCapacityRequest,
     ShiftCoverageRequest
 )
+import uuid
+from datetime import datetime
 
 app = FastAPI()
 solver_service = SolverService()
+model_store = ModelStore()
 
 @app.post("/build")
-def build_model(request: ModelBuildRequest):
+def build_model(request: Dict[str, Any]):
     try:
-        # Build the model
-        model = solver_service.build_model(request.dict())
-        # Store the model
-        model_id = model_store.store_model(model)
+        model = solver_service.build_model(request)
+        model_id = str(uuid.uuid4())
+        model_store.store_model(model_id, model)
         return {"model_id": model_id, "status": "built"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/run/{model_id}")
-def run_model(model_id: str, request: ModelRunRequest):
+def run_model(model_id: str, run_request: Dict[str, Any] = None):
     try:
-        # Get the model
         model = model_store.get_model(model_id)
-        # Run the model
-        result = solver_service.run_model(model, request.dict())
+        result = solver_service.run_model(model, run_request)
         return result
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/solve")
+def solve_model(request: Dict[str, Any]):
+    """Solve a model directly without storing it."""
+    try:
+        # Build the model
+        model = solver_service.build_model(request)
+        # Run the model immediately
+        result = solver_service.run_model(model)
+        return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

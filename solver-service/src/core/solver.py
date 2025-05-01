@@ -72,24 +72,22 @@ class SolverService:
         
         # Set objective
         obj_expr = data["objective"]["expression"]
+        # Parse coefficient and variable name from expression like "2x"
+        coeff = 1.0
+        var_name = obj_expr
+        if any(c.isdigit() for c in obj_expr):
+            # If there's a number in the expression, split it
+            for i, c in enumerate(obj_expr):
+                if c.isalpha():
+                    if i > 0:
+                        coeff = float(obj_expr[:i])
+                    var_name = obj_expr[i:]
+                    break
+        
         if data["objective"]["type"] == "maximize":
-            if "*" in obj_expr:
-                coeff, var = obj_expr.split("*")
-                coeff = float(coeff.strip())
-                var = var.strip()
-                solver.Maximize(variables[var] * coeff)
-            else:
-                var = obj_expr.strip()
-                solver.Maximize(variables[var])
+            solver.Maximize(variables[var_name] * coeff)
         else:
-            if "*" in obj_expr:
-                coeff, var = obj_expr.split("*")
-                coeff = float(coeff.strip())
-                var = var.strip()
-                solver.Minimize(variables[var] * coeff)
-            else:
-                var = obj_expr.strip()
-                solver.Minimize(variables[var])
+            solver.Minimize(variables[var_name] * coeff)
         
         # Solve
         status = solver.Solve()
