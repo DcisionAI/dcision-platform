@@ -9,6 +9,7 @@ from .templates import (
     BreakScheduleRequest, LaborCostRequest, WorkforceCapacityRequest,
     ShiftCoverageRequest
 )
+from datetime import datetime
 
 class SolverService:
     def __init__(self):
@@ -567,4 +568,56 @@ class SolverService:
                         })
             return {"status": "success", "solution": solution}
         else:
-            return {"status": "failed", "error": "No optimal solution found"} 
+            return {"status": "failed", "error": "No optimal solution found"}
+
+    def build_model(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """Build an optimization model from the request."""
+        try:
+            # Validate the model structure
+            if not all(key in request for key in ["variables", "constraints", "objective"]):
+                raise ValueError("Missing required model components")
+            
+            # Create the model representation
+            model = {
+                "variables": request["variables"],
+                "constraints": request["constraints"],
+                "objective": request["objective"],
+                "parameters": request.get("parameters", {}),
+                "metadata": {
+                    "name": request.get("name", "Unnamed Model"),
+                    "description": request.get("description", ""),
+                    "created_at": datetime.now().isoformat()
+                }
+            }
+            
+            return model
+        except Exception as e:
+            raise Exception(f"Failed to build model: {str(e)}")
+
+    def run_model(self, model: Dict[str, Any], run_request: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Run an optimization model with optional parameters."""
+        try:
+            # Update model parameters if provided
+            if run_request and "parameters" in run_request:
+                model["parameters"].update(run_request["parameters"])
+            
+            # Determine the appropriate solver based on variable types
+            variable_types = {v["type"] for v in model["variables"]}
+            if "binary" in variable_types or "integer" in variable_types:
+                solver_type = "mip"
+            else:
+                solver_type = "lp"
+            
+            # Prepare the data for the solver
+            solver_data = {
+                "type": solver_type,
+                "variables": model["variables"],
+                "constraints": model["constraints"],
+                "objective": model["objective"],
+                "parameters": model["parameters"]
+            }
+            
+            # Run the solver
+            return self.solve(solver_data)
+        except Exception as e:
+            raise Exception(f"Failed to run model: {str(e)}") 

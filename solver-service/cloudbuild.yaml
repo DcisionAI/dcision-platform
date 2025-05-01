@@ -1,0 +1,28 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/dcisionai/solver-service/solver-service:v1', '.']
+
+  # Push the container image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/dcisionai/solver-service/solver-service:v1']
+
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'solver-service'
+      - '--image'
+      - 'us-central1-docker.pkg.dev/dcisionai/solver-service/solver-service:v1'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--set-env-vars'
+      - 'PYTHONPATH=/app'
+
+images:
+  - 'us-central1-docker.pkg.dev/dcisionai/solver-service/solver-service:v1' 

@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Any
 from src.core.solver import SolverService
+from src.core.model_store import model_store
+from src.api.models import ModelBuildRequest, ModelRunRequest
 from src.core.templates import (
     VehicleAssignmentRequest, FleetMixRequest, MaintenanceScheduleRequest,
     FuelOptimizationRequest, EmployeeScheduleRequest, TaskAssignmentRequest,
@@ -11,6 +13,30 @@ from src.core.templates import (
 
 app = FastAPI()
 solver_service = SolverService()
+
+@app.post("/build")
+def build_model(request: ModelBuildRequest):
+    try:
+        # Build the model
+        model = solver_service.build_model(request.dict())
+        # Store the model
+        model_id = model_store.store_model(model)
+        return {"model_id": model_id, "status": "built"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/run/{model_id}")
+def run_model(model_id: str, request: ModelRunRequest):
+    try:
+        # Get the model
+        model = model_store.get_model(model_id)
+        # Run the model
+        result = solver_service.run_model(model, request.dict())
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/solve/vehicle-assignment")
 def solve_vehicle_assignment(request: VehicleAssignmentRequest):
