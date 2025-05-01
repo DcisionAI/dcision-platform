@@ -626,7 +626,7 @@ export default function PlaygroundPage() {
           const result = await response.json();
           if (result.output?.success) {
             const { featureSet, fieldMappings, collectedData, featureEngineeringReport } = result.output;
-            
+            console.log('fieldMappings', JSON.stringify(fieldMappings, null, 2));
             output = `Data Integration Results:\n\n` +
                     `Feature Set:\n${JSON.stringify(featureSet, null, 2)}\n\n` +
                     `Field Mappings:\n${JSON.stringify(fieldMappings, null, 2)}\n\n` +
