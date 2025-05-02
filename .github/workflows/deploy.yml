@@ -2,13 +2,13 @@ name: Deploy Backend Services
 
 on:
   push:
-    branches: [ main ]
+    branches: [ backend ]
     paths:
       - 'plugin-service/**'
       - 'solver-service/**'
       - '.github/workflows/deploy.yml'
   pull_request:
-    branches: [ main ]
+    branches: [ backend ]
     paths:
       - 'plugin-service/**'
       - 'solver-service/**'
