@@ -245,62 +245,41 @@ export class AssignmentTemplate {
       protocol: {
         steps: [
           {
+            id: 'collect_data',
             action: 'collect_data',
             description: 'Collect worker and task data',
             required: true
           },
           {
+            id: 'validate_constraints',
             action: 'validate_constraints',
             description: 'Validate assignment constraints',
-            required: true,
-            parameters: {
-              check_skills: true,
-              validate_availability: true
-            }
+            required: true
           },
           {
+            id: 'build_model',
             action: 'build_model',
-            description: 'Build assignment model',
-            required: true,
-            parameters: {
-              solver_type: 'or_tools_cp',
-              consider_preferences: true
-            }
+            description: 'Build assignment optimization model',
+            required: true
           },
           {
+            id: 'solve_model',
             action: 'solve_model',
-            description: 'Generate optimal assignments',
-            required: true,
-            parameters: {
-              solver: 'or_tools',
-              timeout: 30000,
-              solution_limit: 100
-            }
+            description: 'Solve assignment optimization model',
+            required: true
           },
           {
+            id: 'explain_solution',
             action: 'explain_solution',
-            description: 'Generate assignment insights',
-            required: true,
-            parameters: {
-              include_metrics: [
-                'total_cost',
-                'skill_match_score',
-                'workload_balance',
-                'priority_satisfaction'
-              ]
-            }
-          },
-          {
-            action: 'human_review',
-            description: 'Review and approve task assignments',
+            description: 'Explain assignment solution',
             required: true
           }
         ],
-        allowPartialSolutions: true,
+        allowPartialSolutions: false,
         explainabilityEnabled: true,
         humanInTheLoop: {
-          required: true,
-          approvalSteps: ['final_assignments', 'worker_schedules']
+          required: false,
+          approvalSteps: []
         }
       }
     };

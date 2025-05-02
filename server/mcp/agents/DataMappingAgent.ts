@@ -1,5 +1,6 @@
-import { MCPAgent, AgentRunContext, AgentRunResult } from './AgentRegistry';
-import { StepAction, ProtocolStep, MCP } from '../types';
+import { MCPAgent, AgentRunContext, AgentRunResult, AgentType } from './types';
+import { ProtocolStep, MCP } from '../types/core';
+import { StepAction } from './types';
 import { extractJsonFromMarkdown } from '../utils/markdown';
 import { callOpenAI } from './llm/openai';
 import { createClient } from '@supabase/supabase-js';
@@ -92,7 +93,8 @@ interface FieldRequirements {
 
 export class DataMappingAgent implements MCPAgent {
   name = 'Data Mapping Agent';
-  supportedActions: StepAction[] = ['map_data'];
+  type: AgentType = 'data_collector';
+  supportedActions: StepAction[] = ['collect_data'];
   private supabase;
 
   // Define common tables for vehicle routing
@@ -565,7 +567,6 @@ export class DataMappingAgent implements MCPAgent {
 
   async run(step: ProtocolStep, mcp: MCP, context?: AgentRunContext): Promise<AgentRunResult> {
     const thoughtProcess: string[] = [];
-    const onProgress = context?.onProgress || (() => {});
 
     if (!mcp.context) {
       throw new Error('MCP context is required for data mapping');
@@ -633,18 +634,6 @@ export class DataMappingAgent implements MCPAgent {
       thoughtProcess.push(`Available Customer Fields: ${(mcpContext.dataset?.metadata?.databaseFields || []).join(', ')}`);
       thoughtProcess.push(`Database Schema: ${JSON.stringify(tableFields, null, 2)}`);
 
-      onProgress({
-        type: 'progress',
-        message: 'Starting field mapping analysis',
-        details: {
-          problemType: mcpContext.problemType,
-          intentDetails: mcpContext.dataset?.metadata?.intentDetails,
-          requiredFields: mcpContext.dataset?.requiredFields || [],
-          customerFields: mcpContext.dataset?.metadata?.databaseFields || [],
-          tableFields
-        }
-      });
-
       // Step 2: Analyze field requirements with schema awareness
       const fieldRequirementsPrompt = `You are a JSON-only response API for field requirements analysis.
 
@@ -682,22 +671,13 @@ You must respond with ONLY a JSON object in the following format, and nothing el
   }
 }`;
 
-      onProgress({
-        type: 'progress',
-        message: 'Analyzing field requirements',
-        details: {
-          stage: 'field_requirements',
-          prompt: fieldRequirementsPrompt.slice(0, 200) + '...'
-        }
-      });
-
       let fieldRequirements;
       try {
-        const fieldReqResponse = context?.llm 
-          ? await context.llm(fieldRequirementsPrompt)
-          : await callOpenAI(fieldRequirementsPrompt);
+        const { enrichedData, reasoning } = context?.llm 
+          ? await context.llm.enrichData({ prompt: fieldRequirementsPrompt }, { problemType: mcpContext.problemType })
+          : { enrichedData: await callOpenAI(fieldRequirementsPrompt), reasoning: '' };
         
-        const cleanJson = extractJsonFromMarkdown(fieldReqResponse.trim());
+        const cleanJson = extractJsonFromMarkdown(enrichedData.trim());
         try {
           fieldRequirements = JSON.parse(cleanJson);
         } catch (parseError) {
@@ -706,15 +686,9 @@ You must respond with ONLY a JSON object in the following format, and nothing el
         }
 
         thoughtProcess.push('Field Requirements Analysis:', JSON.stringify(fieldRequirements, null, 2));
-
-        onProgress({
-          type: 'progress',
-          message: 'Field requirements analysis complete',
-          details: {
-            stage: 'field_requirements_complete',
-            fieldRequirements
-          }
-        });
+        if (reasoning) {
+          thoughtProcess.push('Reasoning:', reasoning);
+        }
       } catch (error) {
         thoughtProcess.push(`Failed to analyze field requirements: ${error instanceof Error ? error.message : 'Unknown error'}`);
         throw error;
@@ -784,22 +758,13 @@ EXAMPLE RESPONSE:
   "suggested_actions": ["Verify relationships between location IDs and locations table"]
 }`;
 
-      onProgress({
-        type: 'progress',
-        message: 'Starting field mapping',
-        details: {
-          stage: 'field_mapping',
-          prompt: mappingPrompt.slice(0, 200) + '...'
-        }
-      });
-
       let mappingResult;
       try {
-        const mappingResponse = context?.llm
-          ? await context.llm(mappingPrompt)
-          : await callOpenAI(mappingPrompt);
+        const { enrichedData, reasoning } = context?.llm
+          ? await context.llm.enrichData({ prompt: mappingPrompt }, { problemType: mcpContext.problemType })
+          : { enrichedData: await callOpenAI(mappingPrompt), reasoning: '' };
         
-        const cleanJson = extractJsonFromMarkdown(mappingResponse.trim());
+        const cleanJson = extractJsonFromMarkdown(enrichedData.trim());
         try {
           mappingResult = JSON.parse(cleanJson);
           
@@ -813,19 +778,17 @@ EXAMPLE RESPONSE:
               rationale: m.rationale || ''
             })) || [],
             unmapped_fields: mappingResult.unmapped_fields || [],
-            suggested_actions: mappingResult.suggested_actions || [
-              'Review unmapped fields and provide manual mappings if needed',
-              'Verify data type compatibility for all mappings',
-              'Consider adding missing fields to the database schema'
-            ]
+            suggested_actions: mappingResult.suggested_actions || []
           };
-          
         } catch (parseError) {
           thoughtProcess.push(`Failed to parse mapping response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
           throw new Error(`Invalid JSON response from LLM: ${cleanJson}`);
         }
 
         thoughtProcess.push('Field Mapping Analysis:', JSON.stringify(mappingResult, null, 2));
+        if (reasoning) {
+          thoughtProcess.push('Reasoning:', reasoning);
+        }
 
         // Validate the mappings
         const unmappedFields = this.validateMappings(
@@ -873,13 +836,7 @@ EXAMPLE RESPONSE:
             unmappedFields: mappingResult.unmapped_fields,
             suggestedActions: mappingResult.suggested_actions,
             needsHumanReview: mappingResult.unmapped_fields.length > 0 || mappingResult.mappings.some((m: FieldMapping) => m.confidence < 0.8),
-            heuristicAnalysis: {
-              totalFields: Object.keys(fieldRequirements.required_fields).length,
-              mappedFields: mappingResult.mappings.length,
-              highConfidenceMappings: mappingResult.mappings.filter((m: FieldMapping) => m.confidence >= 0.9).length,
-              suggestedTransformations: mappingResult.mappings.filter((m: FieldMapping) => (m.transformations || []).length > 0).length,
-              fieldPatterns: this.analyzeFieldPatterns(mappingResult.mappings, tableFields)
-            }
+            heuristicAnalysis: this.analyzeFieldPatterns(mappingResult.mappings, tableFields)
           },
           thoughtProcess: thoughtProcess.join('\n')
         };
@@ -890,11 +847,6 @@ EXAMPLE RESPONSE:
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       thoughtProcess.push(`Error: ${errorMessage}`);
-      onProgress({
-        type: 'error',
-        message: 'Failed to process data mapping request',
-        details: errorMessage
-      });
       return {
         output: {
           success: false,

@@ -262,63 +262,41 @@ export class BinPackingTemplate {
       protocol: {
         steps: [
           {
+            id: 'collect_data',
             action: 'collect_data',
             description: 'Collect item and bin data',
             required: true
           },
           {
+            id: 'validate_constraints',
             action: 'validate_constraints',
-            description: 'Validate packing constraints',
-            required: true,
-            parameters: {
-              check_dimensions: true,
-              validate_weight: true
-            }
+            description: 'Validate bin packing constraints',
+            required: true
           },
           {
+            id: 'build_model',
             action: 'build_model',
-            description: 'Build bin packing model',
-            required: true,
-            parameters: {
-              solver_type: 'or_tools_cp',
-              use_3d: this.config.is3D,
-              consider_rotation: true
-            }
+            description: 'Build bin packing optimization model',
+            required: true
           },
           {
+            id: 'solve_model',
             action: 'solve_model',
-            description: 'Generate optimal packing solution',
-            required: true,
-            parameters: {
-              solver: 'or_tools',
-              timeout: 30000,
-              solution_limit: 100
-            }
+            description: 'Solve bin packing optimization model',
+            required: true
           },
           {
+            id: 'explain_solution',
             action: 'explain_solution',
-            description: 'Generate packing insights',
-            required: true,
-            parameters: {
-              include_metrics: [
-                'bins_used',
-                'volume_utilization',
-                'weight_distribution',
-                'packing_efficiency'
-              ]
-            }
-          },
-          {
-            action: 'human_review',
-            description: 'Review and approve packing plan',
+            description: 'Explain bin packing solution',
             required: true
           }
         ],
-        allowPartialSolutions: true,
+        allowPartialSolutions: false,
         explainabilityEnabled: true,
         humanInTheLoop: {
-          required: true,
-          approvalSteps: ['packing_plan', 'bin_assignments']
+          required: false,
+          approvalSteps: []
         }
       }
     };

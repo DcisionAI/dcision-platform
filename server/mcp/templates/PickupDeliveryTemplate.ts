@@ -223,16 +223,19 @@ export class PickupDeliveryTemplate {
       protocol: {
         steps: [
           {
+            id: 'collect_data',
             action: 'collect_data',
             description: 'Collect vehicle and request data',
             required: true
           },
           {
+            id: 'validate_constraints',
             action: 'validate_constraints',
             description: 'Validate pickup-delivery constraints',
             required: true
           },
           {
+            id: 'build_model',
             action: 'build_model',
             description: 'Build PDP model with OR-Tools',
             required: true,
@@ -242,6 +245,7 @@ export class PickupDeliveryTemplate {
             }
           },
           {
+            id: 'solve_model',
             action: 'solve_model',
             description: 'Generate optimal pickup-delivery routes',
             required: true,
@@ -252,20 +256,21 @@ export class PickupDeliveryTemplate {
             }
           },
           {
+            id: 'explain_solution',
             action: 'explain_solution',
-            description: 'Generate solution insights',
+            description: 'Generate solution insights and metrics',
             required: true,
             parameters: {
               include_metrics: [
                 'total_distance',
                 'total_time',
                 'vehicle_utilization',
-                'request_fulfillment',
-                'priority_satisfaction'
+                'request_satisfaction'
               ]
             }
           },
           {
+            id: 'human_review',
             action: 'human_review',
             description: 'Review and approve pickup-delivery routes',
             required: true
@@ -275,7 +280,16 @@ export class PickupDeliveryTemplate {
         explainabilityEnabled: true,
         humanInTheLoop: {
           required: true,
-          approvalSteps: ['final_routes', 'vehicle_assignments']
+          approvalSteps: [
+            {
+              step: 'final_routes',
+              description: 'Review and approve final route assignments'
+            },
+            {
+              step: 'vehicle_assignments',
+              description: 'Review and approve vehicle-request assignments'
+            }
+          ]
         }
       }
     };

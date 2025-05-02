@@ -1,5 +1,5 @@
-import { StepAction, ProtocolStep, MCP } from '../types';
-import { MCPAgent as IMCPAgent, AgentType } from './types';
+import { ProtocolStep, MCP } from '../types/core';
+import { MCPAgent as IMCPAgent, AgentType, StepAction } from './types';
 
 export interface AgentRunContext {
   llm?: (prompt: string, config?: any) => Promise<any>;
@@ -42,7 +42,7 @@ export class AgentRegistry {
     return this.agentTypes.get(type) || [];
   }
 
-  getAgentForAction(action: string): IMCPAgent | undefined {
+  getAgentForAction(action: StepAction): IMCPAgent | undefined {
     return Array.from(this.agents.values()).find(agent => 
       agent.supportedActions.includes(action)
     );

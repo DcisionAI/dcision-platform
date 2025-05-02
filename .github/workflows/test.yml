@@ -1,0 +1,54 @@
+name: Test Services
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test-plugin-service:
+    name: Test Plugin Service
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        working-directory: ./plugin-service
+        run: npm ci
+
+      - name: Run Tests
+        working-directory: ./plugin-service
+        run: npm test
+        env:
+          NODE_ENV: test
+
+  test-solver-service:
+    name: Test Solver Service
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        working-directory: ./solver-service
+        run: npm ci
+
+      - name: Run Tests
+        working-directory: ./solver-service
+        run: npm test
+        env:
+          NODE_ENV: test 

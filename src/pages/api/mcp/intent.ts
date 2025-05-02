@@ -1,7 +1,44 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { IntentInterpreterAgent } from '@server/mcp/agents/IntentInterpreterAgent';
-import { MCP } from '@server/mcp/types';
-import { LLMProviderFactory } from '@server/mcp/agents/llm/providers/LLMProviderFactory';
+import { NextApiRequest, NextApiResponse } from 'next';
+import { createClient } from '@supabase/supabase-js';
+import { MCP } from '../../../../server/mcp/types';
+import { LLMProviderFactory } from '../../../../server/mcp/agents/llm/providers/LLMProviderFactory';
+import { LLMService, LLMResponse } from '../../../../server/mcp/services/llm/LLMService';
+import { IntentInterpreterAgent } from '../../../../server/mcp/agents/IntentInterpreterAgent';
+
+class IntegrationLLMService implements LLMService {
+  constructor(private llmProvider: any, private providerType: string) {}
+
+  async generateConstraints(businessRules: string): Promise<{ constraints: string[], reasoning: string }> {
+    throw new Error('Method not implemented.');
+  }
+
+  async validateModel(model: any, problemType: string): Promise<{ issues: string[], suggestions: string[] }> {
+    throw new Error('Method not implemented.');
+  }
+
+  async interpretIntent(description: string): Promise<{ problemType: string, context: any }> {
+    throw new Error('Method not implemented.');
+  }
+
+  async enrichData(data: any, context: any): Promise<{ enrichedData: any, reasoning: string }> {
+    throw new Error('Method not implemented.');
+  }
+
+  async explainSolution(solution: any, problemType: string): Promise<{ explanation: string, insights: string[] }> {
+    throw new Error('Method not implemented.');
+  }
+
+  async call(prompt: string, config?: any): Promise<LLMResponse> {
+    const response = await this.llmProvider.call(prompt, {
+      model: this.providerType === 'anthropic' ? 'claude-3-opus-20240229' : 'gpt-4-turbo-preview',
+      temperature: 0.2,
+      ...config
+    });
+    return {
+      content: response
+    };
+  }
+}
 
 const agent = new IntentInterpreterAgent();
 
@@ -43,6 +80,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       protocol: {
         steps: [
           {
+            id: 'interpret_intent',
             action: 'interpret_intent',
             description: 'Interpret user intent',
             required: true
@@ -70,9 +108,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const llmProvider = LLMProviderFactory.createProvider(providerType as 'openai' | 'anthropic', apiKey);
     
     const result = await agent.run(
-      { action: 'interpret_intent', description: 'Interpret user intent', required: true },
+      { id: 'interpret_intent', action: 'interpret_intent', description: 'Interpret user intent', required: true },
       mcp,
-      { llm: (prompt: string) => llmProvider.call(prompt) }
+      { llm: new IntegrationLLMService(llmProvider, providerType) }
     );
 
     // Add provider information to the response

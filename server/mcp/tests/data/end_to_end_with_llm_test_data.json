@@ -1,0 +1,239 @@
+{
+  "sessionId": "test-fleetops-llm-001",
+  "version": "1.0",
+  "status": "pending",
+  "created": "2024-03-20T10:00:00Z",
+  "lastModified": "2024-03-20T10:00:00Z",
+  "model": {
+    "variables": [
+      {
+        "name": "vehicle_assignments",
+        "type": "array",
+        "description": "Assignment of vehicles to routes",
+        "dimensions": ["vehicle_id", "route_id"]
+      },
+      {
+        "name": "route_sequence",
+        "type": "array",
+        "description": "Sequence of stops in each route",
+        "dimensions": ["route_id", "stop_index"]
+      }
+    ],
+    "constraints": [
+      {
+        "type": "capacity_vehicle",
+        "description": "Vehicle capacity must not be exceeded",
+        "field": "vehicle_assignments",
+        "operator": "lte",
+        "value": "vehicle_capacity",
+        "priority": "must"
+      },
+      {
+        "type": "time_window",
+        "description": "Stops must be visited within their time windows",
+        "field": "route_sequence",
+        "operator": "between",
+        "value": "time_window",
+        "priority": "must"
+      }
+    ],
+    "objective": {
+      "type": "minimize",
+      "field": "total_distance",
+      "description": "Minimize total distance traveled",
+      "weight": 1.0
+    },
+    "fleet": {
+      "vehicles": [
+        {
+          "id": "vehicle_1",
+          "capacity": 1000,
+          "costPerKm": 1.5,
+          "maxDistance": 500
+        },
+        {
+          "id": "vehicle_2",
+          "capacity": 1500,
+          "costPerKm": 2.0,
+          "maxDistance": 800
+        }
+      ],
+      "depots": [
+        {
+          "id": "depot_1",
+          "type": "DEPOT",
+          "latitude": 37.7749,
+          "longitude": -122.4194,
+          "timeWindows": [
+            {
+              "start": "2024-03-20T08:00:00Z",
+              "end": "2024-03-20T18:00:00Z"
+            }
+          ]
+        }
+      ],
+      "customers": [
+        {
+          "id": "customer_1",
+          "type": "CUSTOMER",
+          "latitude": 37.7833,
+          "longitude": -122.4167,
+          "timeWindows": [
+            {
+              "start": "2024-03-20T09:00:00Z",
+              "end": "2024-03-20T12:00:00Z"
+            }
+          ]
+        },
+        {
+          "id": "customer_2",
+          "type": "CUSTOMER",
+          "latitude": 37.7858,
+          "longitude": -122.4008,
+          "timeWindows": [
+            {
+              "start": "2024-03-20T13:00:00Z",
+              "end": "2024-03-20T16:00:00Z"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "context": {
+    "environment": {
+      "region": "us-central1",
+      "timezone": "America/Chicago",
+      "resources": {
+        "solver": {
+          "type": "gcp",
+          "project": "dcisionai-platform",
+          "location": "us-central1"
+        },
+        "llm": {
+          "type": "openai",
+          "model": "gpt-4",
+          "temperature": 0.2
+        }
+      }
+    },
+    "dataset": {
+      "internalSources": ["vehicles", "locations", "demands"],
+      "dataQuality": "good",
+      "requiredFields": [
+        "vehicle_id",
+        "capacity",
+        "location_id",
+        "latitude",
+        "longitude",
+        "demand",
+        "time_window_start",
+        "time_window_end"
+      ]
+    },
+    "problemType": "vehicle_routing",
+    "industry": "logistics"
+  },
+  "protocol": {
+    "steps": [
+      {
+        "id": "interpret_intent",
+        "action": "interpret_intent",
+        "description": "Interpret user intent and identify problem type",
+        "required": true,
+        "parameters": {
+          "input": "I need to optimize delivery routes for my fleet of vehicles considering time windows and vehicle capacities",
+          "llmConfig": {
+            "model": "gpt-4",
+            "temperature": 0.2,
+            "maxTokens": 500
+          }
+        }
+      },
+      {
+        "id": "collect_data",
+        "action": "collect_data",
+        "description": "Collect data from required tables",
+        "required": true,
+        "parameters": {
+          "tables": ["vehicles", "locations", "demands"],
+          "requiredFields": [
+            "vehicle_id",
+            "capacity",
+            "location_id",
+            "latitude",
+            "longitude",
+            "demand",
+            "time_window_start",
+            "time_window_end"
+          ]
+        }
+      },
+      {
+        "id": "enrich_data",
+        "action": "enrich_data",
+        "description": "Enrich data with additional calculations",
+        "required": true,
+        "parameters": {
+          "enrichmentRules": {
+            "calculate_distances": true,
+            "validate_time_windows": true
+          }
+        }
+      },
+      {
+        "id": "build_model",
+        "action": "build_model",
+        "description": "Build optimization model from enriched data",
+        "required": true
+      },
+      {
+        "id": "solve_model",
+        "action": "solve_model",
+        "description": "Solve the optimization model",
+        "required": true,
+        "parameters": {
+          "solver": {
+            "type": "gcp",
+            "timeout": 3600,
+            "max_iterations": 1000
+          }
+        }
+      },
+      {
+        "id": "explain_solution",
+        "action": "explain_solution",
+        "description": "Explain the solution using LLM",
+        "required": true,
+        "parameters": {
+          "llmConfig": {
+            "model": "gpt-4",
+            "temperature": 0.3,
+            "maxTokens": 1000
+          },
+          "format": {
+            "type": "natural_language",
+            "sections": ["summary", "route_details", "recommendations"]
+          }
+        }
+      },
+      {
+        "id": "human_review",
+        "action": "human_review",
+        "description": "Get human review for the solution",
+        "required": true
+      }
+    ],
+    "allowPartialSolutions": false,
+    "explainabilityEnabled": true,
+    "humanInTheLoop": {
+      "required": true,
+      "approvalSteps": [
+        {
+          "step": "explain_solution",
+          "description": "Review and approve the solution explanation"
+        }
+      ]
+    }
+  }
+} 

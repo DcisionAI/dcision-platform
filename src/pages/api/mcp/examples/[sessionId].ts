@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { ExampleSessionService } from '@server/mcp/services/ExampleSessionService';
+import { ExampleSessionService } from '../../../../../server/mcp/services/example/ExampleSessionService';
 
 const exampleService = new ExampleSessionService();
 

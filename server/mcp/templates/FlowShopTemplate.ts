@@ -139,46 +139,41 @@ const FlowShopTemplate: MCP = {
   protocol: {
     steps: [
       {
+        id: 'collect_data',
         action: 'collect_data',
         description: 'Collect job processing times and due dates',
         required: true
       },
       {
-        action: 'collect_data',
-        description: 'Collect machine setup times and maintenance schedules',
-        required: true
-      },
-      {
+        id: 'validate_constraints',
         action: 'validate_constraints',
-        description: 'Validate job and machine data consistency',
+        description: 'Validate flow shop constraints',
         required: true
       },
       {
+        id: 'build_model',
         action: 'build_model',
-        description: 'Build flow shop scheduling optimization model',
+        description: 'Build flow shop optimization model',
         required: true
       },
       {
+        id: 'solve_model',
         action: 'solve_model',
-        description: 'Solve the optimization model',
+        description: 'Solve flow shop optimization model',
         required: true
       },
       {
+        id: 'explain_solution',
         action: 'explain_solution',
-        description: 'Generate Gantt chart visualization',
-        required: true
-      },
-      {
-        action: 'human_review',
-        description: 'Review and approve production schedule',
+        description: 'Explain flow shop solution',
         required: true
       }
     ],
-    allowPartialSolutions: true,
+    allowPartialSolutions: false,
     explainabilityEnabled: true,
     humanInTheLoop: {
-      required: true,
-      approvalSteps: ['review_schedule']
+      required: false,
+      approvalSteps: []
     }
   }
 };

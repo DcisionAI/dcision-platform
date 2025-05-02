@@ -189,41 +189,41 @@ export class JobShopTemplate {
       protocol: {
         steps: [
           {
+            id: 'collect_data',
             action: 'collect_data',
             description: 'Collect job and machine data',
             required: true
           },
           {
+            id: 'validate_constraints',
             action: 'validate_constraints',
-            description: 'Validate job sequences and machine availability',
+            description: 'Validate job shop constraints',
             required: true
           },
           {
+            id: 'build_model',
             action: 'build_model',
-            description: 'Build job shop scheduling model',
+            description: 'Build job shop optimization model',
             required: true
           },
           {
+            id: 'solve_model',
             action: 'solve_model',
-            description: 'Solve job shop scheduling model',
+            description: 'Solve job shop optimization model',
             required: true
           },
           {
+            id: 'explain_solution',
             action: 'explain_solution',
-            description: 'Generate schedule visualization and metrics',
-            required: true
-          },
-          {
-            action: 'human_review',
-            description: 'Review and approve schedule',
+            description: 'Explain job shop solution',
             required: true
           }
         ],
         allowPartialSolutions: false,
         explainabilityEnabled: true,
         humanInTheLoop: {
-          required: true,
-          approvalSteps: ['final_schedule']
+          required: false,
+          approvalSteps: []
         }
       }
     };

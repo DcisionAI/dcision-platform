@@ -1,0 +1,30 @@
+[
+  {
+    "location_id": "L1",
+    "demand": 30,
+    "time_window_start": "09:00",
+    "time_window_end": "12:00",
+    "service_duration": 30
+  },
+  {
+    "location_id": "L2",
+    "demand": 40,
+    "time_window_start": "10:00",
+    "time_window_end": "13:00",
+    "service_duration": 45
+  },
+  {
+    "location_id": "L3",
+    "demand": 25,
+    "time_window_start": "11:00",
+    "time_window_end": "14:00",
+    "service_duration": 20
+  },
+  {
+    "location_id": "L4",
+    "demand": 35,
+    "time_window_start": "12:00",
+    "time_window_end": "15:00",
+    "service_duration": 30
+  }
+] 

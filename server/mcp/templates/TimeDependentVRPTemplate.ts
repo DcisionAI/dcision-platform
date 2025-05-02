@@ -211,11 +211,13 @@ export class TimeDependentVRPTemplate {
       protocol: {
         steps: [
           {
+            id: 'collect_data',
             action: 'collect_data',
             description: 'Collect vehicle, customer, and traffic data',
             required: true
           },
           {
+            id: 'enrich_data',
             action: 'enrich_data',
             description: 'Enrich with real-time traffic data',
             required: true,
@@ -224,6 +226,7 @@ export class TimeDependentVRPTemplate {
             }
           },
           {
+            id: 'build_model',
             action: 'build_model',
             description: 'Build time-dependent VRP model',
             required: true,
@@ -233,6 +236,7 @@ export class TimeDependentVRPTemplate {
             }
           },
           {
+            id: 'solve_model',
             action: 'solve_model',
             description: 'Generate optimal time-dependent routes',
             required: true,
@@ -243,6 +247,7 @@ export class TimeDependentVRPTemplate {
             }
           },
           {
+            id: 'explain_solution',
             action: 'explain_solution',
             description: 'Generate solution insights',
             required: true,

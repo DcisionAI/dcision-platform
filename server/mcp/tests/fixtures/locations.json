@@ -1,0 +1,26 @@
+{
+  "locations": [
+    {
+      "location_id": "DEPOT",
+      "type": "depot",
+      "latitude": 37.7749,
+      "longitude": -122.4194
+    },
+    {
+      "location_id": "L1",
+      "type": "customer",
+      "latitude": 37.7833,
+      "longitude": -122.4167,
+      "time_window_start": "09:00",
+      "time_window_end": "12:00"
+    },
+    {
+      "location_id": "L2",
+      "type": "customer",
+      "latitude": 37.7855,
+      "longitude": -122.4001,
+      "time_window_start": "10:00",
+      "time_window_end": "15:00"
+    }
+  ]
+} 

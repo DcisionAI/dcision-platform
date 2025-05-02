@@ -1,65 +1,85 @@
 # DcisionAI Platform
 
-The DcisionAI Platform is an advanced decision intelligence system that combines optimization, machine learning, and human expertise to solve complex business problems.
+A platform for AI-powered decision making and optimization.
 
-## Features
-
-- Model Context Protocol (MCP) for standardized optimization problem definition
-- Interactive dashboard for monitoring and managing optimization tasks
-- Documentation system with AI-powered search and assistance
-- Integration with various data sources and optimization solvers
-- Real-time status tracking and alerts
-
-## Getting Started
+## Local Development Setup
 
 ### Prerequisites
+- Docker and Docker Compose
+- Node.js (v18 or later)
+- Yarn package manager
 
-- Node.js 16.x or later
-- npm or yarn
-- Git
-
-### Installation
-
-1. Clone the repository:
+### Environment Variables
+Create a `.env.local` file in the root directory with the following variables:
 ```bash
-git clone https://github.com/yourusername/dcisionai-platform.git
-cd dcisionai-platform
+# Supabase Configuration
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_KEY=your_supabase_service_key
+
+# JWT Configuration
+JWT_SECRET=your_jwt_secret
+
+# OpenAI Configuration
+OPENAI_API_KEY=your_openai_api_key
 ```
 
-2. Install dependencies:
+### Running the Services
+1. Start all services using Docker Compose:
 ```bash
-npm install
-# or
+docker-compose up --build
+```
+
+This will start:
+- Frontend on http://localhost:3000
+- Solver Service on http://localhost:8001
+- Plugin Service on http://localhost:8002
+
+### Development Workflow
+1. For frontend development:
+```bash
+cd frontend
 yarn install
-```
-
-3. Create a `.env` file in the root directory and add necessary environment variables:
-```bash
-cp .env.example .env
-```
-
-4. Start the development server:
-```bash
-npm run dev
-# or
 yarn dev
 ```
 
-The application will be available at `http://localhost:3000`.
+2. For solver service development:
+```bash
+cd solver-service
+yarn install
+yarn dev
+```
+
+3. For plugin service development:
+```bash
+cd plugin-service
+yarn install
+yarn dev
+```
 
 ## Project Structure
+- `frontend/` - Next.js frontend application
+- `solver-service/` - Optimization solver service
+- `plugin-service/` - Plugin management service
 
-- `/pages` - Next.js pages and API routes
-- `/components` - Reusable React components
-- `/styles` - Global styles and Tailwind CSS configuration
-- `/public` - Static assets
-- `/server` - Backend server code
-- `/docs` - Project documentation
+## Testing
+Run tests for each service:
+```bash
+# Frontend tests
+cd frontend
+yarn test
 
-## Contributing
+# Solver service tests
+cd solver-service
+yarn test
 
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+# Plugin service tests
+cd plugin-service
+yarn test
+```
+
+## Deployment
+The platform is designed to be deployed using Docker containers. Each service has its own Dockerfile and can be built and deployed independently.
 
 ## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+[Add your license information here]

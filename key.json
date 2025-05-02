@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "dcisionai",
+  "private_key_id": "fb117f58238a55317ba630f12da9605e5defe2ae",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCpw2t+BCq6BURe\n8DZPDo5SmEcOE43aPM8mbjG4Kh7/oWbX3I+SMOndtZ/f0kw+z56qStfpkIk9XS3O\n2w3xnOShfXjjbp4gR8fjSPgu5PQKlzo86EFqNa24LbItFcWCK2yxYjg9hNaYE7Sg\ngB/GEchAQLKuzLOegmNHpENmEB9BAF1zrwwQxMuWtacw0Bt68BcPGGt+wJjHC7HY\nu1TQK8U+q24uqpl3bLCMJd2QSBYqBOSA7/nlT6Ic4zg6/GNtQ65kZv0Nmsvu24d8\nUjTGtJjhakoQ9jA661xCubyGKjBwUqXUzwmZbn/afYu6L8Iapl/P/WvzFw/4yvWu\nkVxnOmIFAgMBAAECggEATkgPTsZEH5BjNTYmjPEE3wBaL5sDvAFzcmC465f8wFsg\nbeTGjZ6hkPt6E/9I6mPZ4ePuSUU9i77may8m8GWtJeySbKmrH+6JtXyF+TXZdPLE\nR6a/12aWS0pDEbgq4fn9PpSwo2mYfPsFPUennzG++iX7X1CEeVDd0ADmlW9UwidT\n7x0TVMPb1wULQno3nTy+CHClMXHIptIlsKSOEGbP7L/QZKmeh0IwIV/VG23gbgKr\n7ibOAYc3R2UJ5J8co3DgOGOVcKuioJUUrfPD7RrL+QcVrbIQNZIOdK8+n9wer6I5\nWror6NoDUd4XKWtXt218TRFQMRXlXUwa9dRqwFHHNwKBgQDpkQI6SHbpL9vVnzxy\npZjiCDajcrCxHuce9Z6Ut2OfWeTCmlZQhEwyVtIdFYjj6aQtd1B9GFQ20V2omrXz\nwp1hLkG9LN0QeixVTX2Ti4EhWOTL4rBjJ0iC60zb8Njjes+0+y2JGUIGNZxumQBG\naeV5DhOnm3G8AWBLeMxwFf1JjwKBgQC6EZrPeJ+tCPigI8iPgVe9D/C00j43JxZ6\nUqUDp2oe3/ZkC6+/7mGcbrxlKdGRJ2IO42mIrsw8pNVx7evCeIsJPdsYYAkIhyqe\nCDc2gnMHaWPI5b/xKHkDrp7d3yQRpqJFa+V6Fn9uUKTO2BntaHWuOsTaIX1QuG0Q\ncqxMCdcJKwKBgEs1bWE1Gk0mIwSbnMxR9HO8L1PcR3cRO1zlvGWo08RpHtdm+So+\nH4cKG+hPmd/BySL2y40se1mXezAieTp/zUuQqIxw2NJIdOQW6rvK7Q6+4BWi7idP\na/L0L7CW0lAVqLJfOx9taaw0MSYP0F3cFY8wcDXFQQ9H5ikHQdVJz2CTAoGBAKIB\nzg8y8aSRmRilz2zTq3ccN/LY0/7lc7bR2oeR7t4vFrMJUd8FScwQxsw2WxfNeJ2J\n+EtgFsf+pTHrfEj49+X2C5vvki3wsnSipqA5eLpNUuqK0FLDcIp6MizwqtELi2Jy\njX19tTpx0O2gTwLc3wnydY+PdTMhQST/E3GpZ6e9AoGBAKZgY8AYnfa3La5KJ4Ds\ndZGzft0qX5DnM+dN1DVNvp2H8TuKIvdf41ZlL+FXdYBQ3DnT7JXNpiSIg97gxHDB\nxAXp41U/AbdoiaZFI8BO6AInHGc2nR7sOHtBAuQky4AUYrbBi/gPdRxeovHu+8Pm\nwemxcEP/SpCHpLN3oD1gVpi5\n-----END PRIVATE KEY-----\n",
+  "client_email": "github-actions@dcisionai.iam.gserviceaccount.com",
+  "client_id": "111258396510504209327",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/github-actions%40dcisionai.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

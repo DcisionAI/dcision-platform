@@ -202,56 +202,47 @@ export class MultiDepotRoutingTemplate {
       protocol: {
         steps: [
           {
+            id: 'interpret_intent',
             action: 'interpret_intent',
             description: 'Understand routing requirements',
             required: true
           },
           {
-            action: 'map_data',
-            description: 'Map fleet and customer data fields',
-            required: true
-          },
-          {
+            id: 'collect_data',
             action: 'collect_data',
-            description: 'Collect fleet and delivery data',
+            description: 'Collect depot and vehicle data',
             required: true
           },
           {
-            action: 'enrich_data',
-            description: 'Add weather and traffic data',
-            required: false
+            id: 'validate_constraints',
+            action: 'validate_constraints',
+            description: 'Validate routing constraints',
+            required: true
           },
           {
+            id: 'build_model',
             action: 'build_model',
-            description: 'Build VRP model',
+            description: 'Build routing optimization model',
             required: true
           },
           {
+            id: 'solve_model',
             action: 'solve_model',
-            description: 'Optimize routes',
+            description: 'Solve routing optimization model',
             required: true
           },
           {
+            id: 'explain_solution',
             action: 'explain_solution',
-            description: 'Generate route explanations',
-            required: true
-          },
-          {
-            action: 'human_review',
-            description: 'Manager approval',
-            required: true
-          },
-          {
-            action: 'productionalize_workflow',
-            description: 'Deploy optimized routes',
+            description: 'Explain routing solution',
             required: true
           }
         ],
         allowPartialSolutions: false,
         explainabilityEnabled: true,
         humanInTheLoop: {
-          required: true,
-          approvalSteps: ['final_routes']
+          required: false,
+          approvalSteps: []
         }
       }
     };

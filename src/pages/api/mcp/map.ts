@@ -4,6 +4,7 @@ import { MCP as CoreMCP, MCPStatus, ProblemType, IndustryVertical, Protocol } fr
 import { DataMappingAgent } from '@server/mcp/agents/DataMappingAgent';
 import { AgentRunContext, AgentRunResult } from '@server/mcp/agents/AgentRegistry';
 import { LLMProviderFactory } from '@server/mcp/agents/llm/providers/LLMProviderFactory';
+import { LLMService, LLMResponse } from '@server/mcp/services/llm/LLMService';
 
 interface SSEUpdate {
   type: 'progress' | 'complete' | 'error';
@@ -24,6 +25,41 @@ interface MCPContext {
   sessionId: string;
   problemType: ProblemType;
   userInput: string;
+}
+
+class IntegrationLLMService implements LLMService {
+  constructor(private llmProvider: any, private providerType: string) {}
+
+  async generateConstraints(businessRules: string): Promise<{ constraints: string[], reasoning: string }> {
+    throw new Error('Method not implemented.');
+  }
+
+  async validateModel(model: any, problemType: string): Promise<{ issues: string[], suggestions: string[] }> {
+    throw new Error('Method not implemented.');
+  }
+
+  async interpretIntent(description: string): Promise<{ problemType: string, context: any }> {
+    throw new Error('Method not implemented.');
+  }
+
+  async enrichData(data: any, context: any): Promise<{ enrichedData: any, reasoning: string }> {
+    throw new Error('Method not implemented.');
+  }
+
+  async explainSolution(solution: any, problemType: string): Promise<{ explanation: string, insights: string[] }> {
+    throw new Error('Method not implemented.');
+  }
+
+  async call(prompt: string, config?: any): Promise<LLMResponse> {
+    const response = await this.llmProvider.call(prompt, {
+      model: this.providerType === 'anthropic' ? 'claude-3-opus-20240229' : 'gpt-4-turbo-preview',
+      temperature: 0.2,
+      ...config
+    });
+    return {
+      content: response
+    };
+  }
 }
 
 class MCP implements CoreMCP {
@@ -88,10 +124,10 @@ class MCP implements CoreMCP {
     };
     this.protocol = {
       steps: [{
+        id: 'map_data',
         action: 'map_data',
         description: 'Determine required data schema based on problem type and user requirements.',
         required: true,
-        agent: 'DataMappingAgent',
         parameters: {}
       }],
       allowPartialSolutions: false,
@@ -153,21 +189,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const agent = new DataMappingAgent();
     
     const result = await agent.run({
+      id: 'map_data',
       action: 'map_data',
       description: 'Determine required data schema based on problem type and user requirements.',
       required: true,
-      agent: 'DataMappingAgent',
       parameters: {}
     }, mcp, {
-      llm: (prompt: string) => llmProvider.call(prompt),
-      onProgress: (update: { type: 'progress' | 'warning' | 'error'; message: string; details?: any }) => {
-        console.log(`[${update.type}] ${update.message}`, update.details);
-        // Send progress updates via SSE
-        sendSSE(res, {
-          type: 'progress',
-          message: update.message,
-          details: update.details
-        });
+      llm: new IntegrationLLMService(llmProvider, providerType),
+      metadata: {
+        onProgress: (update: { type: 'progress' | 'warning' | 'error'; message: string; details?: any }) => {
+          console.log(`[${update.type}] ${update.message}`, update.details);
+          // Send progress updates via SSE
+          sendSSE(res, {
+            type: 'progress',
+            message: update.message,
+            details: update.details
+          });
+        }
       }
     });
 

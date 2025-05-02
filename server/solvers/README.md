@@ -24,11 +24,11 @@ pip install -r requirements.txt
 ### Basic Example
 
 ```typescript
-import { ORToolsSolver } from './ORToolsSolver';
+import { ORToolsBackend } from './ORToolsBackend';
 import { Model } from './types';
 
 // Create a solver instance
-const solver = new ORToolsSolver({
+const solver = new ORToolsBackend({
   timeLimit: 60,  // 60 seconds
   logLevel: 'INFO'
 });
@@ -175,5 +175,5 @@ npm test
 
 1. Add the new problem type to `ProblemTypeSchema` in `types.ts`
 2. Implement the corresponding solver method in `ortools_wrapper.py`
-3. Add validation logic in `ORToolsSolver.ts`
-4. Create tests in `__tests__/ORToolsSolver.test.ts` 
+3. Add validation logic in `ORToolsBackend.ts`
+4. Create tests in `__tests__/ORToolsBackend.test.ts` 

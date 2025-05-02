@@ -240,11 +240,13 @@ export class RCPSPTemplate {
       protocol: {
         steps: [
           {
+            id: 'collect_data',
             action: 'collect_data',
             description: 'Collect activity and resource data',
             required: true
           },
           {
+            id: 'validate_network',
             action: 'validate_network',
             description: 'Validate project network structure',
             required: true,
@@ -254,6 +256,7 @@ export class RCPSPTemplate {
             }
           },
           {
+            id: 'build_model',
             action: 'build_model',
             description: 'Build RCPSP model',
             required: true,
@@ -264,6 +267,7 @@ export class RCPSPTemplate {
             }
           },
           {
+            id: 'solve_model',
             action: 'solve_model',
             description: 'Generate optimal schedule',
             required: true,
@@ -274,6 +278,7 @@ export class RCPSPTemplate {
             }
           },
           {
+            id: 'explain_solution',
             action: 'explain_solution',
             description: 'Generate schedule insights',
             required: true,
@@ -292,7 +297,16 @@ export class RCPSPTemplate {
         explainabilityEnabled: true,
         humanInTheLoop: {
           required: true,
-          approvalSteps: ['final_schedule', 'resource_allocation']
+          approvalSteps: [
+            {
+              step: 'final_schedule',
+              description: 'Review and approve the final project schedule'
+            },
+            {
+              step: 'resource_allocation',
+              description: 'Review and approve resource allocations'
+            }
+          ]
         }
       }
     };

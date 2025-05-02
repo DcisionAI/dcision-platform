@@ -1,0 +1,18 @@
+{
+  "demands": [
+    {
+      "demand_id": "D1",
+      "location_id": "L1",
+      "quantity": 300,
+      "priority": "high",
+      "service_time": 30
+    },
+    {
+      "demand_id": "D2",
+      "location_id": "L2",
+      "quantity": 500,
+      "priority": "medium",
+      "service_time": 45
+    }
+  ]
+} 

@@ -207,11 +207,13 @@ export class TravelingSalesmanTemplate {
       protocol: {
         steps: [
           {
+            id: 'collect_data',
             action: 'collect_data',
             description: 'Collect city and distance data',
             required: true
           },
           {
+            id: 'validate_constraints',
             action: 'validate_constraints',
             description: 'Validate tour constraints',
             required: true,
@@ -221,6 +223,7 @@ export class TravelingSalesmanTemplate {
             }
           },
           {
+            id: 'build_model',
             action: 'build_model',
             description: 'Build TSP model',
             required: true,
@@ -230,6 +233,7 @@ export class TravelingSalesmanTemplate {
             }
           },
           {
+            id: 'solve_model',
             action: 'solve_model',
             description: 'Generate optimal tour',
             required: true,
@@ -240,6 +244,7 @@ export class TravelingSalesmanTemplate {
             }
           },
           {
+            id: 'explain_solution',
             action: 'explain_solution',
             description: 'Generate tour insights',
             required: true,

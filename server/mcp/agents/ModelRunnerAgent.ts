@@ -1,7 +1,6 @@
 import { MCPAgent, AgentType, AgentRunContext, AgentRunResult, StepAction } from './types';
 import { ProtocolStep, MCP, ProblemType } from '../types/core';
-import { ORToolsSolver } from '../services/ORToolsSolver';
-import { ORToolsBackend } from '../services/ORToolsBackend';
+import { ORToolsBackend } from '../services/solver/ORToolsBackend';
 
 export interface ModelSolution {
   variables: Record<string, any>;
@@ -21,12 +20,11 @@ export class ModelRunnerAgent implements MCPAgent {
   name = 'Model Runner Agent';
   type: AgentType = 'model_builder';
   supportedActions: StepAction[] = ['build_model', 'solve_model'];
-  private solver: ORToolsSolver;
+  private solver: ORToolsBackend;
 
   constructor() {
     // Initialize the solver with the hosted service backend
-    const backend = new ORToolsBackend(process.env.ORTools_SERVICE_URL || 'https://solver-service-<hash>-uc.a.run.app');
-    this.solver = new ORToolsSolver(backend);
+    this.solver = new ORToolsBackend(process.env.ORTools_SERVICE_URL || 'https://solver-service-<hash>-uc.a.run.app');
   }
 
   async run(step: ProtocolStep, mcp: MCP, context?: AgentRunContext): Promise<AgentRunResult> {
@@ -79,11 +77,11 @@ export class ModelRunnerAgent implements MCPAgent {
         );
         if (issues.length > 0) {
           thoughtProcess.push('Model validation issues:');
-          issues.forEach(issue => thoughtProcess.push(`- ${issue}`));
+          issues.forEach((issue: string) => thoughtProcess.push(`- ${issue}`));
         }
         if (suggestions.length > 0) {
           thoughtProcess.push('Model improvement suggestions:');
-          suggestions.forEach(suggestion => thoughtProcess.push(`- ${suggestion}`));
+          suggestions.forEach((suggestion: string) => thoughtProcess.push(`- ${suggestion}`));
         }
       } catch (error) {
         thoughtProcess.push('Failed to validate model using LLM');
@@ -105,8 +103,8 @@ export class ModelRunnerAgent implements MCPAgent {
     thoughtProcess.push('Solving optimization model...');
     
     try {
-      // Use the actual solver service instead of mock
-      const solution = await this.solver.solve(mcp.model, mcp);
+      // Use the actual solver service
+      const solution = await this.solver.solve(mcp);
       thoughtProcess.push(`Model solved successfully in ${solution.statistics.solveTime}ms`);
       thoughtProcess.push(`Objective value: ${solution.objective.value}`);
       thoughtProcess.push(`Solution status: ${solution.statistics.status}`);
@@ -121,7 +119,12 @@ export class ModelRunnerAgent implements MCPAgent {
           thoughtProcess.push('Solution explanation:');
           thoughtProcess.push(explanation);
           thoughtProcess.push('Key insights:');
-          insights.forEach(insight => thoughtProcess.push(`- ${insight}`));
+          if (insights && insights.length > 0) {
+            thoughtProcess.push('Solution Insights:');
+            insights.forEach((insight: string) => {
+              thoughtProcess.push(`- ${insight}`);
+            });
+          }
         } catch (error) {
           thoughtProcess.push('Failed to generate solution explanation using LLM');
         }

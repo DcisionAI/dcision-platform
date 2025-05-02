@@ -1,8 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@supabase/supabase-js';
+import { rateLimit } from '../../../utils/rateLimit';
 import { DataIntegrationAgent } from '../../../../server/mcp/agents/DataIntegrationAgent';
 import { MCP, Dataset, ProtocolStep, Environment } from '../../../../server/mcp/types';
 import { LLMProviderFactory } from '../../../../server/mcp/agents/llm/providers/LLMProviderFactory';
+import { LLMService, LLMResponse } from '../../../../server/mcp/services/llm/LLMService';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -13,6 +15,41 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+class IntegrationLLMService implements LLMService {
+  constructor(private llmProvider: any, private providerType: string) {}
+
+  async generateConstraints(businessRules: string): Promise<{ constraints: string[], reasoning: string }> {
+    throw new Error('Method not implemented.');
+  }
+
+  async validateModel(model: any, problemType: string): Promise<{ issues: string[], suggestions: string[] }> {
+    throw new Error('Method not implemented.');
+  }
+
+  async interpretIntent(description: string): Promise<{ problemType: string, context: any }> {
+    throw new Error('Method not implemented.');
+  }
+
+  async enrichData(data: any, context: any): Promise<{ enrichedData: any, reasoning: string }> {
+    throw new Error('Method not implemented.');
+  }
+
+  async explainSolution(solution: any, problemType: string): Promise<{ explanation: string, insights: string[] }> {
+    throw new Error('Method not implemented.');
+  }
+
+  async call(prompt: string, config?: any): Promise<LLMResponse> {
+    const response = await this.llmProvider.call(prompt, {
+      model: this.providerType === 'anthropic' ? 'claude-3-opus-20240229' : 'gpt-4-turbo-preview',
+      temperature: 0.2,
+      ...config
+    });
+    return {
+      content: response
+    };
+  }
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -90,6 +127,7 @@ export default async function handler(
     const agent = new DataIntegrationAgent();
     const result = await agent.run(
       {
+        id: 'collect_supabase_data',
         action: 'collect_data',
         description: 'Collect and integrate data from Supabase',
         required: true,
@@ -110,12 +148,7 @@ export default async function handler(
       } as ProtocolStep,
       mcp,
       {
-        llm: async (prompt: string) => {
-          return await llmProvider.call(prompt, {
-            model: providerType === 'anthropic' ? 'claude-3-opus-20240229' : 'gpt-4-turbo-preview',
-            temperature: 0.2
-          });
-        }
+        llm: new IntegrationLLMService(llmProvider, providerType)
       }
     );
 

@@ -1,7 +1,7 @@
-import '../agents'; // Ensures all agents are registered
-import { MCP, ProtocolStep } from '../types';
-import { agentRegistry } from '../agents/AgentRegistry';
-import { callOpenAI } from '../agents/llm/openai';
+import { MCPAgent } from '../agents/types';
+import { MCP, ProtocolStep } from '../types/core';
+import { AgentRegistry } from '../agents/AgentRegistry';
+import { LLMServiceImpl } from '../services/llm/LLMService';
 
 export interface OrchestrationResult {
   step: ProtocolStep;
@@ -13,11 +13,13 @@ export interface OrchestrationResult {
 
 export async function orchestrateMCP(mcp: MCP): Promise<OrchestrationResult[]> {
   const results: OrchestrationResult[] = [];
-  // Provide LLM function in context for all agents
-  const agentContext = { llm: callOpenAI };
+  // Initialize LLM service
+  const llm = new LLMServiceImpl('openai', process.env.OPENAI_API_KEY || '');
+  const agentContext = { llm };
+  const agentRegistry = AgentRegistry.getInstance();
 
   for (const step of mcp.protocol.steps) {
-    const agent = agentRegistry.getAgentForAction(step.action);
+    const agent = agentRegistry.getAgentForAction(step.action as any); // TODO: Fix type mismatch between core.StepAction and agents.StepAction
     if (!agent) {
       results.push({
         step,

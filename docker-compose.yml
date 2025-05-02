@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.local
+    environment:
+      - NODE_ENV=development
+      - BASE_URL=http://localhost:3000
+      - ORTOOLS_SERVICE_URL=http://solver-service:8001
+      - PLUGIN_SERVICE_URL=http://plugin-service:8002
+
+  solver-service:
+    build:
+      context: ./solver-service
+      dockerfile: Dockerfile
+    ports:
+      - "8003:8001"
+    env_file:
+      - .env.local
+    environment:
+      - PORT=8001
+      - NODE_ENV=development
+      - PLUGIN_SERVICE_URL=http://plugin-service:8002
+
+  plugin-service:
+    build:
+      context: ./plugin-service
+      dockerfile: Dockerfile
+    ports:
+      - "8004:8002"
+    env_file:
+      - .env.local
+    environment:
+      - PORT=8002
+      - NODE_ENV=development
+      - ORTOOLS_SERVICE_URL=http://solver-service:8001

@@ -266,11 +266,13 @@ export class NurseSchedulingTemplate {
       protocol: {
         steps: [
           {
+            id: 'collect_data',
             action: 'collect_data',
             description: 'Gather nurse availability, preferences, and shift requirements',
             required: true
           },
           {
+            id: 'validate_constraints',
             action: 'validate_constraints',
             description: 'Verify nurse qualifications and shift coverage requirements',
             required: true,
@@ -280,6 +282,7 @@ export class NurseSchedulingTemplate {
             }
           },
           {
+            id: 'build_model',
             action: 'build_model',
             description: 'Construct the nurse scheduling optimization model',
             required: true,
@@ -289,6 +292,7 @@ export class NurseSchedulingTemplate {
             }
           },
           {
+            id: 'solve_model',
             action: 'solve_model',
             description: 'Generate optimal nurse schedule',
             required: true,
@@ -299,6 +303,7 @@ export class NurseSchedulingTemplate {
             }
           },
           {
+            id: 'explain_solution',
             action: 'explain_solution',
             description: 'Generate schedule insights',
             required: true,
@@ -313,6 +318,7 @@ export class NurseSchedulingTemplate {
             }
           },
           {
+            id: 'human_review',
             action: 'human_review',
             description: 'Review and approve nurse schedules',
             required: true
@@ -322,7 +328,16 @@ export class NurseSchedulingTemplate {
         explainabilityEnabled: true,
         humanInTheLoop: {
           required: true,
-          approvalSteps: ['final_schedule', 'shift_assignments']
+          approvalSteps: [
+            {
+              step: 'final_schedule',
+              description: 'Review and approve the final nurse schedule'
+            },
+            {
+              step: 'shift_assignments',
+              description: 'Review and approve individual shift assignments'
+            }
+          ]
         }
       }
     };

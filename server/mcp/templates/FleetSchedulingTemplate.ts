@@ -207,56 +207,47 @@ export class FleetSchedulingTemplate {
       protocol: {
         steps: [
           {
+            id: 'interpret_intent',
             action: 'interpret_intent',
             description: 'Understand scheduling requirements',
             required: true
           },
           {
-            action: 'map_data',
-            description: 'Map driver and shift data fields',
-            required: true
-          },
-          {
+            id: 'collect_data',
             action: 'collect_data',
-            description: 'Collect driver and shift data',
+            description: 'Collect fleet and schedule data',
             required: true
           },
           {
-            action: 'enrich_data',
-            description: 'Add traffic and weather data',
-            required: false
+            id: 'validate_constraints',
+            action: 'validate_constraints',
+            description: 'Validate scheduling constraints',
+            required: true
           },
           {
+            id: 'build_model',
             action: 'build_model',
-            description: 'Build scheduling model',
+            description: 'Build scheduling optimization model',
             required: true
           },
           {
+            id: 'solve_model',
             action: 'solve_model',
-            description: 'Generate optimal schedule',
+            description: 'Solve scheduling optimization model',
             required: true
           },
           {
+            id: 'explain_solution',
             action: 'explain_solution',
-            description: 'Generate schedule explanations',
-            required: true
-          },
-          {
-            action: 'human_review',
-            description: 'Manager approval',
-            required: true
-          },
-          {
-            action: 'productionalize_workflow',
-            description: 'Deploy approved schedule',
+            description: 'Explain scheduling solution',
             required: true
           }
         ],
         allowPartialSolutions: false,
         explainabilityEnabled: true,
         humanInTheLoop: {
-          required: true,
-          approvalSteps: ['final_schedule']
+          required: false,
+          approvalSteps: []
         }
       }
     };

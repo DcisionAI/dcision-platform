@@ -199,11 +199,13 @@ export class ORToolsVRPTemplate {
       protocol: {
         steps: [
           {
+            id: 'collect_data',
             action: 'collect_data',
             description: 'Collect location and vehicle data',
             required: true
           },
           {
+            id: 'build_model',
             action: 'build_model',
             description: 'Build OR-Tools VRP model',
             required: true,
@@ -213,6 +215,7 @@ export class ORToolsVRPTemplate {
             }
           },
           {
+            id: 'solve_model',
             action: 'solve_model',
             description: 'Generate optimal routes using OR-Tools',
             required: true,
@@ -223,6 +226,7 @@ export class ORToolsVRPTemplate {
             }
           },
           {
+            id: 'explain_solution',
             action: 'explain_solution',
             description: 'Generate solution insights and statistics',
             required: true,

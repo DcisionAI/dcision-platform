@@ -139,6 +139,20 @@ export interface ProtocolStep {
   error?: string;
 }
 
+export interface ModelSolution {
+  variables: Record<string, any>;
+  objective: {
+    value: number;
+    breakdown: Record<string, number>;
+  };
+  statistics: {
+    solveTime: number;
+    iterations: number;
+    status: string;
+  };
+  logs: string[];
+}
+
 // Main MCP type
 export interface MCP {
   sessionId: string;

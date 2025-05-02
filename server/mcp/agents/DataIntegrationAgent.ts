@@ -1,7 +1,9 @@
-import { MCPAgent, AgentRunContext, AgentRunResult } from './AgentRegistry';
-import { StepAction, ProtocolStep, MCP } from '../types';
+import { MCPAgent, AgentRunContext, AgentRunResult, AgentType } from './types';
+import { ProtocolStep, MCP } from '../types/core';
+import { StepAction } from './types';
 import { PluginRegistry } from '../plugins';
 import { DataSourcePlugin, DataQuery, ValidationResult, DataSourceType } from '../plugins/datasources/base/types';
+import { LLMService } from '../services/llm/LLMService';
 
 interface FeatureSet {
   required: {
@@ -72,6 +74,7 @@ interface MCPContext {
 
 export class DataIntegrationAgent implements MCPAgent {
   name = 'Data Integration Agent';
+  type: AgentType = 'data_collector';
   supportedActions: StepAction[] = ['collect_data'];
   private pluginRegistry: PluginRegistry;
   private dataSource: DataSourcePlugin | null = null;
@@ -201,170 +204,57 @@ export class DataIntegrationAgent implements MCPAgent {
     problemType: string,
     requiredFields: string[],
     schema: any,
-    llm: (prompt: string) => Promise<string>
+    llm: LLMService
   ): Promise<FeatureSet> {
     const prompt = `
 Given the optimization problem type: ${problemType}
 Required fields: ${JSON.stringify(requiredFields)}
 Database schema: ${JSON.stringify(schema, null, 2)}
 
-Analyze and suggest a complete feature set for building an optimization model:
-
-1. Required features (must have):
-   - Identify variables needed for the objective function
-   - Identify parameters needed for constraints
-   - Specify data types and validation rules
-   - Suggest transformations if needed
-
-2. Optional features (nice to have):
-   - Additional variables that could improve the model
-   - Supplementary parameters for enhanced constraints
-   - Features that could enable additional optimization objectives
-
-For each feature, specify:
-- Its role in the optimization model (variable, constraint, parameter)
-- Data type and validation rules
-- Required transformations
-- Importance level
-- Source table/column if obvious from schema
-
-Consider:
-- The specific requirements of ${problemType} optimization
-- Data relationships and dependencies
-- Potential feature engineering opportunities
-- Data quality and completeness requirements
-
-Respond in JSON format:
-{
-  "required": {
-    "feature_name": {
-      "description": "description",
-      "dataType": "type",
-      "validationRules": ["rule1", "rule2"],
-      "transformation": "optional transformation",
-      "optimizationRole": "variable|constraint|parameter",
-      "importance": "high|medium|low",
-      "source": "table.column if obvious"
-    }
-  },
-  "optional": {
-    "feature_name": {
-      "description": "description",
-      "dataType": "type",
-      "benefits": ["benefit1", "benefit2"],
-      "priority": "high|medium|low",
-      "optimizationRole": "variable|constraint|parameter",
-      "source": "table.column if obvious"
-    }
-  }
-}`;
-
-    const response = await llm(prompt);
-    return JSON.parse(response);
+Analyze and suggest a complete feature set for building an optimization model.
+`;
+    const { enrichedData, reasoning } = await llm.enrichData({ prompt }, { problemType });
+    return JSON.parse(enrichedData);
   }
 
   private async mapFeaturesToDataSource(
     featureSet: FeatureSet,
     schema: any,
-    llm: (prompt: string) => Promise<string>
+    llm: LLMService
   ): Promise<FieldMapping[]> {
-    if (!this.dataSource) throw new Error('Data source not initialized');
-
     const prompt = `
-Given the database schema:
-${JSON.stringify(schema, null, 2)}
+Given the feature set: ${JSON.stringify(featureSet)}
+Database schema: ${JSON.stringify(schema, null, 2)}
 
-And the required features for ${featureSet.required} optimization:
-${JSON.stringify(featureSet.required, null, 2)}
+Map features to data source columns.
+`;
+    const { enrichedData, reasoning } = await llm.enrichData({ prompt }, { problemType: 'mapping' });
+    return JSON.parse(enrichedData);
+  }
 
-Map each feature to the most appropriate table and column.
-Consider:
-- Column names and types
-- Data relationships
-- Required transformations
-- Semantic meaning of columns
-- Data quality and completeness
-
-For each mapping:
-1. Provide a confidence score between 0 and 1
-2. Explain why this source was chosen
-3. Suggest any necessary feature engineering steps
-4. Include sample values if available
-
-Respond in JSON format:
-{
-  "mappings": [
-    {
-      "modelField": "feature_name",
-      "table": "matched_table",
-      "column": "matched_column",
-      "confidence": 0.95,
-      "sourceExplanation": "explanation of why this source was chosen",
-      "featureEngineering": {
-        "transformations": ["transformation1", "transformation2"],
-        "reasoning": "explanation of why these transformations are needed"
-      },
-      "sampleValues": ["value1", "value2"]
-    }
-  ]
-}`;
-
-    const response = await llm(prompt);
-    return JSON.parse(response).mappings;
+  private async validateMappings(
+    mappings: FieldMapping[],
+    llm: LLMService
+  ): Promise<ValidationResult> {
+    const prompt = `
+Validate these field mappings: ${JSON.stringify(mappings)}
+`;
+    const { enrichedData, reasoning } = await llm.enrichData({ prompt }, { problemType: 'validation' });
+    return JSON.parse(enrichedData);
   }
 
   private async generateFeatureEngineeringReport(
     featureSet: FeatureSet,
     fieldMappings: FieldMapping[],
-    llm: (prompt: string) => Promise<string>
+    llm: LLMService
   ): Promise<string> {
     const prompt = `
-Given the feature set and field mappings for an optimization model:
-
-Feature Set:
-${JSON.stringify(featureSet, null, 2)}
-
-Field Mappings:
-${JSON.stringify(fieldMappings, null, 2)}
-
-Generate a detailed report explaining:
-1. How each feature was selected and why it's important for the optimization model
-2. The data sources chosen and the reasoning behind each choice
-3. Required feature engineering steps and their purpose
-4. Any potential data quality issues or limitations
-5. Suggestions for improving the feature set
-
-Format the response as a markdown document with clear sections and explanations.
+Generate a feature engineering report for:
+Feature set: ${JSON.stringify(featureSet)}
+Field mappings: ${JSON.stringify(fieldMappings)}
 `;
-
-    return await llm(prompt);
-  }
-
-  private async validateMappings(
-    mappings: FieldMapping[],
-    llm: (prompt: string) => Promise<string>
-  ): Promise<ValidationResult> {
-    const prompt = `
-Validate the following field mappings for an optimization model:
-${JSON.stringify(mappings, null, 2)}
-
-Check for:
-1. Data type compatibility
-2. Completeness of required features
-3. Quality of sample values
-4. Reasonableness of confidence scores
-5. Appropriateness of feature engineering steps
-
-Respond in JSON format:
-{
-  "isValid": true/false,
-  "errors": ["error1", "error2"],
-  "warnings": ["warning1", "warning2"]
-}
-`;
-
-    const response = await llm(prompt);
-    return JSON.parse(response);
+    const { enrichedData, reasoning } = await llm.enrichData({ prompt }, { problemType: 'report' });
+    return enrichedData;
   }
 
   private async collectData(mappings: FieldMapping[]): Promise<Record<string, any>> {

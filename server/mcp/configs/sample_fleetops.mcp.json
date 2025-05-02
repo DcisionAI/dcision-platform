@@ -1,0 +1,157 @@
+{
+  "sessionId": "test-fleetops-001",
+  "version": "1.0",
+  "status": "pending",
+  "created": "2024-03-20T10:00:00Z",
+  "lastModified": "2024-03-20T10:00:00Z",
+  "model": {
+    "variables": [
+      {
+        "name": "vehicle_assignments",
+        "type": "array",
+        "description": "Assignment of vehicles to routes",
+        "dimensions": ["vehicle_id", "route_id"]
+      },
+      {
+        "name": "route_sequence",
+        "type": "array",
+        "description": "Sequence of stops in each route",
+        "dimensions": ["route_id", "stop_index"]
+      }
+    ],
+    "constraints": [
+      {
+        "type": "capacity",
+        "description": "Vehicle capacity must not be exceeded",
+        "field": "vehicle_assignments",
+        "operator": "lte",
+        "value": "vehicle_capacity",
+        "priority": "must"
+      },
+      {
+        "type": "time_window",
+        "description": "Stops must be visited within their time windows",
+        "field": "route_sequence",
+        "operator": "between",
+        "value": "time_window",
+        "priority": "must"
+      }
+    ],
+    "objective": {
+      "type": "minimize",
+      "field": "total_distance",
+      "description": "Minimize total distance traveled",
+      "weight": 1.0
+    }
+  },
+  "context": {
+    "environment": {
+      "region": "us-central1",
+      "timezone": "America/Chicago",
+      "resources": {
+        "solver": {
+          "type": "gcp",
+          "project": "dcisionai-platform",
+          "location": "us-central1"
+        }
+      }
+    },
+    "dataset": {
+      "internalSources": ["vehicles", "locations", "demands"],
+      "dataQuality": "good",
+      "requiredFields": [
+        "vehicle_id",
+        "capacity",
+        "location_id",
+        "latitude",
+        "longitude",
+        "demand",
+        "time_window_start",
+        "time_window_end"
+      ]
+    },
+    "problemType": "vehicle_routing",
+    "industry": "logistics"
+  },
+  "protocol": {
+    "steps": [
+      {
+        "id": "interpret_intent",
+        "action": "interpret_intent",
+        "description": "Interpret user intent and identify problem type",
+        "required": true,
+        "parameters": {
+          "input": "I need to optimize delivery routes for my fleet of vehicles considering time windows and vehicle capacities"
+        }
+      },
+      {
+        "id": "collect_data",
+        "action": "collect_data",
+        "description": "Collect data from required tables",
+        "required": true,
+        "parameters": {
+          "tables": ["vehicles", "locations", "demands"],
+          "requiredFields": [
+            "vehicle_id",
+            "capacity",
+            "location_id",
+            "latitude",
+            "longitude",
+            "demand",
+            "time_window_start",
+            "time_window_end"
+          ]
+        }
+      },
+      {
+        "id": "enrich_data",
+        "action": "enrich_data",
+        "description": "Enrich data with additional calculations",
+        "required": true,
+        "parameters": {
+          "enrichmentRules": {
+            "calculate_distances": true,
+            "validate_time_windows": true
+          }
+        }
+      },
+      {
+        "id": "build_model",
+        "action": "build_model",
+        "description": "Build optimization model from enriched data",
+        "required": true
+      },
+      {
+        "id": "solve_model",
+        "action": "solve_model",
+        "description": "Solve the optimization model",
+        "required": true,
+        "parameters": {
+          "solver": {
+            "type": "gcp",
+            "timeout": 3600,
+            "max_iterations": 1000
+          }
+        }
+      },
+      {
+        "id": "validate_solution",
+        "action": "validate_solution",
+        "description": "Validate the solution",
+        "required": true
+      },
+      {
+        "id": "generate_report",
+        "action": "generate_report",
+        "description": "Generate solution report",
+        "required": true
+      }
+    ],
+    "allowPartialSolutions": false,
+    "explainabilityEnabled": true,
+    "humanInTheLoop": {
+      "required": false,
+      "approvalSteps": []
+    }
+  }
+} 
