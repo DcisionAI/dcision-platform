@@ -90,7 +90,7 @@ app.get('/drivers', async (req, res) => {
   }
 });
 
-// Test backend branch deployment - can be removed after verification
+// Test Vercel ignore - this change should not trigger a Vercel deployment
 app.listen(port, () => {
   console.log(`DcisionAI Data Service listening at http://localhost:${port}`);
 }); 
