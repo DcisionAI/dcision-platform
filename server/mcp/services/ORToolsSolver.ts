@@ -1,24 +1,69 @@
-import { MCP, ProblemType } from '../types';
+import { MCP, ProblemType } from '../types/core';
 import { ModelSolution } from '../agents/ModelRunnerAgent';
+import axios from 'axios';
 
 export interface SolverBackend {
-  buildModel(mcp: MCP): Promise<any>;
-  solve(model: any, mcp: MCP): Promise<ModelSolution>;
+  solve(model: any): Promise<ModelSolution>;
 }
 
 export class ORToolsSolver {
   private backend: SolverBackend;
+  private solverServiceUrl: string;
 
   constructor(backend: SolverBackend) {
     this.backend = backend;
-  }
-
-  async buildModel(mcp: MCP): Promise<any> {
-    return this.backend.buildModel(mcp);
+    // Use environment variable for solver service URL, default to local development
+    this.solverServiceUrl = process.env.ORTools_SERVICE_URL || 'http://localhost:8081';
   }
 
   async solve(model: any, mcp: MCP): Promise<ModelSolution> {
-    return this.backend.solve(model, mcp);
+    try {
+      // Transform the model into the format expected by the /solve endpoint
+      const solveRequest = {
+        type: this.getModelType(mcp.context.problemType).toLowerCase(),
+        variables: model.variables.map((v: any) => ({
+          name: v.name,
+          type: v.type.toLowerCase(),
+          lower_bound: v.min ?? 0,
+          upper_bound: v.max ?? 1000
+        })),
+        constraints: model.constraints.map((c: any) => ({
+          expression: c.field,
+          operator: c.operator === 'gte' ? '>=' : c.operator === 'lte' ? '<=' : c.operator === 'eq' ? '=' : c.operator,
+          rhs: c.value
+        })).filter((c: any) => c.expression && c.operator && c.rhs !== undefined),
+        objective: {
+          type: model.objective.type.toLowerCase(),
+          expression: model.objective.expression || model.objective.field
+        }
+      };
+
+      // Call the solver service
+      const response = await axios.post(`${this.solverServiceUrl}/solve`, solveRequest);
+      
+      // Transform the response into the expected format
+      return {
+        variables: response.data.solution,
+        objective: {
+          value: response.data.objective_value
+        },
+        statistics: {
+          status: response.data.status.toUpperCase(),
+          solveTime: response.data.solve_time || 0,
+          iterations: response.data.iterations || 0
+        },
+        logs: response.data.logs || []
+      };
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 400) {
+        const errorMessage = error.response.data.detail;
+        if (errorMessage.includes('Failed to solve lp')) {
+          throw new Error(`Solver type ${this.getModelType(mcp.context.problemType)} is not implemented yet`);
+        }
+      }
+      console.error('Error solving model:', error);
+      throw error;
+    }
   }
 
   private getModelType(problemType: ProblemType): 'CP-SAT' | 'VRP' | 'MIP' {
@@ -40,47 +85,5 @@ export class ORToolsSolver {
       'custom': 'CP-SAT'
     };
     return modelMap[problemType] || 'CP-SAT';
-  }
-}
-
-// Mock solver backend for development/testing
-export class MockSolverBackend implements SolverBackend {
-  async buildModel(mcp: MCP): Promise<any> {
-    return {
-      type: 'mock_model',
-      problemType: mcp.context.problemType,
-      variables: mcp.model.variables.length,
-      constraints: mcp.model.constraints.length
-    };
-  }
-
-  async solve(model: any, mcp: MCP): Promise<ModelSolution> {
-    return {
-      variables: {
-        // Mock solution variables
-        routes: [
-          [1, 2, 3],
-          [4, 5, 6]
-        ]
-      },
-      objective: {
-        value: 1234.56,
-        breakdown: {
-          distance: 1000,
-          time: 234.56
-        }
-      },
-      statistics: {
-        solveTime: 1234,
-        iterations: 100,
-        status: 'OPTIMAL'
-      },
-      logs: [
-        'Started solving...',
-        'Initial solution found...',
-        'Improving solution...',
-        'Optimal solution found'
-      ]
-    };
   }
 } 

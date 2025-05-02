@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ModelSchema, SolutionSchema } from '../../solvers/types';
+import { ModelSchema, SolutionSchema } from './solver-types';
 
 // API Request/Response types
 export const CreateJobRequestSchema = z.object({

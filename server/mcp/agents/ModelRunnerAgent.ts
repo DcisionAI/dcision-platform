@@ -1,5 +1,7 @@
-import { MCPAgent, AgentRunContext, AgentRunResult } from './AgentRegistry';
-import { StepAction, ProtocolStep, MCP, ProblemType } from '../types';
+import { MCPAgent, AgentType, AgentRunContext, AgentRunResult, StepAction } from './types';
+import { ProtocolStep, MCP, ProblemType } from '../types/core';
+import { ORToolsSolver } from '../services/ORToolsSolver';
+import { ORToolsBackend } from '../services/ORToolsBackend';
 
 export interface ModelSolution {
   variables: Record<string, any>;
@@ -17,7 +19,15 @@ export interface ModelSolution {
 
 export class ModelRunnerAgent implements MCPAgent {
   name = 'Model Runner Agent';
+  type: AgentType = 'model_builder';
   supportedActions: StepAction[] = ['build_model', 'solve_model'];
+  private solver: ORToolsSolver;
+
+  constructor() {
+    // Initialize the solver with the hosted service backend
+    const backend = new ORToolsBackend(process.env.ORTools_SERVICE_URL || 'https://solver-service-<hash>-uc.a.run.app');
+    this.solver = new ORToolsSolver(backend);
+  }
 
   async run(step: ProtocolStep, mcp: MCP, context?: AgentRunContext): Promise<AgentRunResult> {
     const thoughtProcess: string[] = [];
@@ -25,7 +35,7 @@ export class ModelRunnerAgent implements MCPAgent {
     if (step.action === 'build_model') {
       return this.buildModel(mcp, thoughtProcess, context);
     } else if (step.action === 'solve_model') {
-      return this.solveModel(mcp, thoughtProcess);
+      return this.solveModel(mcp, thoughtProcess, context);
     }
 
     throw new Error(`Unsupported action: ${step.action}`);
@@ -38,25 +48,6 @@ export class ModelRunnerAgent implements MCPAgent {
     const solver = this.getSolverForProblemType(mcp.context.problemType);
     thoughtProcess.push(`Selected ${solver} solver for ${mcp.context.problemType}`);
 
-    // LLM-based constraint generation
-    if (mcp.context.businessRules && context?.llm) {
-      const constraintPrompt = `
-Given the business rules: ${JSON.stringify(mcp.context.businessRules)}
-Generate mathematical constraints for the optimization model.
-Respond in JSON: { "constraints": ["..."], "reasoning": "..." }
-`;
-      try {
-        const constraintRaw = await context.llm(constraintPrompt);
-        const constraints = JSON.parse(constraintRaw);
-        if (constraints.constraints?.length) {
-          thoughtProcess.push(`LLM generated constraints: ${constraints.constraints.join(', ')}`);
-          thoughtProcess.push(`Constraint reasoning: ${constraints.reasoning}`);
-        }
-      } catch (e) {
-        thoughtProcess.push('LLM constraint generation response could not be parsed.');
-      }
-    }
-
     // Build model components
     const modelComponents = await this.buildModelComponents(mcp);
     thoughtProcess.push('Built model components:');
@@ -64,26 +55,38 @@ Respond in JSON: { "constraints": ["..."], "reasoning": "..." }
     thoughtProcess.push(`- Constraints: ${modelComponents.constraints.length}`);
     thoughtProcess.push(`- Objective function defined`);
 
-    // LLM-based model validation
+    // Use LLM for enhanced functionality if available
     if (context?.llm) {
-      const validationPrompt = `
-Given the model components: ${JSON.stringify(modelComponents)}
-Validate that all constraints and variables are appropriate for a ${mcp.context.problemType} problem. Respond in JSON: { "issues": ["..."], "suggestions": ["..."], "reasoning": "..." }
-`;
+      // Generate constraints from business rules
+      if (mcp.context.businessRules) {
+        try {
+          const { constraints, reasoning } = await context.llm.generateConstraints(
+            JSON.stringify(mcp.context.businessRules)
+          );
+          thoughtProcess.push(`LLM generated constraints: ${constraints.join(', ')}`);
+          thoughtProcess.push(`Constraint reasoning: ${reasoning}`);
+          modelComponents.constraints.push(...constraints);
+        } catch (error) {
+          thoughtProcess.push('Failed to generate constraints using LLM');
+        }
+      }
+
+      // Validate model structure
       try {
-        const validationRaw = await context.llm(validationPrompt);
-        const validation = JSON.parse(validationRaw);
-        if (validation.issues?.length) {
-          thoughtProcess.push(`LLM model validation issues: ${validation.issues.join(', ')}`);
+        const { issues, suggestions } = await context.llm.validateModel(
+          modelComponents,
+          mcp.context.problemType
+        );
+        if (issues.length > 0) {
+          thoughtProcess.push('Model validation issues:');
+          issues.forEach(issue => thoughtProcess.push(`- ${issue}`));
         }
-        if (validation.suggestions?.length) {
-          thoughtProcess.push(`LLM model validation suggestions: ${validation.suggestions.join(', ')}`);
+        if (suggestions.length > 0) {
+          thoughtProcess.push('Model improvement suggestions:');
+          suggestions.forEach(suggestion => thoughtProcess.push(`- ${suggestion}`));
         }
-        if (validation.reasoning) {
-          thoughtProcess.push(`LLM model validation reasoning: ${validation.reasoning}`);
-        }
-      } catch (e) {
-        thoughtProcess.push('LLM model validation response could not be parsed.');
+      } catch (error) {
+        thoughtProcess.push('Failed to validate model using LLM');
       }
     }
 
@@ -98,16 +101,31 @@ Validate that all constraints and variables are appropriate for a ${mcp.context.
     };
   }
 
-  private async solveModel(mcp: MCP, thoughtProcess: string[]): Promise<AgentRunResult> {
+  private async solveModel(mcp: MCP, thoughtProcess: string[], context?: AgentRunContext): Promise<AgentRunResult> {
     thoughtProcess.push('Solving optimization model...');
-
+    
     try {
-      // This would be replaced with actual OR-Tools solver call
-      const solution = await this.mockSolve(mcp);
-      
+      // Use the actual solver service instead of mock
+      const solution = await this.solver.solve(mcp.model, mcp);
       thoughtProcess.push(`Model solved successfully in ${solution.statistics.solveTime}ms`);
       thoughtProcess.push(`Objective value: ${solution.objective.value}`);
       thoughtProcess.push(`Solution status: ${solution.statistics.status}`);
+
+      // Use LLM to explain the solution if available
+      if (context?.llm) {
+        try {
+          const { explanation, insights } = await context.llm.explainSolution(
+            solution,
+            mcp.context.problemType
+          );
+          thoughtProcess.push('Solution explanation:');
+          thoughtProcess.push(explanation);
+          thoughtProcess.push('Key insights:');
+          insights.forEach(insight => thoughtProcess.push(`- ${insight}`));
+        } catch (error) {
+          thoughtProcess.push('Failed to generate solution explanation using LLM');
+        }
+      }
 
       return {
         output: {
@@ -174,36 +192,4 @@ Validate that all constraints and variables are appropriate for a ${mcp.context.
       objective: 'Minimize total distance'
     };
   }
-
-  private async mockSolve(mcp: MCP): Promise<ModelSolution> {
-    // Mock solver implementation
-    // This would be replaced with actual OR-Tools solver call
-    return {
-      variables: {
-        // Mock solution variables
-        routes: [
-          [1, 2, 3],
-          [4, 5, 6]
-        ]
-      },
-      objective: {
-        value: 1234.56,
-        breakdown: {
-          distance: 1000,
-          time: 234.56
-        }
-      },
-      statistics: {
-        solveTime: 1234,
-        iterations: 100,
-        status: 'OPTIMAL'
-      },
-      logs: [
-        'Started solving...',
-        'Initial solution found...',
-        'Improving solution...',
-        'Optimal solution found'
-      ]
-    };
-  }
-} 
+}

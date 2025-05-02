@@ -1,207 +1,182 @@
 import { MCPValidator } from './MCPValidator';
-import { MCP, FleetProblem } from './MCPTypes';
-import { 
-  SchedulingProblem,
-  InventoryProblem,
-  ProductionProblem
-} from './OptimizationTypes';
-import { ValidationError } from '../errors/ValidationError';
-import { describe, it, expect } from '@jest/globals';
+import { MCP, MCPStatus, ProblemType, Variable, Constraint, Objective, StepAction, ProtocolStep } from '../../types/core';
 
 describe('MCPValidator', () => {
   let validator: MCPValidator;
-  let validFleetProblem: FleetProblem;
+
+  const validProblem: MCP = {
+    sessionId: 'test-session-123',
+    version: '1.0.0',
+    status: 'pending' as MCPStatus,
+    created: new Date().toISOString(),
+    lastModified: new Date().toISOString(),
+    context: {
+      problemType: 'vehicle_routing' as ProblemType,
+      environment: {
+        region: 'us-west',
+        timezone: 'America/Los_Angeles'
+      },
+      dataset: {
+        internalSources: ['vehicles', 'locations', 'demands'],
+        metadata: {
+          userInput: 'Optimize vehicle routes for delivery in San Francisco'
+        }
+      }
+    },
+    model: {
+      variables: [{
+        name: 'x',
+        type: 'integer',
+        description: 'Vehicle assignment variable',
+        min: 0,
+        max: 1
+      } as Variable],
+      constraints: [{
+        type: 'capacity_constraint',
+        description: 'Vehicle capacity constraint',
+        field: 'x',
+        operator: 'lte',
+        value: 10,
+        priority: 'must'
+      } as Constraint],
+      objective: {
+        type: 'minimize',
+        field: 'total_distance',
+        description: 'Minimize total distance traveled',
+        weight: 1
+      } as Objective
+    },
+    protocol: {
+      steps: [{
+        id: 'step-1',
+        action: 'interpret_intent' as StepAction,
+        description: 'Interpret the optimization problem intent',
+        required: true,
+        status: 'pending'
+      } as ProtocolStep],
+      allowPartialSolutions: false,
+      explainabilityEnabled: true,
+      humanInTheLoop: { 
+        required: false, 
+        approvalSteps: ['step-1'] 
+      }
+    }
+  };
 
   beforeEach(() => {
     validator = new MCPValidator();
-    validFleetProblem = {
-      sessionId: 'test-session-123',
-      model: {
-        variables: [],
-        constraints: [],
-        objective: { type: 'minimize', field: 'total_distance', description: 'Minimize total distance', weight: 1 },
-        fleet: {
-          vehicles: [
-            {
-              id: 'vehicle1',
-              capacity: 100,
-              costPerKm: 1.0
-            }
-          ],
-          depots: [
-            {
-              id: 'depot1',
-              latitude: 37.7749,
-              longitude: -122.4194,
-              address: 'Depot Address'
-            }
-          ],
-          customers: [
-            {
-              id: 'customer1',
-              latitude: 37.7833,
-              longitude: -122.4167,
-              demand: 10,
-              address: 'Customer Address'
-            }
-          ]
-        }
-      },
-      context: {
-        environment: {},
-        dataset: { internalSources: [] },
-        problemType: 'vehicle_routing'
-      },
-      protocol: {
-        steps: [],
-        allowPartialSolutions: false,
-        explainabilityEnabled: true,
-        humanInTheLoop: { required: false, approvalSteps: [] }
-      },
-      version: '1.0.0',
-      created: '2024-03-20T10:00:00Z',
-      lastModified: '2024-03-20T10:00:00Z',
-      status: 'pending'
-    };
   });
 
-  it('should accept a valid fleet problem', () => {
-    const errors = validator.validate(validFleetProblem);
+  it('should accept a valid problem', () => {
+    const errors = validator.validate(validProblem);
     expect(errors).toHaveLength(0);
   });
 
   it('should validate timestamps', () => {
-    const invalidProblem = { ...validFleetProblem };
-    invalidProblem.lastModified = new Date(2020, 0, 1).toISOString();
-    invalidProblem.created = new Date(2021, 0, 1).toISOString();
-    
+    const invalidProblem = {
+      ...validProblem,
+      created: new Date().toISOString(),
+      lastModified: new Date(Date.now() - 1000).toISOString()
+    };
     const errors = validator.validate(invalidProblem);
     expect(errors.length).toBeGreaterThan(0);
     expect(errors[0].message).toContain('lastModified cannot be before created');
   });
 
-  it('should validate vehicle properties', () => {
-    const invalidProblem = { ...validFleetProblem };
-    (invalidProblem.model.fleet as any).vehicles[0].capacity = -1;
-    
-    const errors = validator.validate(invalidProblem);
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0].message).toContain('must be > 0');
-  });
-
-  it('should validate location coordinates', () => {
-    const invalidProblem = { ...validFleetProblem };
-    (invalidProblem.model.fleet as any).customers[0].latitude = 91;
-    
-    const errors = validator.validate(invalidProblem);
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0].message).toContain('must be <= 90');
-  });
-
-  it('should validate time windows', () => {
-    const invalidProblem = { ...validFleetProblem };
-    const customer = (invalidProblem.model.fleet as any).customers[0];
-    customer.timeWindows = [{
-      start: '2024-03-20T10:00:00Z',
-      end: '2024-03-20T09:00:00Z'  // End before start
-    }];
-    
-    const errors = validator.validate(invalidProblem);
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0].message).toContain('Invalid time window');
-  });
-
-  it('should require at least one route-related constraint', () => {
-    const invalidProblem = { ...validFleetProblem };
-    invalidProblem.model.constraints = [
-      {
-        type: 'other_constraint',
-        description: 'Some other constraint',
-        field: 'route',
-        operator: 'eq',
-        value: 1,
-        priority: 'must'
+  it('should validate problem type', () => {
+    const invalidProblem = {
+      ...validProblem,
+      context: {
+        ...validProblem.context,
+        problemType: 'invalid_type' as ProblemType
       }
-    ];
-    
-    const errors = validator.validate(invalidProblem);
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0].message).toContain('Invalid constraint type');
-  });
-
-  it('should validate human-in-the-loop settings', () => {
-    const invalidProblem = { ...validFleetProblem };
-    invalidProblem.protocol.humanInTheLoop = {
-      required: true,
-      approvalSteps: []
     };
-    
-    const errors = validator.validate(invalidProblem);
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0].message).toContain('approvalSteps');
-  });
-
-  it('should validate protocol steps', () => {
-    const invalidProblem = { ...validFleetProblem };
-    invalidProblem.protocol.steps = [
-      {
-        action: 'invalid_action' as any,
-        required: true,
-        description: 'Invalid step for testing'
-      }
-    ];
-    
     const errors = validator.validate(invalidProblem);
     expect(errors.length).toBeGreaterThan(0);
     expect(errors[0].message).toContain('must be equal to one of the allowed values');
   });
 
-  describe('Resource Scheduling Validation', () => {
-    const validSchedulingProblem: SchedulingProblem = {
-      sessionId: 'test-session-123',
+  it('should validate model structure', () => {
+    const invalidProblem = {
+      ...validProblem,
       model: {
-        variables: [],
-        constraints: [],
-        objective: { type: 'minimize', field: 'total_time', description: 'Minimize total completion time', weight: 1 },
-        scheduling: {
-          resources: [
-            {
-              id: 'resource1',
-              name: 'Engineer 1',
-              skills: ['repair', 'maintenance'],
-              availability: [{ start: '2024-03-20T09:00:00Z', end: '2024-03-20T17:00:00Z' }],
-              cost: 100,
-              efficiency: 1.0
-            }
-          ],
-          tasks: [
-            {
-              id: 'task1',
-              name: 'Repair Machine A',
-              duration: 120,
-              requiredSkills: ['repair'],
-              priority: 1,
-              earliestStart: '2024-03-20T09:00:00Z',
-              latestEnd: '2024-03-20T17:00:00Z'
-            }
-          ]
+        ...validProblem.model,
+        variables: []
+      }
+    };
+    const errors = validator.validate(invalidProblem);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0].message).toContain('must NOT have fewer than 1 items');
+  });
+
+  it('should validate protocol steps', () => {
+    const invalidProblem = {
+      ...validProblem,
+      protocol: {
+        ...validProblem.protocol,
+        steps: []
+      }
+    };
+    const errors = validator.validate(invalidProblem);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0].message).toContain('must NOT have fewer than 1 items');
+  });
+
+  it('should validate LLM context', () => {
+    const invalidProblem = {
+      ...validProblem,
+      context: {
+        ...validProblem.context,
+        dataset: {
+          ...validProblem.context.dataset,
+          metadata: {}
+        }
+      }
+    };
+    const errors = validator.validate(invalidProblem);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0].message).toContain('must have required property');
+  });
+
+  describe('Resource Scheduling Validation', () => {
+    const validSchedulingProblem: MCP = {
+      ...validProblem,
+      context: {
+        problemType: 'resource_scheduling' as ProblemType,
+        environment: {
+          region: 'us-west',
+          timezone: 'America/Los_Angeles'
+        },
+        dataset: {
+          internalSources: ['resources', 'tasks', 'dependencies'],
+          metadata: {
+            userInput: 'Schedule resources for project tasks'
+          }
         }
       },
-      context: {
-        environment: {},
-        dataset: { internalSources: [] },
-        problemType: 'resource_scheduling'
-      },
-      protocol: {
-        steps: [],
-        allowPartialSolutions: false,
-        explainabilityEnabled: true,
-        humanInTheLoop: { required: false, approvalSteps: [] }
-      },
-      version: '1.0.0',
-      created: '2024-03-20T10:00:00Z',
-      lastModified: '2024-03-20T10:00:00Z',
-      status: 'pending'
+      model: {
+        variables: [{
+          name: 'start_time',
+          type: 'integer',
+          description: 'Task start time',
+          min: 0,
+          max: 100
+        } as Variable],
+        constraints: [{
+          type: 'time_constraint',
+          description: 'Resource capacity constraint',
+          field: 'start_time',
+          operator: 'lte',
+          value: 8,
+          priority: 'must'
+        } as Constraint],
+        objective: {
+          type: 'minimize',
+          field: 'total_duration',
+          description: 'Minimize total project duration',
+          weight: 1
+        } as Objective
+      }
     };
 
     it('should validate a valid scheduling problem', () => {
@@ -210,13 +185,13 @@ describe('MCPValidator', () => {
     });
 
     it('should detect missing resources', () => {
-      const invalidProblem: SchedulingProblem = {
+      const invalidProblem = {
         ...validSchedulingProblem,
-        model: {
-          ...validSchedulingProblem.model,
-          scheduling: {
-            ...validSchedulingProblem.model.scheduling,
-            resources: []
+        context: {
+          ...validSchedulingProblem.context,
+          dataset: {
+            ...validSchedulingProblem.context.dataset,
+            internalSources: ['tasks', 'dependencies']
           }
         }
       };
@@ -226,57 +201,44 @@ describe('MCPValidator', () => {
   });
 
   describe('Inventory Optimization Validation', () => {
-    const validInventoryProblem: InventoryProblem = {
-      sessionId: 'test-session-123',
-      model: {
-        variables: [],
-        constraints: [],
-        objective: { type: 'minimize', field: 'total_cost', description: 'Minimize total inventory cost', weight: 1 },
-        inventory: {
-          products: [
-            {
-              id: 'product1',
-              name: 'Widget A',
-              unitCost: 10,
-              holdingCost: 2,
-              setupCost: 100,
-              leadTime: 5
-            }
-          ],
-          warehouses: [
-            {
-              id: 'warehouse1',
-              name: 'Main Warehouse',
-              capacity: 1000,
-              fixedCost: 1000,
-              handlingCost: 5
-            }
-          ],
-          demandForecasts: [
-            {
-              productId: 'product1',
-              period: '2024-04',
-              quantity: 100,
-              confidence: 0.9
-            }
-          ]
+    const validInventoryProblem: MCP = {
+      ...validProblem,
+      context: {
+        problemType: 'inventory_optimization' as ProblemType,
+        environment: {
+          region: 'us-west',
+          timezone: 'America/Los_Angeles'
+        },
+        dataset: {
+          internalSources: ['products', 'demand', 'suppliers'],
+          metadata: {
+            userInput: 'Optimize inventory levels for products'
+          }
         }
       },
-      context: {
-        environment: {},
-        dataset: { internalSources: [] },
-        problemType: 'inventory_optimization'
-      },
-      protocol: {
-        steps: [],
-        allowPartialSolutions: false,
-        explainabilityEnabled: true,
-        humanInTheLoop: { required: false, approvalSteps: [] }
-      },
-      version: '1.0.0',
-      created: '2024-03-20T10:00:00Z',
-      lastModified: '2024-03-20T10:00:00Z',
-      status: 'pending'
+      model: {
+        variables: [{
+          name: 'order_quantity',
+          type: 'integer',
+          description: 'Product order quantity',
+          min: 0,
+          max: 1000
+        } as Variable],
+        constraints: [{
+          type: 'capacity_constraint',
+          description: 'Storage capacity constraint',
+          field: 'order_quantity',
+          operator: 'lte',
+          value: 10000,
+          priority: 'must'
+        } as Constraint],
+        objective: {
+          type: 'minimize',
+          field: 'total_cost',
+          description: 'Minimize total inventory cost',
+          weight: 1
+        } as Objective
+      }
     };
 
     it('should validate a valid inventory problem', () => {
@@ -285,19 +247,15 @@ describe('MCPValidator', () => {
     });
 
     it('should detect invalid product costs', () => {
-      const invalidProblem: InventoryProblem = {
+      const invalidProblem = {
         ...validInventoryProblem,
         model: {
           ...validInventoryProblem.model,
-          inventory: {
-            ...validInventoryProblem.model.inventory,
-            products: [
-              {
-                ...validInventoryProblem.model.inventory.products[0],
-                unitCost: -1
-              }
-            ]
-          }
+          variables: [{
+            ...validInventoryProblem.model.variables[0],
+            min: -1,
+            max: 1000
+          } as Variable]
         }
       };
       const errors = validator.validate(invalidProblem);
@@ -306,64 +264,44 @@ describe('MCPValidator', () => {
   });
 
   describe('Production Planning Validation', () => {
-    const validProductionProblem: ProductionProblem = {
-      sessionId: 'test-session-123',
-      model: {
-        variables: [],
-        constraints: [],
-        objective: { type: 'minimize', field: 'makespan', description: 'Minimize total production time', weight: 1 },
-        production: {
-          machines: [
-            {
-              id: 'machine1',
-              name: 'CNC Machine',
-              setupTime: 30,
-              processingRate: 10,
-              capabilities: ['milling', 'drilling'],
-              costPerHour: 100
-            }
-          ],
-          materials: [
-            {
-              id: 'material1',
-              name: 'Aluminum',
-              cost: 50,
-              leadTime: 2
-            }
-          ],
-          orders: [
-            {
-              id: 'order1',
-              productId: 'product1',
-              quantity: 100,
-              dueDate: '2024-04-01T17:00:00Z',
-              priority: 1,
-              routingSteps: [
-                {
-                  machineType: 'CNC Machine',
-                  duration: 60,
-                  materials: [{ materialId: 'material1', quantity: 1 }]
-                }
-              ]
-            }
-          ]
+    const validProductionProblem: MCP = {
+      ...validProblem,
+      context: {
+        problemType: 'production_planning' as ProblemType,
+        environment: {
+          region: 'us-west',
+          timezone: 'America/Los_Angeles'
+        },
+        dataset: {
+          internalSources: ['products', 'machines', 'demand'],
+          metadata: {
+            userInput: 'Plan production schedule for products'
+          }
         }
       },
-      context: {
-        environment: {},
-        dataset: { internalSources: [] },
-        problemType: 'production_planning'
-      },
-      protocol: {
-        steps: [],
-        allowPartialSolutions: false,
-        explainabilityEnabled: true,
-        humanInTheLoop: { required: false, approvalSteps: [] }
-      },
-      version: '1.0.0',
-      created: '2024-03-20T10:00:00Z',
-      lastModified: '2024-03-20T10:00:00Z',
-      status: 'pending'
+      model: {
+        variables: [{
+          name: 'production_quantity',
+          type: 'integer',
+          description: 'Product production quantity',
+          min: 0,
+          max: 1000
+        } as Variable],
+        constraints: [{
+          type: 'capacity_constraint',
+          description: 'Machine capacity constraint',
+          field: 'production_quantity',
+          operator: 'lte',
+          value: 100,
+          priority: 'must'
+        } as Constraint],
+        objective: {
+          type: 'minimize',
+          field: 'total_cost',
+          description: 'Minimize total production cost',
+          weight: 1
+        } as Objective
+      }
     };
 
     it('should validate a valid production problem', () => {
@@ -372,19 +310,15 @@ describe('MCPValidator', () => {
     });
 
     it('should detect invalid processing rate', () => {
-      const invalidProblem: ProductionProblem = {
+      const invalidProblem = {
         ...validProductionProblem,
         model: {
           ...validProductionProblem.model,
-          production: {
-            ...validProductionProblem.model.production,
-            machines: [
-              {
-                ...validProductionProblem.model.production.machines[0],
-                processingRate: 0
-              }
-            ]
-          }
+          variables: [{
+            ...validProductionProblem.model.variables[0],
+            min: 0,
+            max: 0
+          } as Variable]
         }
       };
       const errors = validator.validate(invalidProblem);

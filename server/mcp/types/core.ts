@@ -120,16 +120,23 @@ export interface Protocol {
   explainabilityEnabled: boolean;
   humanInTheLoop: {
     required: boolean;
-    approvalSteps: string[];
+    approvalSteps: Array<{
+      step: string;
+      description: string;
+    }>;
   };
 }
 
 export interface ProtocolStep {
-  action: StepAction;
+  id: string;
+  action: string;
   description: string;
   required: boolean;
-  agent?: string;
   parameters?: Record<string, any>;
+  input?: any;
+  output?: any;
+  status?: 'pending' | 'running' | 'completed' | 'failed';
+  error?: string;
 }
 
 // Main MCP type

@@ -35,6 +35,7 @@ export class MCPValidator {
   private readonly VALID_INDUSTRY_VERTICALS: IndustryVertical[] = ['logistics', 'delivery', 'field_service', 'custom'];
   private readonly REQUIRED_FLEET_FIELDS = ['vehicles', 'depots', 'customers'] as const;
   private readonly VALID_STEP_ACTIONS: StepAction[] = [
+    'interpret_intent',
     'collect_data',
     'enrich_data',
     'build_model',

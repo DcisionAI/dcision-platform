@@ -1,24 +1,46 @@
-name: Deploy Backend Services
+name: Deploy Services
 
 on:
   push:
     branches: [ main ]
     paths:
+      - 'src/**'
+      - 'pages/**'
+      - 'components/**'
       - 'plugin-service/**'
       - 'solver-service/**'
       - '.github/workflows/deploy.yml'
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'plugin-service/**'
-      - 'solver-service/**'
-      - '.github/workflows/deploy.yml'
+      - 'cloudbuild.yaml'
+      - 'Dockerfile'
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: us-central1
 
 jobs:
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.modified, 'src/') || contains(github.event.head_commit.modified, 'pages/') || contains(github.event.head_commit.modified, 'components/')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Google Auth
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and Deploy Frontend
+        run: |
+          gcloud builds submit \
+            --config=cloudbuild.yaml \
+            --substitutions=COMMIT_SHA=${{ github.sha }}
+
   deploy-plugin-service:
     name: Deploy Plugin Service
     runs-on: ubuntu-latest
@@ -27,11 +49,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Google Auth
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Build and Deploy Plugin Service
         working-directory: ./plugin-service
@@ -48,11 +73,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Google Auth
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Build and Deploy Solver Service
         working-directory: ./solver-service

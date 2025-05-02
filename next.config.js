@@ -6,6 +6,7 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 const nextConfig = {
   reactStrictMode: true,
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
+  output: 'standalone',
   webpack: (config, { isServer }) => {
     // Monaco editor webpack config
     if (!isServer) {

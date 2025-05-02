@@ -68,9 +68,13 @@ const timeWindowSchema: ExtendedJSONSchema = {
 
 const locationSchema: ExtendedJSONSchema = {
   type: 'object',
-  required: ['id', 'latitude', 'longitude'],
+  required: ['id', 'type', 'latitude', 'longitude'],
   properties: {
     id: { type: 'string' },
+    type: { 
+      type: 'string',
+      enum: ['DEPOT', 'CUSTOMER']
+    },
     latitude: { 
       type: 'number',
       minimum: -90,
@@ -137,12 +141,13 @@ const protocolStepSchema: ExtendedJSONSchema = {
     action: {
       type: 'string',
       enum: [
+        'interpret_intent',
         'collect_data',
         'enrich_data',
         'build_model',
         'solve_model',
         'explain_solution',
-        'human_approval',
+        'human_review',
         'custom'
       ]
     },

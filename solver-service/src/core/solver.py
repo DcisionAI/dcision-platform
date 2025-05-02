@@ -49,62 +49,73 @@ class SolverService:
         variables = {}
         for var in data["variables"]:
             name = var["name"]
-            bounds = var["bounds"]
-            variables[name] = solver.NumVar(bounds[0], bounds[1], name)
+            lower_bound = var.get("lower_bound", float('-inf'))
+            upper_bound = var.get("upper_bound", float('inf'))
+            variables[name] = solver.NumVar(lower_bound, upper_bound, name)
         
         # Add constraints
-        for constraint in data["constraints"]:
+        for constraint in data.get("constraints", []):
             expr = constraint["expression"]
+            operator = constraint["operator"]
+            rhs = constraint["rhs"]
+            
             # Parse the expression (this is a simplified version)
             # In a real implementation, you would need a proper expression parser
-            if "<=" in expr:
-                lhs, rhs = expr.split("<=")
-                lhs = lhs.strip()
-                rhs = float(rhs.strip())
-                if "*" in lhs:
-                    coeff, var = lhs.split("*")
-                    coeff = float(coeff.strip())
-                    var = var.strip()
-                    solver.Add(variables[var] * coeff <= rhs)
-                else:
-                    var = lhs.strip()
-                    solver.Add(variables[var] <= rhs)
+            terms = expr.split('+')
+            linear_expr = solver.Sum([
+                float(term.strip().split('*')[0]) * variables[term.strip().split('*')[1]]
+                if '*' in term else variables[term.strip()]
+                for term in terms
+            ])
+            
+            if operator == "<=":
+                solver.Add(linear_expr <= rhs)
+            elif operator == ">=":
+                solver.Add(linear_expr >= rhs)
+            elif operator == "=":
+                solver.Add(linear_expr == rhs)
         
         # Set objective
-        obj_expr = data["objective"]["expression"]
-        # Parse coefficient and variable name from expression like "2x"
-        coeff = 1.0
-        var_name = obj_expr
-        if any(c.isdigit() for c in obj_expr):
-            # If there's a number in the expression, split it
-            for i, c in enumerate(obj_expr):
-                if c.isalpha():
-                    if i > 0:
-                        coeff = float(obj_expr[:i])
-                    var_name = obj_expr[i:]
-                    break
+        objective = data["objective"]
+        expr = objective["expression"]
+        terms = expr.split('+')
+        linear_expr = solver.Sum([
+            float(term.strip().split('*')[0]) * variables[term.strip().split('*')[1]]
+            if '*' in term else variables[term.strip()]
+            for term in terms
+        ])
         
-        if data["objective"]["type"] == "maximize":
-            solver.Maximize(variables[var_name] * coeff)
+        if objective["type"] == "minimize":
+            solver.Minimize(linear_expr)
         else:
-            solver.Minimize(variables[var_name] * coeff)
+            solver.Maximize(linear_expr)
         
         # Solve
         status = solver.Solve()
         
+        # Return solution
         if status == pywraplp.Solver.OPTIMAL:
-            solution = {name: var.solution_value() for name, var in variables.items()}
             return {
-                "status": "optimal",
-                "solution": solution,
-                "objective_value": solver.Objective().Value()
+                "status": "OPTIMAL",
+                "solution": {name: var.solution_value() for name, var in variables.items()},
+                "objective_value": solver.Objective().Value(),
+                "solve_time": solver.WallTime() / 1000,  # Convert to seconds
+                "iterations": solver.Iterations()
+            }
+        elif status == pywraplp.Solver.FEASIBLE:
+            return {
+                "status": "FEASIBLE",
+                "solution": {name: var.solution_value() for name, var in variables.items()},
+                "objective_value": solver.Objective().Value(),
+                "solve_time": solver.WallTime() / 1000,
+                "iterations": solver.Iterations()
             }
         elif status == pywraplp.Solver.INFEASIBLE:
-            return {"status": "infeasible"}
+            raise Exception("Problem is infeasible")
         elif status == pywraplp.Solver.UNBOUNDED:
-            return {"status": "unbounded"}
+            raise Exception("Problem is unbounded")
         else:
-            return {"status": "unknown"}
+            raise Exception("Failed to solve lp")
 
     def _solve_mip(self, data: Dict[str, Any]) -> Dict[str, Any]:
         solver = pywraplp.Solver.CreateSolver('SCIP')

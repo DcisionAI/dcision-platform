@@ -1,46 +1,59 @@
 import { StepAction, ProtocolStep, MCP } from '../types';
+import { MCPAgent as IMCPAgent, AgentType } from './types';
 
 export interface AgentRunContext {
-  llm?: (prompt: string) => Promise<string>;
-  onProgress?: (update: {
-    type: 'progress' | 'warning' | 'error';
-    message: string;
-    details?: any;
-  }) => void;
-  // Add more context fields as needed (user, session, etc.)
+  llm?: (prompt: string, config?: any) => Promise<any>;
+  user?: any;
+  session?: any;
 }
 
 export interface AgentRunResult {
-  output: {
-    success: boolean;
-    error?: string;
-    details?: any;
-    [key: string]: any;
-  };
-  thoughtProcess: string;
+  output: any;
+  thoughtProcess?: string;
   feedbackUrl?: string;
 }
 
-export interface MCPAgent {
-  name: string;
-  supportedActions: StepAction[];
-  run: (step: ProtocolStep, mcp: MCP, context?: AgentRunContext) => Promise<AgentRunResult>;
-}
+export class AgentRegistry {
+  private static instance: AgentRegistry;
+  private agents: Map<string, IMCPAgent> = new Map();
+  private agentTypes: Map<AgentType, IMCPAgent[]> = new Map();
 
-class AgentRegistry {
-  private agents: MCPAgent[] = [];
+  private constructor() {}
 
-  register(agent: MCPAgent) {
-    this.agents.push(agent);
+  static getInstance(): AgentRegistry {
+    if (!AgentRegistry.instance) {
+      AgentRegistry.instance = new AgentRegistry();
+    }
+    return AgentRegistry.instance;
   }
 
-  getAgentForAction(action: StepAction): MCPAgent | undefined {
-    return this.agents.find(agent => agent.supportedActions.includes(action));
+  register(agent: IMCPAgent): void {
+    this.agents.set(agent.name, agent);
+    const typeAgents = this.agentTypes.get(agent.type) || [];
+    typeAgents.push(agent);
+    this.agentTypes.set(agent.type, typeAgents);
   }
 
-  listAgents(): MCPAgent[] {
-    return this.agents;
+  getAgent(name: string): IMCPAgent | undefined {
+    return this.agents.get(name);
   }
-}
 
-export const agentRegistry = new AgentRegistry(); 
+  getAgentsByType(type: AgentType): IMCPAgent[] {
+    return this.agentTypes.get(type) || [];
+  }
+
+  getAgentForAction(action: string): IMCPAgent | undefined {
+    return Array.from(this.agents.values()).find(agent => 
+      agent.supportedActions.includes(action)
+    );
+  }
+
+  listAgents(): IMCPAgent[] {
+    return Array.from(this.agents.values());
+  }
+
+  clear(): void {
+    this.agents.clear();
+    this.agentTypes.clear();
+  }
+} 
