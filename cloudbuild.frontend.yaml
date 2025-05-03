@@ -2,7 +2,7 @@ steps:
   # Frontend Service
   - name: 'gcr.io/cloud-builders/docker'
     args: ['pull', 'gcr.io/dcisionai/frontend:latest']
-    continue-on-error: true
+    allowFailure: true
 
 
   # Generate .env.production for Next.js build (build-time env vars)
@@ -62,6 +62,3 @@ options:
   volumes:
     - name: 'docker-cache'
       path: '/docker-cache'
-
-substitutions:
-  _PROJECT_ID: "dcisionai" 
