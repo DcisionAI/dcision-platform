@@ -1,3 +1,5 @@
+options:
+  logging: CLOUD_LOGGING_ONLY
 steps:
   # Build and deploy solver service
   - name: 'gcr.io/cloud-builders/docker'
