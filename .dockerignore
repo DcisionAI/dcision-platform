@@ -1,0 +1,3 @@
+# Ignore local environment files (these should not override .env.production)
+.env
+.env.local
