@@ -12,6 +12,8 @@ services:
       - BASE_URL=http://localhost:3000
       - ORTOOLS_SERVICE_URL=http://solver-service:8001
       - PLUGIN_SERVICE_URL=http://plugin-service:8002
+      # Ensure Airbyte API is reachable inside the Docker network
+      - AIRBYTE_API_URL=http://airbyte-server:8001
 
   solver-service:
     build:
@@ -41,6 +43,7 @@ services:
 
   # --- Airbyte Core Services ---
   airbyte-db:
+    platform: linux/amd64
     image: airbyte/db:0.50.48
     container_name: airbyte-db
     restart: unless-stopped
@@ -57,6 +60,7 @@ services:
       retries: 5
 
   airbyte-bootloader:
+    platform: linux/amd64
     image: airbyte/bootloader:0.50.48
     container_name: airbyte-bootloader
     depends_on:
@@ -74,6 +78,7 @@ services:
     restart: on-failure
 
   airbyte-server:
+    platform: linux/amd64
     image: airbyte/server:0.50.48
     container_name: airbyte-server
     depends_on:
@@ -97,6 +102,10 @@ services:
       - TEMPORAL_HOST=airbyte-temporal:7233
       - REDIS_HOST=airbyte-redis
       - AIRBYTE_VERSION=0.50.48
+      # Flyway migration version settings to prevent missing property errors
+      - AIRBYTE_FLYWAY_CONFIGS_MINIMUM_MIGRATION_VERSION=0.0.0
+      - AIRBYTE_FLYWAY_JOBS_MINIMUM_MIGRATION_VERSION=0.0.0
+      - AIRBYTE_FLYWAY_STATE_MINIMUM_MIGRATION_VERSION=0.0.0
     volumes:
       - airbyte_data:/data
     ports:
@@ -104,6 +113,7 @@ services:
     restart: unless-stopped
 
   airbyte-webapp:
+    platform: linux/amd64
     image: airbyte/webapp:0.50.48
     container_name: airbyte-webapp
     depends_on:
@@ -111,12 +121,15 @@ services:
     environment:
       - AIRBYTE_API_URL=http://airbyte-server:8000
       - INTERNAL_API_HOST=airbyte-server:8000
+      - CONNECTOR_BUILDER_API_HOST=plugin-service:8002
+      - KEYCLOAK_INTERNAL_HOST=airbyte-server:8000
       - AIRBYTE_VERSION=0.50.48
     ports:
       - "8001:80"
     restart: unless-stopped
 
   airbyte-worker:
+    platform: linux/amd64
     image: airbyte/worker:0.50.48
     container_name: airbyte-worker
     depends_on:
@@ -136,13 +149,17 @@ services:
       - CONFIG_DATABASE_USER=airbyte
       - CONFIG_DATABASE_URL=jdbc:postgresql://airbyte-db:5432/airbyte
       - AIRBYTE_WORKSPACE_ROOT=/data
+      - AIRBYTE_LOCAL_ROOT=/local
       - TEMPORAL_HOST=airbyte-temporal:7233
       - REDIS_HOST=airbyte-redis
     volumes:
       - airbyte_data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+      - airbyte_local:/local
     restart: unless-stopped
 
   airbyte-cron:
+    platform: linux/amd64
     image: airbyte/cron:0.50.48
     container_name: airbyte-cron
     depends_on:
@@ -167,6 +184,7 @@ services:
     restart: unless-stopped
 
   airbyte-temporal:
+    platform: linux/amd64
     image: temporalio/auto-setup:1.20.2
     container_name: airbyte-temporal
     environment:
@@ -192,3 +210,4 @@ services:
 volumes:
   airbyte_db_data:
   airbyte_data:
+  airbyte_local:

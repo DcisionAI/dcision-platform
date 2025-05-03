@@ -62,7 +62,7 @@ export default function ConnectorCatalog({ onSelect }: ConnectorCatalogProps) {
             <button
               key={connector.sourceDefinitionId}
               onClick={() => onSelect?.(connector)}
-              className="flex flex-col items-center p-6 bg-white rounded-lg shadow border border-docs-border hover:shadow-lg focus:outline-none transition"
+              className="flex flex-col items-center p-6 bg-docs-section border border-docs-section-border shadow-sm rounded-xl hover:bg-docs-section/80 transition-colors focus:outline-none"
             >
               <img
                 src={connector.icon}
