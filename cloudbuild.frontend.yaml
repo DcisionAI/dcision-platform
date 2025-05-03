@@ -4,16 +4,8 @@ steps:
     args: ['pull', 'gcr.io/dcisionai/frontend:latest']
     continue-on-error: true
 
-  # Generate .env.production for Next.js build
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        echo "NEXT_PUBLIC_SUPABASE_URL=$(gcloud secrets versions access latest --secret=supabase-url --project=$PROJECT_ID)" > .env.production
-        echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(gcloud secrets versions access latest --secret=supabase-anon-key --project=$PROJECT_ID)" >> .env.production
 
-  # Generate environment file for Next.js production build
+  # Generate .env.production for Next.js build (build-time env vars)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
