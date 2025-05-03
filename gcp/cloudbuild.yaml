@@ -1,5 +1,6 @@
 options:
   logging: CLOUD_LOGGING_ONLY
+  defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
 steps:
   # Build and deploy solver service
   - name: 'gcr.io/cloud-builders/docker'
