@@ -27,6 +27,40 @@ steps:
       - '--set-secrets'
       - 'OPENAI_API_KEY=openai-api-key:latest'
 
+  # Build and deploy data (Airbyte) service
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/data:latest', './airbyte-service']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/data:latest']
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'data'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/data:latest'
+      - '--region'
+      - '${_REGION}'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--port'
+      - '3000'
+      - '--set-env-vars'
+      - 'SUPABASE_URL=$(gcloud secrets versions access latest --secret=NEXT_PUBLIC_SUPABASE_URL),SUPABASE_SERVICE_KEY=$(gcloud secrets versions access latest --secret=SUPABASE_SERVICE_KEY)'
+  # Map domain to data service
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud run domain-mappings create \
+          --service data \
+          --domain data.dcisionai.com \
+          --region ${_REGION} \
+        || echo "Domain mapping exists; continuing..."
+
   # Build and deploy plugin service
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'gcr.io/$PROJECT_ID/plugin-service:latest', './plugin-service']
