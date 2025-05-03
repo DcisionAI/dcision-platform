@@ -52,6 +52,15 @@ steps:
       - '--set-secrets'
       - 'OPENAI_API_KEY=openai-api-key:latest'
 
+  # Generate .env.production for Next.js build
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "NEXT_PUBLIC_SUPABASE_URL=$(gcloud secrets versions access latest --secret=supabase-url --project=$PROJECT_ID)" > .env.production
+        echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(gcloud secrets versions access latest --secret=supabase-anon-key --project=$PROJECT_ID)" >> .env.production
+
   # Build and deploy frontend
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'gcr.io/$PROJECT_ID/frontend:latest', '.']

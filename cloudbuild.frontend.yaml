@@ -4,14 +4,23 @@ steps:
     args: ['pull', 'gcr.io/dcisionai/frontend:latest']
     continue-on-error: true
 
+  # Generate .env.production for Next.js build
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "NEXT_PUBLIC_SUPABASE_URL=$(gcloud secrets versions access latest --secret=supabase-url --project=$PROJECT_ID)" > .env.production
+        echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(gcloud secrets versions access latest --secret=supabase-anon-key --project=$PROJECT_ID)" >> .env.production
+
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
       '--progress=plain',
       '--no-cache',
       '-t', 'gcr.io/dcisionai/frontend:latest',
-      '-f', './frontend/Dockerfile',
-      './frontend'
+      '-f', './Dockerfile',
+      '.'
     ]
     env:
       - 'DOCKER_BUILDKIT=1'
@@ -33,17 +42,15 @@ steps:
 
   # Map domain to frontend service
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'gcloud'
+    entrypoint: 'bash'
     args:
-      - 'run'
-      - 'domain-mappings'
-      - 'create'
-      - '--service'
-      - 'frontend'
-      - '--domain'
-      - 'platform.dcisionai.com'
-      - '--region'
-      - 'us-central1'
+      - '-c'
+      - |
+        gcloud beta run domain-mappings create \
+          --service frontend \
+          --domain platform.dcisionai.com \
+          --region us-central1 \
+        || echo "Domain mapping exists or failed; continuing..."
 
 images:
   - 'gcr.io/dcisionai/frontend:latest'
