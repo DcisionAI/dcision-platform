@@ -4,16 +4,13 @@ WORKDIR /app
 
 # Copy package files first to leverage Docker cache
 COPY package*.json ./
-COPY yarn.lock ./
-
-# Install dependencies
-RUN yarn install --frozen-lockfile
+RUN npm ci
 
 # Copy source code
 COPY . .
 
 # Build application
-RUN yarn build
+RUN npm run build
 
 # Production stage
 FROM node:20-alpine AS runner
@@ -22,15 +19,14 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Copy necessary files from builder
-COPY --from=builder /app/next.config.js ./
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package*.json ./
 
-# Create public directory if it doesn't exist
-RUN mkdir -p public
+# Install production dependencies only
+RUN npm ci --only=production
 
 # Expose port
 EXPOSE 3000
 
 # Start the application
-CMD ["node", "server.js"] 
+CMD ["node", "dist/index.js"] 

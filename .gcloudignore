@@ -1,0 +1,41 @@
+# Ignore node modules and build artifacts
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# Ignore Python virtual environments
+venv/
+env/
+__pycache__/
+*.pyc
+
+# Ignore git and IDE files
+.git/
+.gitignore
+.idea/
+.vscode/
+
+# Ignore logs and temporary files
+*.log
+.DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ignore test files and scripts
+__tests__/
+test/
+tests/
+*.test.*
+*.spec.*
+server/mcp/scripts/
+server/mcp/tests/
+
+# Keep necessary configuration files
+!.env.example
+!.env.local.example
+!next.config.js
+!package.json
+!yarn.lock 

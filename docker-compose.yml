@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   frontend:
     build:
@@ -40,3 +38,157 @@ services:
       - PORT=8002
       - NODE_ENV=development
       - ORTOOLS_SERVICE_URL=http://solver-service:8001
+
+  # --- Airbyte Core Services ---
+  airbyte-db:
+    image: airbyte/db:0.50.48
+    container_name: airbyte-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=airbyte
+      - POSTGRES_DB=airbyte
+    volumes:
+      - airbyte_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airbyte"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  airbyte-bootloader:
+    image: airbyte/bootloader:0.50.48
+    container_name: airbyte-bootloader
+    depends_on:
+      airbyte-db:
+        condition: service_healthy
+    environment:
+      - AIRBYTE_ROLE=bootloader
+      - DATABASE_USER=airbyte
+      - DATABASE_PASSWORD=password
+      - DATABASE_URL=jdbc:postgresql://airbyte-db:5432/airbyte
+      - CONFIG_DATABASE_PASSWORD=password
+      - CONFIG_DATABASE_USER=airbyte
+      - CONFIG_DATABASE_URL=jdbc:postgresql://airbyte-db:5432/airbyte
+      - AIRBYTE_VERSION=0.50.48
+    restart: on-failure
+
+  airbyte-server:
+    image: airbyte/server:0.50.48
+    container_name: airbyte-server
+    depends_on:
+      airbyte-db:
+        condition: service_healthy
+      airbyte-bootloader:
+        condition: service_started
+      airbyte-temporal:
+        condition: service_started
+      airbyte-redis:
+        condition: service_started
+    environment:
+      - AIRBYTE_ROLE=server
+      - DATABASE_USER=airbyte
+      - DATABASE_PASSWORD=password
+      - DATABASE_URL=jdbc:postgresql://airbyte-db:5432/airbyte
+      - CONFIG_DATABASE_PASSWORD=password
+      - CONFIG_DATABASE_USER=airbyte
+      - CONFIG_DATABASE_URL=jdbc:postgresql://airbyte-db:5432/airbyte
+      - AIRBYTE_WORKSPACE_ROOT=/data
+      - TEMPORAL_HOST=airbyte-temporal:7233
+      - REDIS_HOST=airbyte-redis
+      - AIRBYTE_VERSION=0.50.48
+    volumes:
+      - airbyte_data:/data
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  airbyte-webapp:
+    image: airbyte/webapp:0.50.48
+    container_name: airbyte-webapp
+    depends_on:
+      - airbyte-server
+    environment:
+      - AIRBYTE_API_URL=http://airbyte-server:8000
+      - INTERNAL_API_HOST=airbyte-server:8000
+      - AIRBYTE_VERSION=0.50.48
+    ports:
+      - "8001:80"
+    restart: unless-stopped
+
+  airbyte-worker:
+    image: airbyte/worker:0.50.48
+    container_name: airbyte-worker
+    depends_on:
+      airbyte-server:
+        condition: service_started
+      airbyte-temporal:
+        condition: service_started
+      airbyte-redis:
+        condition: service_started
+    environment:
+      - AIRBYTE_ROLE=worker
+      - AIRBYTE_VERSION=0.50.48
+      - DATABASE_USER=airbyte
+      - DATABASE_PASSWORD=password
+      - DATABASE_URL=jdbc:postgresql://airbyte-db:5432/airbyte
+      - CONFIG_DATABASE_PASSWORD=password
+      - CONFIG_DATABASE_USER=airbyte
+      - CONFIG_DATABASE_URL=jdbc:postgresql://airbyte-db:5432/airbyte
+      - AIRBYTE_WORKSPACE_ROOT=/data
+      - TEMPORAL_HOST=airbyte-temporal:7233
+      - REDIS_HOST=airbyte-redis
+    volumes:
+      - airbyte_data:/data
+    restart: unless-stopped
+
+  airbyte-cron:
+    image: airbyte/cron:0.50.48
+    container_name: airbyte-cron
+    depends_on:
+      airbyte-server:
+        condition: service_started
+      airbyte-worker:
+        condition: service_started
+    environment:
+      - AIRBYTE_ROLE=cron
+      - AIRBYTE_VERSION=0.50.48
+      - DATABASE_USER=airbyte
+      - DATABASE_PASSWORD=password
+      - DATABASE_URL=jdbc:postgresql://airbyte-db:5432/airbyte
+      - CONFIG_DATABASE_PASSWORD=password
+      - CONFIG_DATABASE_USER=airbyte
+      - CONFIG_DATABASE_URL=jdbc:postgresql://airbyte-db:5432/airbyte
+      - AIRBYTE_WORKSPACE_ROOT=/data
+      - TEMPORAL_HOST=airbyte-temporal:7233
+      - REDIS_HOST=airbyte-redis
+    volumes:
+      - airbyte_data:/data
+    restart: unless-stopped
+
+  airbyte-temporal:
+    image: temporalio/auto-setup:1.20.2
+    container_name: airbyte-temporal
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=airbyte
+      - POSTGRES_PWD=password
+      - POSTGRES_SEEDS=airbyte-db
+    depends_on:
+      airbyte-db:
+        condition: service_healthy
+    ports:
+      - "7233:7233"
+    restart: unless-stopped
+
+  airbyte-redis:
+    image: redis:6-alpine
+    container_name: airbyte-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+volumes:
+  airbyte_db_data:
+  airbyte_data:

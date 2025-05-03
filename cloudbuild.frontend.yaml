@@ -1,0 +1,59 @@
+steps:
+  # Frontend Service
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['pull', 'gcr.io/dcisionai/frontend:latest']
+    continue-on-error: true
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '--progress=plain',
+      '--no-cache',
+      '-t', 'gcr.io/dcisionai/frontend:latest',
+      '-f', './frontend/Dockerfile',
+      './frontend'
+    ]
+    env:
+      - 'DOCKER_BUILDKIT=1'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/dcisionai/frontend:latest']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud run deploy frontend \
+          --image gcr.io/dcisionai/frontend:latest \
+          --region us-central1 \
+          --platform managed \
+          --allow-unauthenticated \
+          --set-env-vars NEXT_PUBLIC_SUPABASE_URL=$(gcloud secrets versions access latest --secret=supabase-url),NEXT_PUBLIC_SUPABASE_ANON_KEY=$(gcloud secrets versions access latest --secret=supabase-anon-key)
+
+  # Map domain to frontend service
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'domain-mappings'
+      - 'create'
+      - '--service'
+      - 'frontend'
+      - '--domain'
+      - 'platform.dcisionai.com'
+      - '--region'
+      - 'us-central1'
+
+images:
+  - 'gcr.io/dcisionai/frontend:latest'
+
+options:
+  machineType: 'E2_HIGHCPU_32'
+  logging: CLOUD_LOGGING_ONLY
+  volumes:
+    - name: 'docker-cache'
+      path: '/docker-cache'
+
+substitutions:
+  _PROJECT_ID: "dcisionai" 

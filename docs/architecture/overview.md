@@ -1,150 +1,127 @@
-# DcisionAI Platform Architecture Overview
+# DcisionAI Platform: Architecture Overview
 
-## Introduction
+## 1. High-Level System Components
 
-DcisionAI is a modern platform for operations research and optimization, built around the Model Context Protocol (MCP). This document provides a high-level overview of the platform's architecture, components, and their interactions.
+| Component         | Description                                                                                  | Key Technologies         |
+|-------------------|---------------------------------------------------------------------------------------------|-------------------------|
+| **Frontend**      | User interface for problem definition, solution review, and orchestration control.           | Next.js, TypeScript     |
+| **MCP Orchestrator** | Central logic that sequences protocol steps, invokes agents, and manages state.           | Node.js/TypeScript      |
+| **Solver Service**| Backend service for optimization model building and solving.                                 | FastAPI, Python, OR-Tools|
+| **Data Service**  | Handles data ingestion, ETL, and integration from various sources.                          | Airbyte, Node.js        |
+| **Plugin Service**| Middleware for extensibility and custom logic.                                               | Node.js/TypeScript      |
+| **Supabase**      | Cloud-native database for persistent storage.                                                | Supabase (Postgres)     |
+| **LLM Providers** | Large Language Model integrations for reasoning, mapping, and explanation.                   | OpenAI, Anthropic, etc. |
 
-## System Architecture
+---
 
-The platform is built using a microservices architecture with the following main components:
+## 2. System Flow Diagram
 
-1. **Frontend Application**
-   - Next.js-based web application
-   - TypeScript for type safety
-   - Tailwind CSS for styling
-   - React components for UI
+```
+[Frontend] <--> [MCP Orchestrator] <--> [Agents/LLMs]
+                                 |         |
+                                 |         +--> [Solver Service]
+                                 |         +--> [Data Service]
+                                 |         +--> [Plugin Service]
+                                 |
+                                 +--> [Supabase]
+```
 
-2. **Backend Services**
-   - Node.js/TypeScript services
-   - RESTful APIs
-   - WebSocket support for real-time updates
-   - Authentication and authorization
+---
 
-3. **Model Context Protocol (MCP)**
-   - Core protocol implementation
-   - Agent-based architecture
-   - Orchestration layer
-   - Problem-solving pipeline
+## 3. Component Details
 
-4. **Data Storage**
-   - Supabase for user data and authentication
-   - File-based storage for models and examples
-   - Caching layer for performance
+### **Frontend**
+- Built with Next.js and TypeScript.
+- Allows users to define problems, review solutions, and interact with the MCP protocol.
+- Communicates with backend services via REST APIs.
 
-## Key Components
+---
 
-### 1. Frontend Architecture
-- **Pages**: Next.js pages for different views
-- **Components**: Reusable UI components
-- **Contexts**: React contexts for state management
-- **API Clients**: Generated API clients for backend communication
+### **MCP Orchestrator**
+- Located in `server/mcp/orchestrator/`.
+- Sequences protocol steps as defined in the MCP object.
+- For each step:
+  1. Looks up the appropriate agent from the `AgentRegistry`.
+  2. Passes the current MCP state and context (including LLM access) to the agent.
+  3. Collects results, errors, and thought processes for each step.
+- Returns a full protocol execution trace to the frontend.
 
-### 2. Backend Architecture
-- **API Routes**: Next.js API routes for backend services
-- **Services**: Business logic and data processing
-- **Middleware**: Authentication, rate limiting, etc.
-- **WebSocket Server**: Real-time communication
+---
 
-### 3. MCP Implementation
-- **Protocol Definition**: Type definitions and interfaces
-- **Agent System**: Specialized agents for different tasks
-- **Orchestrator**: Coordination of agent activities
-- **Problem Solving**: Model building and solving
+### **Backend Services**
 
-### 4. Data Layer
-- **Database**: Supabase PostgreSQL
-- **Storage**: File system for models
-- **Cache**: In-memory and distributed caching
-- **Search**: Full-text search capabilities
+#### **Solver Service**
+- Located in `solver-service/`.
+- Exposes REST APIs for model building, solving, and solution explanation.
+- Uses OR-Tools for optimization.
+- Can be invoked directly by the orchestrator or by agents (e.g., `ModelRunnerAgent`).
 
-## Communication Flow
+#### **Data Service**
+- Located in `data-service/`.
+- Handles data ingestion, ETL, and integration.
+- Connects to external and internal data sources with over 100 connectors. 
+- Supplies clean, structured data to the orchestrator and agents.
 
-1. **User Interaction**
-   - User actions trigger frontend events
-   - API calls to backend services
-   - Real-time updates via WebSocket
+#### **Plugin Service**
+- Located in `plugin-service/`.
+- Provides extensibility for custom logic, integrations, and business rules.
 
-2. **Problem Solving**
-   - Problem definition through MCP
-   - Agent orchestration
-   - Solution generation and validation
-   - Results delivery to user
+#### **Supabase**
+- Used for persistent storage of user data, problem definitions, and results.
 
-3. **Data Flow**
-   - User data → Database
-   - Model data → File storage
-   - Cache updates → In-memory/Redis
-   - Search indexing → Search engine
+---
 
-## Security Architecture
+### **Agent & LLM System**
 
-1. **Authentication**
-   - Supabase Auth
-   - JWT tokens
-   - Session management
+#### **Agent Registry**
+- Central registry for all agents.
+- Ensures each protocol step is handled by the correct agent.
 
-2. **Authorization**
-   - Role-based access control
-   - Resource-level permissions
-   - API route protection
+#### **Agents**
+- Each agent is responsible for a specific protocol step.
+- Many agents leverage LLMs for advanced reasoning, mapping, and explanation.
+- See the detailed agent breakdown in the next section.
 
-3. **Data Security**
-   - Encryption at rest
-   - Secure communication
-   - Input validation
-   - Rate limiting
+#### **LLM Providers**
+- Abstracted via a provider/factory pattern.
+- Supports OpenAI, Anthropic, and other LLMs.
+- Agents receive an `llm` object in their context, abstracting provider details.
 
-## Deployment Architecture
+---
 
-1. **Development**
-   - Local development environment
-   - Docker containers
-   - Hot reloading
+## 4. Agent System: Categories & Responsibilities
 
-2. **Staging**
-   - Preview deployments
-   - Integration testing
-   - Performance testing
+| Agent Name               | Category                | Key Actions                | LLM Usage                |
+|--------------------------|-------------------------|----------------------------|--------------------------|
+| IntentInterpreterAgent   | Intent Understanding    | interpret_intent           | Yes (intent extraction)  |
+| DataIntegrationAgent     | Data Collection         | collect_data               | Yes (feature mapping)    |
+| DataMappingAgent         | Data Mapping            | collect_data               | Yes (mapping, rationale) |
+| ModelRunnerAgent         | Model Build & Solve     | build_model, solve_model   | Yes (constraints, explain)|
+| SolutionExplainerAgent   | Explanation & Reporting | generate_report            | Yes (explanation)        |
 
-3. **Production**
-   - Containerized deployment
-   - Load balancing
-   - Monitoring and logging
-   - Backup and recovery
+**See the agents documentation for a detailed breakdown of each agent.**
 
-## Monitoring and Observability
+---
 
-1. **Logging**
-   - Application logs
-   - Error tracking
-   - Performance metrics
+## 5. Protocol Flow Example
 
-2. **Monitoring**
-   - System health
-   - Performance metrics
-   - User analytics
+1. **User submits a problem** via the frontend.
+2. **MCP Orchestrator** loads the protocol steps and invokes agents in sequence:
+   - **IntentInterpreterAgent**: Classifies and extracts context.
+   - **DataIntegrationAgent/DataMappingAgent**: Connects to data sources, maps, and collects data.
+   - **ModelRunnerAgent**: Builds and solves the optimization model.
+   - **SolutionExplainerAgent**: Explains and reports the solution.
+3. **LLMs** are invoked by agents as needed for interpretation, mapping, validation, and explanation.
+4. **Results** are returned to the frontend, with human-in-the-loop review if required.
 
-3. **Alerting**
-   - Error notifications
-   - Performance alerts
-   - Security alerts
+---
 
-## Future Considerations
+## 6. Extensibility & Best Practices
 
-1. **Scalability**
-   - Horizontal scaling
-   - Load balancing
-   - Caching strategies
-
-2. **Extensibility**
-   - Plugin architecture
-   - Custom agent support
-   - API versioning
-
-3. **Performance**
-   - Optimization strategies
-   - Caching improvements
-   - Database optimization
+- **Modular agent design** allows for easy addition of new protocol steps or agent types.
+- **LLM provider abstraction** enables switching or combining LLMs as needed.
+- **Service-oriented architecture** supports independent scaling and deployment of each service.
+- **Cloud-native deployment** (Cloud Run, Docker, etc.) for scalability and reliability.
 
 ## Related Documents
 

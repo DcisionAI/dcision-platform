@@ -429,3 +429,36 @@ API Endpoints	submit-problem.ts	❌	No LLM
     Keep orchestrator agent-agnostic (no LLM assumptions inside).
 
     Modularize LLMAssistant.ts cleanly to switch models easily later (Azure OpenAI, Claude, etc.).
+
+# TODO: Data Integration & Enrichment Enhancements
+
+## Real-Time & Multi-Source Data Integration (MCP, Agents, UI)
+
+- [ ] Extend MCP protocol to support multiple data sources per run, including enrichment sources and real-time/on-demand flags.
+- [ ] Refactor DataIntegrationAgent to:
+    - [ ] Iterate over multiple data sources in a single run.
+    - [ ] Use Airbyte API to trigger syncs and fetch latest data before mapping/feature engineering.
+    - [ ] Optionally support streaming or polling for real-time sources.
+- [ ] Allow LLMs to suggest additional enrichment sources based on problem context.
+- [ ] Dynamically update MCP protocol steps to include enrichment from relevant sources.
+- [ ] Update UI to:
+    - [ ] Let users select multiple sources in the connector catalog.
+    - [ ] Show enrichment suggestions from the LLM in the UI, with "one-click add" to the protocol.
+- [ ] Example protocol step:
+
+```json
+{
+  "steps": [
+    {
+      "action": "collect_data",
+      "sources": [
+        { "type": "postgres", "config": { ... } },
+        { "type": "weather_api", "config": { ... }, "enrichment": true }
+      ],
+      "real_time": true
+    }
+  ]
+}
+```
+
+---
