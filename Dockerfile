@@ -11,8 +11,8 @@ ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
 COPY package*.json ./
 COPY yarn.lock ./
 
-# Install dependencies
-RUN yarn install --frozen-lockfile
+# Install all dependencies, including devDependencies (needed for bundle-analyzer)
+RUN yarn install --frozen-lockfile --production=false
 
 COPY . .
 # Copy source code
