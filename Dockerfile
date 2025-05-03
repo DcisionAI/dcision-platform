@@ -1,9 +1,7 @@
 # Build stage
 FROM node:20-alpine AS builder
 WORKDIR /app
-# Ensure production environment for Next.js build so .env.production is loaded
-ENV NODE_ENV=production
-# Build-time environment variables for Next.js
+# Build-time environment variables for Next.js (from Secret Manager)
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ENV NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
@@ -16,8 +14,12 @@ COPY yarn.lock ./
 # Install dependencies
 RUN yarn install --frozen-lockfile
 
+COPY . .
 # Copy source code
 COPY . .
+
+# Set production mode so Next.js loads .env.production
+ENV NODE_ENV=production
 
 # Build application
 RUN yarn build
