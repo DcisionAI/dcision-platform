@@ -45,6 +45,11 @@ export default function Navbar() {
             Playground
           </a>
         </Link>
+        <Link href="/modelbuilder" legacyBehavior>
+          <a className={router.pathname === '/modelbuilder' ? 'text-docs-accent font-semibold' : 'text-docs-muted hover:text-docs-accent'}>
+            Model Builder
+          </a>
+        </Link>
         
         <Link href="/docs" legacyBehavior>
           <a className={router.pathname === '/docs' ? 'text-docs-accent font-semibold' : 'text-docs-muted hover:text-docs-accent'}>

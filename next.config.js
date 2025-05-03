@@ -24,7 +24,7 @@ const nextConfig = {
     return [
       {
         source: '/',
-        destination: '/playground',
+        destination: '/modelbuilder',
         permanent: true,
       },
     ]

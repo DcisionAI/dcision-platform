@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Layout from '@/components/Layout';
+
+import IntentDataMCPWizard from '@/components/playground/IntentDataMCPWizard';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { v4 as uuidv4 } from 'uuid';
 import { ProblemType } from '../mcp/types';
@@ -193,6 +195,14 @@ export default function PlaygroundPage() {
   const getCurrentSession = (): Session | undefined =>
     sessions.find((session) => session.id === activeSessionId);
 
+  const handleWizardComplete = (mcpConfig: any) => {
+    // Initialize session with MCP JSON as description and sampleData
+    setUserInput(JSON.stringify(mcpConfig, null, 2));
+    setSampleData(JSON.stringify(mcpConfig, null, 2));
+    setShowInput(false);
+    handleStartSession();
+  };
+  
   const handleStartSession = () => {
     const newSession: Session = {
       id: uuidv4(),
@@ -903,98 +913,9 @@ export default function PlaygroundPage() {
   return (
     <Layout>
       <div className="h-[calc(100vh-4rem)] bg-[#0D1117]">
-        {showInput && (
+      {showInput && (
           <div className="max-w-6xl mx-auto p-8 space-y-8">
-            <div className="space-y-2">
-              <h1 className="text-2xl font-medium text-white">DcisionAI Playground</h1>
-              <p className="text-[#8B949E] text-sm">Define your business optimization challenge and let our AI assist you in finding the best solution.</p>
-              
-              {/* How it works section */}
-              <div className="grid grid-cols-3 gap-4 my-8">
-                <div className="bg-[#161B22] p-6 rounded-lg border border-[#30363D] space-y-3">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5 text-[#2F81F7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
-                    </svg>
-                    <h3 className="text-white text-sm font-medium">Specialized AI Agents</h3>
-                  </div>
-                  <p className="text-[#8B949E] text-sm">
-                  DcisionAI uses a team of specialized agents — each responsible for a critical step in the decision workflow. From intent interpretation to model selection and solution explanation, our agents collaborate to automate complex optimization tasks with precision and transparency.
-                  </p>
-                </div>
-
-                <div className="bg-[#161B22] p-6 rounded-lg border border-[#30363D] space-y-3">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5 text-[#2F81F7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
-                    <h3 className="text-white text-sm font-medium">Plug-in Architecture</h3>
-                  </div>
-                  <p className="text-[#8B949E] text-sm">
-                  Our plug-in architecture connects directly to your live databases. In this playground, we use Supabase to demonstrate how agents scan actual schema and map data in real time — enabling grounded optimization with no manual setup. Designed for secure, extensible enterprise integration.
-                  </p>
-                </div>
-
-                <div className="bg-[#161B22] p-6 rounded-lg border border-[#30363D] space-y-3">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5 text-[#2F81F7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-                    </svg>
-                    <h3 className="text-white text-sm font-medium">Model Context Protocol</h3>
-                  </div>
-                  <p className="text-[#8B949E] text-sm">
-                  Model Context Protocol (MCP) is our orchestration layer for decision-making. It ensures agents operate with shared context — structuring goals, constraints, and data into optimization-ready inputs. With built-in explainability and human-in-the-loop validation, MCP makes decisions both auditable and trustworthy.
-                  </p>
-                 
-                </div>
-              </div>
-
-              {/* Process visualization */}
-              <div className="bg-[#161B22] p-6 rounded-lg border border-[#30363D] mb-6">
-                <div className="flex items-center justify-between text-sm text-[#8B949E]">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-[#2F81F7]"></div>
-                    <span>Intent Analysis</span>
-                  </div>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-[#2F81F7]"></div>
-                    <span>Data Mapping</span>
-                  </div>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-[#2F81F7]"></div>
-                    <span>DcisionAI Model Selection</span>
-                  </div>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-[#2F81F7]"></div>
-                    <span>Explainable Decisions</span>
-                  </div>
-                </div>
-              </div>
-
-              <textarea
-                value={userInput}
-                onChange={(e) => setUserInput(e.target.value)}
-                placeholder="Describe what you are trying to decide... (e.g., Optimize delivery fleet for cost and time)"
-                className="w-full p-4 border border-[#30363D] rounded-lg h-24 bg-[#161B22] text-white placeholder-[#8B949E]/50 text-sm focus:border-[#2F81F7] focus:ring-1 focus:ring-[#2F81F7] transition-colors"
-                autoFocus
-              />
-            </div>
-            <button
-              onClick={handleStartSession}
-              disabled={!userInput.trim()}
-              className="w-full px-6 py-2.5 bg-[#2F81F7] text-white text-sm font-medium rounded-lg hover:bg-[#2F81F7]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              See DecisionAI in Action
-            </button>
+            <IntentDataMCPWizard onComplete={handleWizardComplete} />
           </div>
         )}
         {(!showInput || sessions.length > 0) && (
