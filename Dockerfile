@@ -1,6 +1,8 @@
 # Build stage
 FROM node:20-alpine AS builder
 WORKDIR /app
+# Ensure production environment for Next.js build so .env.production is loaded
+ENV NODE_ENV=production
 # Build-time environment variables for Next.js
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
