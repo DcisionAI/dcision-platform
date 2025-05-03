@@ -33,7 +33,7 @@ steps:
       - '--port'
       - '3000'
       - '--set-env-vars'
-      - 'NODE_ENV=production,BASE_URL=${_BASE_URL},ORTOOLS_SERVICE_URL=${_SOLVER_SERVICE_URL},PLUGIN_SERVICE_URL=${_PLUGIN_SERVICE_URL}'
+      - 'NODE_ENV=production,BASE_URL=${_BASE_URL},ORTOOLS_SERVICE_URL=${_SOLVER_SERVICE_URL},PLUGIN_SERVICE_URL=${_PLUGIN_SERVICE_URL},AIRBYTE_API_URL=https://data.dcisionai.com'
       - '--set-secrets'
       - 'JWT_SECRET=jwt-secret:latest,OPENAI_API_KEY=openai-api-key:latest,SUPABASE_URL=supabase-url:latest,SUPABASE_ANON_KEY=supabase-anon-key:latest,SUPABASE_SERVICE_KEY=supabase-service-key:latest'
   # Map custom domain to frontend service (idempotent)

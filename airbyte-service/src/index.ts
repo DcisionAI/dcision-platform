@@ -19,6 +19,16 @@ const service = new DcisionAIAirbyteService(DEFAULT_WHITE_LABEL_CONFIG);
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy' });
 });
+// List all connectors by default at root
+app.get('/', async (req, res) => {
+  try {
+    const connectors = await service.listConnectors();
+    res.json({ connectors });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ error: message });
+  }
+});
 
 // Create connection
 app.post('/connections', async (req, res) => {
