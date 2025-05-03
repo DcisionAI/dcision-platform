@@ -11,8 +11,8 @@ steps:
     args:
       - '-c'
       - |
-        echo "NEXT_PUBLIC_SUPABASE_URL=$(gcloud secrets versions access latest --secret=supabase-url --project=$PROJECT_ID)" > .env.production
-        echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(gcloud secrets versions access latest --secret=supabase-anon-key --project=$PROJECT_ID)" >> .env.production
+        echo "NEXT_PUBLIC_SUPABASE_URL=$(gcloud secrets versions access latest --secret=NEXT_PUBLIC_SUPABASE_URL --project=$PROJECT_ID)" > .env.production
+        echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(gcloud secrets versions access latest --secret=NEXT_PUBLIC_SUPABASE_ANON_KEY --project=$PROJECT_ID)" >> .env.production
 
   - name: 'gcr.io/cloud-builders/docker'
     args: [
@@ -39,7 +39,7 @@ steps:
           --region us-central1 \
           --platform managed \
           --allow-unauthenticated \
-          --set-env-vars NEXT_PUBLIC_SUPABASE_URL=$(gcloud secrets versions access latest --secret=supabase-url),NEXT_PUBLIC_SUPABASE_ANON_KEY=$(gcloud secrets versions access latest --secret=supabase-anon-key)
+          --set-env-vars NEXT_PUBLIC_SUPABASE_URL=$(gcloud secrets versions access latest --secret=NEXT_PUBLIC_SUPABASE_URL),NEXT_PUBLIC_SUPABASE_ANON_KEY=$(gcloud secrets versions access latest --secret=NEXT_PUBLIC_SUPABASE_ANON_KEY)
 
   # Map domain to frontend service
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
