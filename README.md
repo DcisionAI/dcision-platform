@@ -81,5 +81,9 @@ yarn test
 ## Deployment
 The platform is designed to be deployed using Docker containers. Each service has its own Dockerfile and can be built and deployed independently.
 
+## Infrastructure as Code
+
+We maintain Terraform configurations in the `terraform/` directory to manage Cloud Run domain mappings. See `terraform/README.md` for setup, import commands, and deployment instructions.
+
 ## License
 [Add your license information here]

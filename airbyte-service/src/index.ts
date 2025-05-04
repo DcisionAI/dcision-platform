@@ -19,7 +19,22 @@ console.log('  SUPABASE_KEY=', process.env.SUPABASE_KEY ? 'SET' : 'NOT SET');
 app.use(cors());
 app.use(express.json());
 
-const service = new DcisionAIAirbyteService(DEFAULT_WHITE_LABEL_CONFIG);
+// Initialize the Airbyte service; prevent startup crashes if configuration is invalid
+let service: DcisionAIAirbyteService;
+try {
+  service = new DcisionAIAirbyteService(DEFAULT_WHITE_LABEL_CONFIG);
+} catch (err) {
+  console.error('Failed to initialize DcisionAI Airbyte service:', err);
+  // Provide a stub implementation so the server still starts; only health and stubbed endpoints work
+  service = {
+    listConnectors: async () => [],
+    createConnection: async () => { throw err; },
+    syncConnection: async () => { throw err; },
+    getConnectionStatus: async () => { throw err; },
+    getDrivers: async () => [],
+    getOrders: async () => [],
+  } as unknown as DcisionAIAirbyteService;
+}
 
 // Health check endpoint
 app.get('/health', (req, res) => {
