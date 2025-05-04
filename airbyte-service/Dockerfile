@@ -25,8 +25,8 @@ COPY --from=builder /app/package*.json ./
 # Install production dependencies only
 RUN npm ci --only=production
 
-# Expose port
-EXPOSE 3000
+# Expose port (matches Cloud Run default PORT)
+EXPOSE 8080
 
 # Start the application
 CMD ["node", "dist/index.js"] 
