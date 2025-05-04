@@ -45,8 +45,6 @@ steps:
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
-      - '--port'
-      - '8080'
       - '--set-env-vars'
       - 'SUPABASE_URL=$(gcloud secrets versions access latest --secret=NEXT_PUBLIC_SUPABASE_URL),SUPABASE_SERVICE_KEY=$(gcloud secrets versions access latest --secret=SUPABASE_SERVICE_KEY)'
   # Map domain to data service
