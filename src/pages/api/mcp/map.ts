@@ -2,153 +2,11 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@supabase/supabase-js';
 import { MCP as CoreMCP, MCPStatus, ProblemType, IndustryVertical, Protocol } from '@server/mcp/types/core';
 import { DataMappingAgent } from '@server/mcp/agents/DataMappingAgent';
-import { AgentRunContext, AgentRunResult } from '@server/mcp/agents/AgentRegistry';
-import { LLMProviderFactory } from '@server/mcp/agents/llm/providers/LLMProviderFactory';
-import { LLMService, LLMResponse } from '@server/mcp/services/llm/LLMService';
-
-interface SSEUpdate {
-  type: 'progress' | 'complete' | 'error';
-  message?: string;
-  details?: any;
-  output?: any;
-  thoughtProcess?: string[];
-  error?: string;
-}
-
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-// MCP types
-interface MCPContext {
-  sessionId: string;
-  problemType: ProblemType;
-  userInput: string;
-}
-
-class IntegrationLLMService implements LLMService {
-  constructor(private llmProvider: any, private providerType: string) {}
-
-  async generateConstraints(businessRules: string): Promise<{ constraints: string[], reasoning: string }> {
-    throw new Error('Method not implemented.');
-  }
-
-  async validateModel(model: any, problemType: string): Promise<{ issues: string[], suggestions: string[] }> {
-    throw new Error('Method not implemented.');
-  }
-
-  async interpretIntent(description: string): Promise<{ problemType: string, context: any }> {
-    throw new Error('Method not implemented.');
-  }
-
-  async enrichData(data: any, context: any): Promise<{ enrichedData: any, reasoning: string }> {
-    throw new Error('Method not implemented.');
-  }
-
-  async explainSolution(solution: any, problemType: string): Promise<{ explanation: string, insights: string[] }> {
-    throw new Error('Method not implemented.');
-  }
-
-  async call(prompt: string, config?: any): Promise<LLMResponse> {
-    const response = await this.llmProvider.call(prompt, {
-      model: this.providerType === 'anthropic' ? 'claude-3-opus-20240229' : 'gpt-4-turbo-preview',
-      temperature: 0.2,
-      ...config
-    });
-    return {
-      content: response
-    };
-  }
-}
-
-class MCP implements CoreMCP {
-  sessionId: string;
-  version: string = '1.0.0';
-  status: MCPStatus = 'pending';
-  created: string;
-  lastModified: string;
-  model: {
-    variables: any[];
-    constraints: any[];
-    objective: any;
-  };
-  context: {
-    environment: {
-      region: string;
-      timezone: string;
-      resources?: Record<string, unknown>;
-      constraints?: Record<string, unknown>;
-      parameters?: Record<string, unknown>;
-      metadata?: Record<string, unknown>;
-    };
-    dataset: {
-      internalSources: string[];
-      externalEnrichment?: string[];
-      dataQuality?: 'poor' | 'fair' | 'good' | 'excellent';
-      requiredFields?: string[];
-      validationRules?: Record<string, unknown>;
-      metadata?: Record<string, unknown>;
-    };
-    problemType: ProblemType;
-    industry?: IndustryVertical;
-    businessRules?: any;
-  };
-  protocol: Protocol;
-
-  constructor(sessionId: string, problemType: ProblemType, userInput: string) {
-    this.sessionId = sessionId;
-    this.created = new Date().toISOString();
-    this.lastModified = new Date().toISOString();
-    this.model = {
-      variables: [],
-      constraints: [],
-      objective: {}
-    };
-    this.context = {
-      environment: {
-        region: 'us-east-1',
-        timezone: 'UTC',
-        resources: {}
-      },
-      dataset: {
-        internalSources: [],
-        externalEnrichment: [],
-        metadata: {
-          userInput,
-          problemType
-        }
-      },
-      problemType,
-      industry: 'logistics'
-    };
-    this.protocol = {
-      steps: [{
-        id: 'map_data',
-        action: 'map_data',
-        description: 'Determine required data schema based on problem type and user requirements.',
-        required: true,
-        parameters: {}
-      }],
-      allowPartialSolutions: false,
-      explainabilityEnabled: true,
-      humanInTheLoop: {
-        required: false,
-        approvalSteps: []
-      }
-    };
-  }
-}
-
-// Helper function to send SSE
-function sendSSE(res: NextApiResponse, data: SSEUpdate) {
-  res.write(`data: ${JSON.stringify(data)}\n\n`);
-}
+import { LLMServiceImpl } from '@server/mcp/services/llm/LLMService';
 
 export const config = {
   api: {
-    bodyParser: true,
-    responseLimit: false
+    bodyParser: true
   }
 };
 
@@ -156,158 +14,53 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
-
-  // Set headers for SSE
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-
   try {
-    const { sessionId, userInput, intentDetails } = req.body;
-    const problemType = intentDetails?.selectedModel || 'vehicle_routing';
+    const { sessionId, userInput, intentDetails, problemType: reqProblemType } = req.body;
+    const problemType = reqProblemType
+      || intentDetails?.output?.problemType
+      || intentDetails?.selectedModel
+      || 'vehicle_routing';
 
-    const mcp = new MCP(sessionId, problemType as ProblemType, userInput);
-
-    // Update MCP context with intent details
-    mcp.context.dataset.metadata = {
-      ...mcp.context.dataset.metadata,
-      intentDetails
+    // Build a minimal MCP instance
+    const mcp: CoreMCP = {
+      sessionId,
+      version: '1.0.0',
+      status: 'pending' as MCPStatus,
+      created: new Date().toISOString(),
+      lastModified: new Date().toISOString(),
+      model: { variables: [], constraints: [], objective: { type: 'minimize', expression: '', description: '' } },
+      context: {
+        environment: { region: 'us-east-1', timezone: 'UTC' },
+        dataset: { internalSources: [], metadata: { userInput, intentDetails } },
+        problemType: problemType as ProblemType,
+        industry: 'logistics' as IndustryVertical
+      },
+      protocol: {
+        steps: [ { id: 'map_data', action: 'collect_data', description: 'Field mapping', required: true } ],
+        allowPartialSolutions: false,
+        explainabilityEnabled: true,
+        humanInTheLoop: { required: false, approvalSteps: [] }
+      }
     };
 
-    // Create LLM provider based on environment configuration
-    const providerType = process.env.LLM_PROVIDER || 'anthropic';
-    const apiKey = providerType === 'anthropic' 
-      ? process.env.ANTHROPIC_API_KEY 
-      : process.env.OPENAI_API_KEY;
-    
-    if (!apiKey) {
-      throw new Error(`API key is required for ${providerType} provider`);
-    }
+    // Initialize LLM service
+    const providerType = (process.env.LLM_PROVIDER as 'anthropic'|'openai') || 'anthropic';
+    const apiKey = providerType === 'anthropic'
+      ? process.env.ANTHROPIC_API_KEY!
+      : process.env.OPENAI_API_KEY!;
+    const llmService = new LLMServiceImpl(providerType, apiKey);
 
-    const llmProvider = LLMProviderFactory.createProvider(providerType as 'openai' | 'anthropic', apiKey);
-    
+    // Run the DataMappingAgent
     const agent = new DataMappingAgent();
-    
-    const result = await agent.run({
-      id: 'map_data',
-      action: 'map_data',
-      description: 'Determine required data schema based on problem type and user requirements.',
-      required: true,
-      parameters: {}
-    }, mcp, {
-      llm: new IntegrationLLMService(llmProvider, providerType),
-      metadata: {
-        onProgress: (update: { type: 'progress' | 'warning' | 'error'; message: string; details?: any }) => {
-          console.log(`[${update.type}] ${update.message}`, update.details);
-          // Send progress updates via SSE
-          sendSSE(res, {
-            type: 'progress',
-            message: update.message,
-            details: update.details
-          });
-        }
-      }
-    });
+    const result = await agent.run(
+      { id: 'map_data', action: 'collect_data', description: 'Determine data mappings', required: true },
+      mcp,
+      { llm: llmService }
+    );
 
-    // Send final result
-    sendSSE(res, {
-      type: 'complete',
-      output: result.output,
-      thoughtProcess: Array.isArray(result.thoughtProcess) 
-        ? result.thoughtProcess 
-        : [result.thoughtProcess]
-    });
-
-    // End the response
-    res.end();
+    return res.status(200).json(result);
   } catch (error) {
-    console.error('Error in data mapping:', error);
-    // Send error via SSE
-    sendSSE(res, {
-      type: 'error',
-      error: 'Failed to process data mapping request',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
-    res.end();
+    console.error('DataMappingAgent error:', error);
+    return res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
   }
 }
-
-// Helper function to get required fields based on problem type
-function getRequiredFieldsForProblemType(type: string): string[] {
-  switch (type) {
-    case 'vehicle_routing':
-      return [
-        'vehicle_id',
-        'vehicle_capacity',
-        'location_id',
-        'location_coordinates',
-        'demand',
-        'time_window_start',
-        'time_window_end',
-        'service_time'
-      ];
-    case 'job_shop':
-      return [
-        'job_id',
-        'operation_id',
-        'machine_id',
-        'processing_time',
-        'due_date',
-        'priority'
-      ];
-    case 'bin_packing':
-      return [
-        'item_id',
-        'item_size',
-        'bin_id',
-        'bin_capacity'
-      ];
-    case 'resource_scheduling':
-      return [
-        'resource_id',
-        'task_id',
-        'start_time',
-        'end_time',
-        'required_skills',
-        'priority'
-      ];
-    case 'fleet_scheduling':
-      return [
-        'vehicle_id',
-        'route_id',
-        'departure_time',
-        'arrival_time',
-        'capacity',
-        'distance'
-      ];
-    case 'project_scheduling':
-      return [
-        'task_id',
-        'duration',
-        'dependencies',
-        'resources_required',
-        'earliest_start',
-        'latest_finish'
-      ];
-    case 'nurse_scheduling':
-      return [
-        'nurse_id',
-        'shift_id',
-        'shift_start',
-        'shift_end',
-        'skills',
-        'preferences'
-      ];
-    case 'production_planning':
-      return [
-        'product_id',
-        'quantity',
-        'machine_id',
-        'setup_time',
-        'production_rate',
-        'due_date'
-      ];
-    default:
-      return [];
-  }
-} 

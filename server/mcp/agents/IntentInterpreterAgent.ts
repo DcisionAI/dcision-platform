@@ -31,13 +31,11 @@ export class IntentInterpreterAgent implements MCPAgent {
         const { problemType, context: problemContext } = await context.llm.interpretIntent(
           problemDescription
         );
-        
         thoughtProcess.push(`LLM identified problem type: ${problemType}`);
         thoughtProcess.push('Problem context:');
         Object.entries(problemContext).forEach(([key, value]) => {
           thoughtProcess.push(`- ${key}: ${JSON.stringify(value)}`);
         });
-
         return {
           output: {
             success: true,
@@ -48,7 +46,11 @@ export class IntentInterpreterAgent implements MCPAgent {
           thoughtProcess: thoughtProcess.join('\n')
         };
       } catch (error) {
-        thoughtProcess.push('Failed to interpret intent using LLM, falling back to basic interpretation');
+        const errMsg = error instanceof Error ? error.message : String(error);
+        console.error('IntentInterpreterAgent LLM error:', error);
+        thoughtProcess.push(
+          `Failed to interpret intent using LLM: ${errMsg}, falling back to basic interpretation`
+        );
       }
     }
 

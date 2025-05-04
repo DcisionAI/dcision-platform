@@ -21,7 +21,7 @@ const menu = [
   {
     section: '',
     items: [
-      { href: '/playground', label: 'Playground', icon: CodeBracketIcon },
+      { href: '/modelbuilder', label: 'Dcision Builder', icon: CodeBracketIcon },
       { href: '/dashboard', label: 'Dashboard', icon: ChartBarIcon },
       { href: '/agents', label: 'Agents', icon: BeakerIcon },
       { href: '/data-integration', label: 'Data Integration', icon: ArrowsPointingInIcon },

@@ -1,5 +1,11 @@
 # Build stage
 FROM node:20-alpine AS builder
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+# Set Supabase env vars for build-time, so Next.js can prerender auth pages
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 WORKDIR /app
 # Copy package files first to leverage Docker cache
 COPY package*.json ./

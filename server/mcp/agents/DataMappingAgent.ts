@@ -677,12 +677,21 @@ You must respond with ONLY a JSON object in the following format, and nothing el
           ? await context.llm.enrichData({ prompt: fieldRequirementsPrompt }, { problemType: mcpContext.problemType })
           : { enrichedData: await callOpenAI(fieldRequirementsPrompt), reasoning: '' };
         
-        const cleanJson = extractJsonFromMarkdown(enrichedData.trim());
+        // Extract JSON payload (strip markdown code fences and surrounding text)
+        const rawReq = enrichedData.trim();
+        let cleanJson = extractJsonFromMarkdown(rawReq);
+        // Fallback: isolate JSON object between first '{' and last '}'
+        const firstBrace = cleanJson.indexOf('{');
+        const lastBrace = cleanJson.lastIndexOf('}');
+        if (firstBrace >= 0 && lastBrace > firstBrace) {
+          cleanJson = cleanJson.substring(firstBrace, lastBrace + 1);
+        }
         try {
           fieldRequirements = JSON.parse(cleanJson);
         } catch (parseError) {
-          thoughtProcess.push(`Failed to parse field requirements response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
-          throw new Error(`Invalid JSON response from LLM: ${cleanJson}`);
+          const msg = parseError instanceof Error ? parseError.message : String(parseError);
+          thoughtProcess.push(`Failed to parse field requirements JSON: ${msg}`);
+          throw new Error(`Invalid JSON for field requirements: ${msg}`);
         }
 
         thoughtProcess.push('Field Requirements Analysis:', JSON.stringify(fieldRequirements, null, 2));
@@ -764,7 +773,15 @@ EXAMPLE RESPONSE:
           ? await context.llm.enrichData({ prompt: mappingPrompt }, { problemType: mcpContext.problemType })
           : { enrichedData: await callOpenAI(mappingPrompt), reasoning: '' };
         
-        const cleanJson = extractJsonFromMarkdown(enrichedData.trim());
+        // Extract JSON payload for mapping (strip markdown fences and text)
+        const rawMap = enrichedData.trim();
+        let cleanJson = extractJsonFromMarkdown(rawMap);
+        // Fallback: isolate JSON object between first '{' and last '}'
+        const firstBraceMap = cleanJson.indexOf('{');
+        const lastBraceMap = cleanJson.lastIndexOf('}');
+        if (firstBraceMap >= 0 && lastBraceMap > firstBraceMap) {
+          cleanJson = cleanJson.substring(firstBraceMap, lastBraceMap + 1);
+        }
         try {
           mappingResult = JSON.parse(cleanJson);
           

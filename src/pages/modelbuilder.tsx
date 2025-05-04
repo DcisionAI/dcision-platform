@@ -45,12 +45,14 @@ const baseSteps: AgentStep[] = [
 
   // Initialize and run a pipeline session
   const startSession = (config: any) => {
+    // Use the identified problemType from the wizard config, fallback to 'custom'
+    const identifiedType = config?.context?.intent?.output?.problemType || 'custom';
     const newSession: Session = {
       id: uuidv4(),
       sessionId: uuidv4(),
       version: uuidv4(),
       description: JSON.stringify(config, null, 2),
-      problemType: 'custom',
+      problemType: identifiedType,
       dataFormat: 'json',
       sampleData: JSON.stringify(config, null, 2),
       steps: JSON.parse(JSON.stringify(baseSteps)),

@@ -1,44 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@supabase/supabase-js';
 import { MCP } from '../../../../server/mcp/types';
-import { LLMProviderFactory } from '../../../../server/mcp/agents/llm/providers/LLMProviderFactory';
-import { LLMService, LLMResponse } from '../../../../server/mcp/services/llm/LLMService';
 import { IntentInterpreterAgent } from '../../../../server/mcp/agents/IntentInterpreterAgent';
 
-class IntegrationLLMService implements LLMService {
-  constructor(private llmProvider: any, private providerType: string) {}
-
-  async generateConstraints(businessRules: string): Promise<{ constraints: string[], reasoning: string }> {
-    throw new Error('Method not implemented.');
-  }
-
-  async validateModel(model: any, problemType: string): Promise<{ issues: string[], suggestions: string[] }> {
-    throw new Error('Method not implemented.');
-  }
-
-  async interpretIntent(description: string): Promise<{ problemType: string, context: any }> {
-    throw new Error('Method not implemented.');
-  }
-
-  async enrichData(data: any, context: any): Promise<{ enrichedData: any, reasoning: string }> {
-    throw new Error('Method not implemented.');
-  }
-
-  async explainSolution(solution: any, problemType: string): Promise<{ explanation: string, insights: string[] }> {
-    throw new Error('Method not implemented.');
-  }
-
-  async call(prompt: string, config?: any): Promise<LLMResponse> {
-    const response = await this.llmProvider.call(prompt, {
-      model: this.providerType === 'anthropic' ? 'claude-3-opus-20240229' : 'gpt-4-turbo-preview',
-      temperature: 0.2,
-      ...config
-    });
-    return {
-      content: response
-    };
-  }
-}
+// Use the core LLMServiceImpl for intent interpretation
+import { LLMServiceImpl } from '@server/mcp/services/llm/LLMService';
 
 const agent = new IntentInterpreterAgent();
 
@@ -95,22 +60,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     };
 
-    // Create LLM provider based on environment configuration
-    const providerType = process.env.LLM_PROVIDER || 'anthropic';
-    const apiKey = providerType === 'anthropic' 
-      ? process.env.ANTHROPIC_API_KEY 
+    // Initialize LLM service for enhanced intent interpretation
+    const providerType = (process.env.LLM_PROVIDER as 'anthropic' | 'openai') || 'anthropic';
+    const apiKey = providerType === 'anthropic'
+      ? process.env.ANTHROPIC_API_KEY
       : process.env.OPENAI_API_KEY;
-    
     if (!apiKey) {
       throw new Error(`API key is required for ${providerType} provider`);
     }
-
-    const llmProvider = LLMProviderFactory.createProvider(providerType as 'openai' | 'anthropic', apiKey);
-    
+    // Use the core LLMServiceImpl which implements interpretIntent
+    const llmService = new LLMServiceImpl(providerType, apiKey);
     const result = await agent.run(
       { id: 'interpret_intent', action: 'interpret_intent', description: 'Interpret user intent', required: true },
       mcp,
-      { llm: new IntegrationLLMService(llmProvider, providerType) }
+      { llm: llmService }
     );
 
     // Add provider information to the response

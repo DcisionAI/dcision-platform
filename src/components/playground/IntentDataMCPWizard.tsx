@@ -15,7 +15,8 @@ const IntentDataMCPWizard: React.FC<IntentDataMCPWizardProps> = ({ onComplete })
   const [intentContext, setIntentContext] = useState<any>(null);
   // Pre-populate Supabase credentials from environment (NEXT_PUBLIC_ vars)
   const defaultUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const defaultKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY || '';
+  // For table discovery via REST, use anon key
+  const defaultKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
   const [supabaseUrl, setSupabaseUrl] = useState<string>(defaultUrl);
   const [supabaseKey, setSupabaseKey] = useState<string>(defaultKey);
   const [tables, setTables] = useState<string[]>([]);
@@ -41,6 +42,11 @@ const IntentDataMCPWizard: React.FC<IntentDataMCPWizardProps> = ({ onComplete })
       body: JSON.stringify({ url: supabaseUrl, key: supabaseKey })
     });
     const tbls = await res.json();
+    if (!Array.isArray(tbls)) {
+      console.error('Error fetching tables:', tbls);
+      alert(tbls.error || 'Failed to fetch tables');
+      return;
+    }
     setTables(tbls);
     setStep(3);
   };

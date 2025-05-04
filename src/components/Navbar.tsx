@@ -47,7 +47,7 @@ export default function Navbar() {
         </Link>
         <Link href="/modelbuilder" legacyBehavior>
           <a className={router.pathname === '/modelbuilder' ? 'text-docs-accent font-semibold' : 'text-docs-muted hover:text-docs-accent'}>
-            Model Builder
+            Dcision Builder
           </a>
         </Link>
         

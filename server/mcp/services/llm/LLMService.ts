@@ -1,5 +1,7 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
+// Utility to strip Markdown code fences when extracting JSON
+import { extractJsonFromMarkdown } from '../../utils/markdown';
 
 export type LLMProvider = 'anthropic' | 'openai';
 
@@ -122,7 +124,24 @@ export class LLMServiceImpl implements LLMService {
     Identify the problem type and extract relevant context.`;
     
     const response = await this.callLLM(prompt, systemPrompt);
-    return JSON.parse(response.content);
+    const content = response.content.trim();
+    try {
+      return JSON.parse(content);
+    } catch (err: any) {
+      // Fallback: strip Markdown fences and extract JSON blob
+      const cleaned = extractJsonFromMarkdown(content);
+      const first = cleaned.indexOf('{');
+      const last = cleaned.lastIndexOf('}');
+      if (first !== -1 && last !== -1 && last > first) {
+        const jsonOnly = cleaned.slice(first, last + 1);
+        try {
+          return JSON.parse(jsonOnly);
+        } catch (innerErr: any) {
+          throw new Error(`Failed to parse JSON after cleanup: ${innerErr.message}`);
+        }
+      }
+      throw new Error(`Failed to parse JSON from LLM response: ${err.message}`);
+    }
   }
 
   async enrichData(data: any, context: any): Promise<{ enrichedData: any, reasoning: string }> {
