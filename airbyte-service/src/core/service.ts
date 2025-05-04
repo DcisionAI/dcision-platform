@@ -11,10 +11,11 @@ export class DcisionAIAirbyteService {
   constructor(config: WhiteLabelConfig) {
     this.whiteLabelConfig = config;
     const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_KEY;
+    // Support service role key or legacy key env var
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Supabase credentials not found');
+      throw new Error('Supabase credentials not found. Ensure SUPABASE_URL and SUPABASE_SERVICE_KEY are set');
     }
 
     this.supabase = new SupabaseClient(supabaseUrl, supabaseKey);
