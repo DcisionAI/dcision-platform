@@ -1,6 +1,6 @@
 import { ConnectionConfig, Connection, SyncResult, Connector, Driver } from '../api/models';
 import { WhiteLabelConfig } from '../config/types';
-import { SupabaseClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 export class DcisionAIAirbyteService {
   private whiteLabelConfig: WhiteLabelConfig;
@@ -18,7 +18,7 @@ export class DcisionAIAirbyteService {
       throw new Error('Supabase credentials not found. Ensure SUPABASE_URL and SUPABASE_SERVICE_KEY are set');
     }
 
-    this.supabase = new SupabaseClient(supabaseUrl, supabaseKey);
+    this.supabase = createClient(supabaseUrl, supabaseKey);
   }
 
   async createConnection(config: ConnectionConfig): Promise<Connection> {
