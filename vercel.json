@@ -1,5 +1,5 @@
 {
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD ./plugin-service ./solver-service",
+  "ignoreCommand": "dirs=\"\"; for d in plugin-service solver-service; do [ -d \"$d\" ] && dirs=\"$dirs $d\"; done; [ -z \"$dirs\" ] && exit 1; git diff --quiet HEAD^ HEAD --$dirs",
   "git": {
     "deploymentEnabled": {
       "plugin-service/**": false,
