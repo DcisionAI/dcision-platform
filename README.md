@@ -31,35 +31,13 @@ SUPABASE_SERVICE_KEY=your-supabase-service-key
 AIRBYTE_API_URL=http://localhost:8000
 ```
 
-### Running the Services
-docker-compose up --build
-1. Start all services using Docker Compose (including Airbyte core for data integration):
+### Running Locally
+Install dependencies and start the Next.js development server:
 ```bash
-# Optionally override default host ports:
-#   export FRONTEND_PORT=3005
-#   export SOLVER_SERVICE_PORT=8005
-#   export PLUGIN_SERVICE_PORT=8006
-# Then bring up the stack:
-docker-compose up --build
-```
-This will start:
-  - Frontend on http://localhost:3000
-  - Solver Service on http://localhost:8003 (maps to container port 8001)
-  - Plugin Service on http://localhost:8004 (maps to container port 8002)
-  - Airbyte core services (server on localhost:8000, webapp on localhost:8001, DB, Redis, Temporal)
-  - After building & solving the model, retrieve the final decision via:
-    GET http://localhost:3000/api/decision/{sessionId}
-
-Alternatively, if you only want to work on the front-end without spinning up Airbyte, you can run:
-```bash
+yarn install
+cp config.example.env .env.local
 yarn dev
 ```
-Any calls to `/api/airbyte` will return an empty list stub in development mode unless the Airbyte server is running.
-
-This will start:
-- Frontend on http://localhost:3000
-- Solver Service on http://localhost:8001
-- Plugin Service on http://localhost:8002
 
 ### Development Workflow
 1. For frontend development:
