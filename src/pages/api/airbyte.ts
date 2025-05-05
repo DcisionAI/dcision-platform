@@ -1,12 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-const AIRBYTE_API_URL = process.env.AIRBYTE_API_URL;
+// Default to local Airbyte open-source API endpoint if not explicitly set
+const AIRBYTE_API_URL = process.env.AIRBYTE_API_URL || 'http://localhost:8000';
 const AIRBYTE_API_KEY = process.env.AIRBYTE_API_KEY;
-const AIRBYTE_WORKSPACE_ID = process.env.AIRBYTE_WORKSPACE_ID; // fallback workspace
+const AIRBYTE_WORKSPACE_ID = process.env.AIRBYTE_WORKSPACE_ID; // optional default workspace
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Ensure the URL is defined (defaults to localhost in dev)
   if (!AIRBYTE_API_URL) {
-    return res.status(500).json({ error: 'Airbyte API URL not configured' });
+    return res.status(500).json({ error: 'Airbyte API URL is not configured or defaulted' });
   }
 
   // Proxy GET /api/airbyte?type=source|destination
@@ -33,12 +35,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const data = await airbyteRes.json();
       return res.status(200).json(data);
     } catch (error) {
+      console.error('Airbyte proxy error (GET):', error);
+      if (process.env.NODE_ENV === 'development') {
+        // In local dev, return empty list stub
+        if (type === 'source') {
+          return res.status(200).json({ sourceDefinitions: [] });
+        } else {
+          return res.status(200).json({ destinationDefinitions: [] });
+        }
+      }
       return res.status(500).json({ error: 'Failed to fetch from Airbyte API', details: (error as Error).message });
     }
   }
 
   // POST: test connection, get spec, create connection, list connections
   if (req.method === 'POST') {
+    // Development stubs: avoid needing real Airbyte server for local dev
+    if (process.env.NODE_ENV === 'development') {
+      const { action, sourceDefinitionId, connectionConfiguration } = req.body;
+      switch (action) {
+        case 'test_connection':
+          return res.status(200).json({ status: 'succeeded' });
+        case 'get_spec':
+          return res.status(200).json({ connectionSpecification: { properties: {}, required: [] } });
+        case 'create_connection':
+          return res.status(200).json({
+            sourceId: 'demo-source-id',
+            name: req.body.name ?? 'demo',
+            sourceDefinitionId,
+            connectionConfiguration
+          });
+        case 'list_connections':
+          return res.status(200).json({ connections: [] });
+        default:
+          break;
+      }
+    }
     const { action } = req.body;
     if (action === 'test_connection') {
       // Test connection for a source

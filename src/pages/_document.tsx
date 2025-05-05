@@ -4,7 +4,11 @@ export default function Document() {
   return (
     <Html>
       <Head>
-        <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100&display=swap" rel="stylesheet" />
+        {/* Load Roboto Flex with normal and bold weights for better readability */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@100;400;700&display=swap"
+          rel="stylesheet"
+        />
       </Head>
       <body>
         <Main />

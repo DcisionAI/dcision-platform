@@ -111,8 +111,9 @@ export class DataMappingAgent implements MCPAgent {
 
   constructor() {
     // Try production environment variables first
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    // Support configuration via SUPABASE_URL/KEY or NEXT_PUBLIC_SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     // Fallback to development environment variables
     if (!supabaseUrl || !supabaseKey) {

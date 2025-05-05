@@ -71,9 +71,6 @@ export default function ConnectorCatalog({ onSelect }: ConnectorCatalogProps) {
                 onError={e => (e.currentTarget.style.display = 'none')}
               />
               <div className="font-semibold text-docs-heading text-lg mb-1">{connector.name}</div>
-              <div className="text-sm text-docs-muted text-center line-clamp-2">
-                {connector.dockerRepository}
-              </div>
               {connector.documentationUrl && (
                 <a
                   href={connector.documentationUrl}

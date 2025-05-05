@@ -15,7 +15,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
   try {
-    const { sessionId, userInput, intentDetails, problemType: reqProblemType } = req.body;
+    // Accept optional inputs from the client for data mapping context
+    const {
+      sessionId,
+      userInput,
+      intentDetails,
+      requiredFields,
+      databaseFields,
+      tablesToScan,
+      problemType: reqProblemType
+    } = req.body;
     const problemType = reqProblemType
       || intentDetails?.output?.problemType
       || intentDetails?.selectedModel
@@ -23,15 +32,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Build a minimal MCP instance
     const mcp: CoreMCP = {
-      sessionId,
+      sessionId: sessionId || `mcp-${Date.now()}`,
       version: '1.0.0',
       status: 'pending' as MCPStatus,
       created: new Date().toISOString(),
       lastModified: new Date().toISOString(),
-      model: { variables: [], constraints: [], objective: { type: 'minimize', expression: '', description: '' } },
+      model: {
+        variables: [],
+        constraints: [],
+        // Objective must match the CoreMCP Objective interface
+        objective: { type: 'minimize', field: '', description: '', weight: 1 }
+      },
       context: {
         environment: { region: 'us-east-1', timezone: 'UTC' },
-        dataset: { internalSources: [], metadata: { userInput, intentDetails } },
+        dataset: {
+          internalSources: [],
+          requiredFields: Array.isArray(requiredFields) ? requiredFields : [],
+          metadata: {
+            userInput,
+            intentDetails,
+            databaseFields: Array.isArray(databaseFields) ? databaseFields : [],
+            tablesToScan: Array.isArray(tablesToScan) ? tablesToScan : []
+          }
+        },
         problemType: problemType as ProblemType,
         industry: 'logistics' as IndustryVertical
       },

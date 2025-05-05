@@ -7,7 +7,8 @@ services:
         NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     ports:
-      - "3000:3000"
+      # Host port FRONTEND_PORT (default 3000) mapped to container 3000
+      - "${FRONTEND_PORT:-3000}:3000"
     env_file:
       - .env.local
     environment:
@@ -23,7 +24,8 @@ services:
       context: ./solver-service
       dockerfile: Dockerfile
     ports:
-      - "8003:8001"
+      # Host port SOLVER_SERVICE_PORT (default 8003) mapped to container 8001
+      - "${SOLVER_SERVICE_PORT:-8003}:8001"
     env_file:
       - .env.local
     environment:
@@ -36,7 +38,8 @@ services:
       context: ./plugin-service
       dockerfile: Dockerfile
     ports:
-      - "8004:8002"
+      # Host port PLUGIN_SERVICE_PORT (default 8004) mapped to container 8002
+      - "${PLUGIN_SERVICE_PORT:-8004}:8002"
     env_file:
       - .env.local
     environment:

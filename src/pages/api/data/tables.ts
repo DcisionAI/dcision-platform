@@ -19,10 +19,12 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
   
-  // Extract Supabase credentials from request body
-  const { url, key } = req.body as { url?: string; key?: string };
+  // Extract Supabase credentials from request body or environment
+  const body = req.body as { url?: string; key?: string };
+  const url = body.url || process.env.SUPABASE_URL;
+  const key = body.key || process.env.SUPABASE_SERVICE_KEY;
   if (!url || !key) {
-    return res.status(400).json({ error: 'Missing Supabase url or key in request body' });
+    return res.status(400).json({ error: 'Missing Supabase URL or service key in request or environment' });
   }
   
   // Derive DB connection string: use SUPABASE_DB_URL env var or construct from provided URL/key

@@ -10,7 +10,8 @@
 
 body {
   font-family: 'Roboto Flex', 'IBM Plex Sans', Inter, Arial, sans-serif;
-  font-weight: 100;
+  /* Use normal (400) weight for body text for readability */
+  font-weight: 400;
   color: rgb(var(--foreground-rgb));
   background: rgb(var(--background-start-rgb));
 }
