@@ -69,16 +69,23 @@ yarn install
 yarn dev
 ```
 
-2. For solver service development:
+2. Clone and run backend services from the dedicated services repository:
 ```bash
-cd solver-service
+# Clone the services repo as a sibling directory
+git clone git@github.com:DcisionAI/dcision-services.git ../dcision-services
+
+# Solver Service (Python/FastAPI)
+cd ../dcision-services/solver-service
+pip install -r requirements.txt
+uvicorn src.api.routes:app --reload
+
+# Plugin Service (Node.js)
+cd ../dcision-services/plugin-service
 yarn install
 yarn dev
-```
 
-3. For plugin service development:
-```bash
-cd plugin-service
+# Airbyte Wrapper Service (Node.js)
+cd ../dcision-services/airbyte-service
 yarn install
 yarn dev
 ```
