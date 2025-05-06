@@ -49,7 +49,7 @@ export const AgentConversation: React.FC<AgentConversationProps> = ({ steps }) =
             </button>
           </div>
           {expanded.has(idx) && step.output && (
-            <pre className="mt-2 bg-gray-100 p-2 rounded text-sm whitespace-pre-wrap">
+            <pre className="mt-2 bg-docs-section p-2 rounded text-sm whitespace-pre-wrap">
               {step.output}
             </pre>
           )}

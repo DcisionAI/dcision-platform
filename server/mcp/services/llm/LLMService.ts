@@ -17,7 +17,17 @@ export interface LLMResponse {
 export interface LLMService {
   generateConstraints(businessRules: string): Promise<{ constraints: string[], reasoning: string }>;
   validateModel(model: any, problemType: string): Promise<{ issues: string[], suggestions: string[] }>;
-  interpretIntent(description: string): Promise<{ problemType: string, context: any }>;
+  /**
+   * Interpret a problem description, classify its type, and extract context.
+   * Should also return business-focused reasoning, typical industry use cases, and business implications.
+   */
+  interpretIntent(description: string): Promise<{ 
+    problemType: string;
+    context: any;
+    reasoning?: string;
+    useCases?: string[];
+    businessImplications?: string[];
+  }>;
   enrichData(data: any, context: any): Promise<{ enrichedData: any, reasoning: string }>;
   explainSolution(solution: any, problemType: string): Promise<{ explanation: string, insights: string[] }>;
 }
@@ -116,13 +126,21 @@ export class LLMServiceImpl implements LLMService {
     return JSON.parse(response.content);
   }
 
-  async interpretIntent(description: string): Promise<{ problemType: string, context: any }> {
-    const systemPrompt = `You are an expert in optimization problems. Your task is to interpret problem descriptions and identify the appropriate problem type and context.
-    Respond in JSON format with two fields: "problemType" (one of: vehicle_routing, job_shop, bin_packing, etc.) and "context" (relevant problem parameters and constraints).`;
-    
-    const prompt = `Interpret this optimization problem description: ${description}
-    Identify the problem type and extract relevant context.`;
-    
+  async interpretIntent(description: string): Promise<{
+    problemType: string;
+    context: any;
+    reasoning?: string;
+    useCases?: string[];
+    businessImplications?: string[];
+  }> {
+    // Business-focused interpretation: classification, context, reasoning, use cases, and benefits
+    const systemPrompt = `You are a business-focused optimization expert. When analyzing a problem description, classify the problem type and extract context. Additionally:
+  - Explain why you classified it as that problem type (reasoning).
+  - Provide 2-3 typical industry use cases for this problem type.
+  - Outline key business implications or benefits of solving it.
+Respond ONLY in valid JSON with fields: problemType, context, reasoning, useCases, businessImplications.`;
+
+    const prompt = `Analyze this optimization problem description and provide business-focused insights: ${description}`;
     const response = await this.callLLM(prompt, systemPrompt);
     const content = response.content.trim();
     try {

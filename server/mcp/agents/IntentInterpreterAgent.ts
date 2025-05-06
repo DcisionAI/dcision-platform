@@ -28,19 +28,25 @@ export class IntentInterpreterAgent implements MCPAgent {
     // Use LLM for enhanced intent interpretation if available
     if (context?.llm && problemDescription) {
       try {
-        const { problemType, context: problemContext } = await context.llm.interpretIntent(
-          problemDescription
-        );
+        // Retrieve full business-focused interpretation from LLM
+        const llmResult = await context.llm.interpretIntent(problemDescription);
+        const { problemType, context: problemContext } = llmResult;
         thoughtProcess.push(`LLM identified problem type: ${problemType}`);
         thoughtProcess.push('Problem context:');
-        Object.entries(problemContext).forEach(([key, value]) => {
-          thoughtProcess.push(`- ${key}: ${JSON.stringify(value)}`);
-        });
+        // Display context if needed for debugging
+        if (typeof problemContext === 'string') {
+          thoughtProcess.push(`- ${problemContext}`);
+        } else if (problemContext && typeof problemContext === 'object') {
+          Object.entries(problemContext).forEach(([key, value]) => {
+            thoughtProcess.push(`- ${key}: ${JSON.stringify(value)}`);
+          });
+        } else {
+          thoughtProcess.push(`- ${JSON.stringify(problemContext)}`);
+        }
+        // Construct output including business insights
         return {
           output: {
-            success: true,
-            problemType,
-            context: problemContext,
+            ...llmResult,
             domain: DomainType.FLEETOPS
           },
           thoughtProcess: thoughtProcess.join('\n')
@@ -57,19 +63,18 @@ export class IntentInterpreterAgent implements MCPAgent {
     // Basic intent interpretation (fallback)
     const problemType = this.determineProblemType(problemDescription);
     thoughtProcess.push(`Determined problem type: ${problemType}`);
-    
     const problemContext = this.extractBasicContext(problemDescription);
     thoughtProcess.push('Extracted basic context:');
     Object.entries(problemContext).forEach(([key, value]) => {
       thoughtProcess.push(`- ${key}: ${JSON.stringify(value)}`);
     });
-
+    // Return fallback output without business insights
     return {
       output: {
-        success: true,
         problemType,
         context: problemContext,
-        domain: DomainType.FLEETOPS
+        domain: DomainType.FLEETOPS,
+        reasoning: thoughtProcess.join('\n')
       },
       thoughtProcess: thoughtProcess.join('\n')
     };

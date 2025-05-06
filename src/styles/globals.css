@@ -3,13 +3,15 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 13, 13, 13;
-  --background-end-rgb: 13, 13, 13;
+  /* OpenAI Platform color tokens (dark theme) */
+  --foreground-rgb: 231, 233, 235;       /* #E7E9EB: primary text color */
+  --background-start-rgb: 15, 17, 21;     /* #0F1115: main background */
+  --background-end-rgb: 15, 17, 21;       /* #0F1115: main background end */
 }
 
 body {
-  font-family: 'Roboto Flex', 'IBM Plex Sans', Inter, Arial, sans-serif;
+  /* Use Inter variable font across the platform */
+  font-family: 'Inter var', 'Inter', 'IBM Plex Sans', 'Arial', sans-serif;
   /* Use normal (400) weight for body text for readability */
   font-weight: 400;
   color: rgb(var(--foreground-rgb));

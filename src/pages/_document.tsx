@@ -4,9 +4,9 @@ export default function Document() {
   return (
     <Html>
       <Head>
-        {/* Load Roboto Flex with normal and bold weights for better readability */}
+        {/* Load Inter font for platform typography */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@100;400;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap"
           rel="stylesheet"
         />
       </Head>

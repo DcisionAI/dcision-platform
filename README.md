@@ -93,8 +93,37 @@ yarn test
 The platform is designed to be deployed using Docker containers. Each service has its own Dockerfile and can be built and deployed independently.
 
 ## Infrastructure as Code
+We maintain IaC configs under `infra/` for different clouds:
 
-We maintain Terraform configurations in the `terraform/` directory to manage Cloud Run domain mappings. See `terraform/README.md` for setup, import commands, and deployment instructions.
+- **GCP (MVP)**: `infra/gcp` contains Terraform to provision:
+  - Cloud SQL (Postgres) for Airbyte config DB
+  - GCS bucket for Airbyte storage
+  - GKE cluster and node pool
+  Use it with:
+  ```bash
+  cd infra/gcp
+  # Place your service account key JSON (the content you pasted) into this folder as 'credentials.json'
+  terraform init
+  terraform apply \
+    -var project_id=YOUR_PROJECT_ID \
+    -var credentials_file="credentials.json"
+  ```
+  Then deploy Airbyte and solver to the cluster:
+  ```bash
+  kubectl create namespace data
+  kubectl create namespace solver
+  # Create secrets (replace paths and names accordingly)
+  kubectl create secret generic cloudsql-instance-credentials \
+    --from-file=credentials.json=PATH_TO_SA_KEY.json -n data
+  kubectl create secret generic airbyte-db-credentials \
+    --from-literal=password=$(terraform output -raw db_password) -n data
+  # Apply Kubernetes manifests
+  kubectl apply -f infra/k8s/data-service-deployment.yaml
+  kubectl apply -f infra/k8s/solver-service-deployment.yaml
+  ```
+
+- **AWS (Roadmap)**: see `infra/aws/README.md` for RDS, S3, EKS/ECS setup
+- **Azure (Roadmap)**: see `infra/azure/README.md` for Azure Database for PostgreSQL, Blob Storage, AKS
 
 ## License
 [Add your license information here]
