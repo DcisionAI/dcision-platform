@@ -58,7 +58,8 @@ export type AgentType =
   | 'model_builder'
   | 'solver'
   | 'validator'
-  | 'reporter';
+  | 'reporter'
+  | 'model_definition';
 
 export interface MCPAgent {
   name: string;
@@ -81,6 +82,7 @@ export interface AgentRunResult {
 
 export type StepAction = 
   | 'interpret_intent'
+  | 'define_model'
   | 'collect_data'
   | 'enrich_data'
   | 'build_model'
