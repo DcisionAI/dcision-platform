@@ -209,9 +209,10 @@ Respond ONLY in valid JSON with exactly these keys.`;
   }
   
   async interpretModelDefinition(description: string): Promise<{
-    variables: Array<{ name: string; description: string; domain?: string }>;
-    constraints: Array<{ name?: string; description: string; expression?: string }>;
-    objective: { type: string; expression?: string; description?: string };
+    variables: Array<{ name: string; description: string; domain?: string; businessContext?: string }>;
+    constraints: Array<{ name?: string; description: string; expression?: string; businessContext?: string }>;
+    objective: { type: string; expression?: string; description?: string; businessContext?: string };
+    externalDataSources: Array<{ source: string; description: string; valueAdd: string }>;
   }> {
     const systemPrompt = `You are an expert in optimization modeling. Given a business problem statement, identify and extract:\n` +
       `1) variables: list of decision variables with {name, description, domain (optional), businessContext (business relevance)};\n` +

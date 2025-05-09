@@ -24,7 +24,6 @@ const menu = [
       { href: '/modelbuilder', label: 'Dcision Builder', icon: CodeBracketIcon },
       { href: '/dashboard', label: 'Dashboard', icon: ChartBarIcon },
       { href: '/agents', label: 'Agents', icon: BeakerIcon },
-      { href: '/data-integration', label: 'Data Integration', icon: ArrowsPointingInIcon },
       { href: '/explainability', label: 'Explainability', icon: LightBulbIcon },
       { href: '/endpoints', label: 'Endpoints', icon: CloudArrowUpIcon },
     ],

@@ -52,6 +52,14 @@ class IntegrationLLMService implements LLMService {
   async explainSolution(solution: any, problemType: string): Promise<{ explanation: string, insights: string[] }> {
     throw new Error('Method not implemented.');
   }
+  async interpretModelDefinition(description: string): Promise<{
+    variables: Array<{ name: string; description: string; domain?: string; businessContext?: string }>;
+    constraints: Array<{ name?: string; description: string; expression?: string; businessContext?: string }>;
+    objective: { type: string; expression?: string; description?: string; businessContext?: string };
+    externalDataSources: Array<{ source: string; description: string; valueAdd: string }>;
+  }> {
+    throw new Error('interpretModelDefinition not implemented in IntegrationLLMService');
+  }
 
   async call(prompt: string, config?: any): Promise<LLMResponse> {
     const response = await this.llmProvider.call(prompt, {
