@@ -36,6 +36,19 @@ export interface LLMService {
   }>;
   enrichData(data: any, context: any): Promise<{ enrichedData: any, reasoning: string }>;
   explainSolution(solution: any, problemType: string): Promise<{ explanation: string, insights: string[] }>;
+  /**
+   * Analyze a business problem and extract model structure.
+   * Return JSON with exactly:
+   * variables: list of { name, description, domain? }
+   * constraints: list of { name?, description, expression? }
+   * objective: { type, expression?, description? }
+   */
+  interpretModelDefinition(description: string): Promise<{
+    variables: Array<{ name: string; description: string; domain?: string; businessContext?: string }>;
+    constraints: Array<{ name?: string; description: string; expression?: string; businessContext?: string }>;
+    objective: { type: string; expression?: string; description?: string; businessContext?: string };
+    externalDataSources: Array<{ source: string; description: string; valueAdd: string }>;
+  }>;
 }
 
 export class LLMServiceImpl implements LLMService {
@@ -193,5 +206,37 @@ Respond ONLY in valid JSON with exactly these keys.`;
     
     const response = await this.callLLM(prompt, systemPrompt);
     return JSON.parse(response.content);
+  }
+  
+  async interpretModelDefinition(description: string): Promise<{
+    variables: Array<{ name: string; description: string; domain?: string }>;
+    constraints: Array<{ name?: string; description: string; expression?: string }>;
+    objective: { type: string; expression?: string; description?: string };
+  }> {
+    const systemPrompt = `You are an expert in optimization modeling. Given a business problem statement, identify and extract:\n` +
+      `1) variables: list of decision variables with {name, description, domain (optional), businessContext (business relevance)};\n` +
+      `2) constraints: list of model constraints with {name (optional), description, expression (optional), businessContext};\n` +
+      `3) objective: model objective with {type ('minimize' or 'maximize'), expression (optional), description, businessContext};\n` +
+      `4) externalDataSources: list of optional external data sources that can augment model accuracy, with {source, description, valueAdd}.\n` +
+      `Respond ONLY with valid JSON containing exactly these four fields.`;
+    const prompt = `Problem description: ${description}`;
+    const response = await this.callLLM(prompt, systemPrompt);
+    const content = response.content.trim();
+    try {
+      return JSON.parse(content);
+    } catch (err: any) {
+      const cleaned = extractJsonFromMarkdown(content);
+      const first = cleaned.indexOf('{');
+      const last = cleaned.lastIndexOf('}');
+      if (first !== -1 && last > first) {
+        const jsonOnly = cleaned.slice(first, last + 1);
+        try {
+          return JSON.parse(jsonOnly);
+        } catch (innerErr: any) {
+          throw new Error(`Failed to parse model definition JSON: ${innerErr.message}`);
+        }
+      }
+      throw new Error(`Failed to parse JSON for model definition: ${err.message}`);
+    }
   }
 } 

@@ -16,11 +16,11 @@ const StepCards: React.FC<StepCardsProps> = ({ cards }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
       {cards.map((card, idx) => (
-        <div key={idx} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-          <h3 className="text-lg font-medium mb-2 text-gray-900 dark:text-gray-100">
+        <div key={idx} className="bg-docs-section border border-docs-section-border p-4 rounded-lg shadow">
+          <h3 className="text-lg font-medium mb-2 text-docs-text">
             {card.title}
           </h3>
-          <p className="text-gray-700 dark:text-gray-300 text-sm">
+          <p className="text-docs-muted text-sm">
             {card.description}
           </p>
         </div>

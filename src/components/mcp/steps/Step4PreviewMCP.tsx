@@ -28,7 +28,7 @@ const Step4PreviewMCP: React.FC<Step4PreviewMCPProps> = ({ config }) => {
         </button>
       </div>
       <pre
-        className="w-full bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-4 text-gray-700 dark:text-gray-300 text-sm whitespace-pre-wrap break-words overflow-auto"
+        className="w-full bg-docs-section border border-docs-section-border p-4 rounded-lg shadow mb-4 text-docs-text text-sm whitespace-pre-wrap break-words overflow-auto"
         style={{ maxHeight: '400px' }}
       >
         {jsonText}

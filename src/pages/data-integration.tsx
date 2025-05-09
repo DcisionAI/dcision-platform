@@ -33,6 +33,8 @@ export default function DataIntegrationPage() {
   const [buildLoading, setBuildLoading] = useState(false);
   const [buildError, setBuildError] = useState<string | null>(null);
   const [buildResults, setBuildResults] = useState<any[] | null>(null);
+  // Tab state for Analysis vs Mapping
+  const [activeTab, setActiveTab] = useState<'analysis' | 'mapping'>('analysis');
 
   const handleConnectorSelect = (connector: any) => {
     setSelectedConnector(connector);
@@ -88,61 +90,40 @@ export default function DataIntegrationPage() {
                   console.log('Intent result:', result, 'Input:', userInput);
                 }}
               />
-              {/* Data Mapping step after intent interpretation */}
               {intentResult && (
                 <div className="mt-6">
-                  <h2 className="text-xl font-semibold">Intent Interpretation</h2>
-                  <div className="bg-gray-50 border border-gray-200 rounded p-4 mt-2">
-                    <p><strong>Problem Type:</strong> {intentResult.output.problemType}</p>
-                    <p><strong>Context:</strong> {JSON.stringify(intentResult.output.context)}</p>
-                  </div>
-                  <div className="mt-4">
+                  <div className="flex space-x-4 border-b border-gray-200">
                     <button
-                      onClick={async () => {
-                        setMappingLoading(true);
-                        setMappingError(null);
-                        try {
-                          const res = await fetch('/api/mcp/map', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              sessionId: selectedConnector?.sourceDefinitionId || '',
-                              userInput: intentInput,
-                              intentDetails: intentResult,
-                              requiredFields: intentResult.output.context.requiredFields || [],
-                              databaseFields: [],
-                              tablesToScan: selectedTables,
-                              problemType: intentResult.output.problemType
-                            })
-                          });
-                          const data = await res.json();
-                          if (!res.ok) throw new Error(data.error || 'Mapping failed');
-                          setMappingResult(data);
-                        } catch (err: any) {
-                          setMappingError(err.message);
-                        } finally {
-                          setMappingLoading(false);
-                        }
-                      }}
-                      className="bg-docs-accent text-white px-4 py-2 rounded"
-                      disabled={mappingLoading}
+                      className={`py-2 px-4 ${activeTab === 'analysis'
+                        ? 'border-b-2 border-docs-accent font-semibold'
+                        : 'text-gray-500'}`}
+                      onClick={() => setActiveTab('analysis')}
                     >
-                      {mappingLoading ? 'Mapping...' : 'Run Data Mapping'}
+                      Analysis
+                    </button>
+                    <button
+                      className={`py-2 px-4 ${activeTab === 'mapping'
+                        ? 'border-b-2 border-docs-accent font-semibold'
+                        : 'text-gray-500'}`}
+                      onClick={() => setActiveTab('mapping')}
+                    >
+                      Mapping
                     </button>
                   </div>
-                  {mappingError && <div className="text-red-600 mt-2">{mappingError}</div>}
-                  {mappingResult && <MappingResult result={mappingResult} />}
-                </div>
-              )}
-              {/* Data Mapping step after intent interpretation */}
-              {intentResult && (
-                <div className="mt-6">
-                  <h2 className="text-xl font-semibold">Intent Interpretation</h2>
-                  <div className="bg-gray-50 border border-gray-200 rounded p-4 mt-2">
-                    <p><strong>Problem Type:</strong> {intentResult.output.problemType}</p>
-                    <p><strong>Context:</strong> {JSON.stringify(intentResult.output.context)}</p>
-                  </div>
-                  <div className="mt-4 flex space-x-2">
+                  {activeTab === 'analysis' && (
+                    <div className="mt-4">
+                      <h2 className="text-xl font-semibold">Intent Interpretation</h2>
+                      <div className="bg-gray-50 border border-gray-200 rounded p-4 mt-2">
+                        <p><strong>Problem Type:</strong> {intentResult.output.problemType}</p>
+                        <p><strong>Context:</strong> {JSON.stringify(intentResult.output.context)}</p>
+                        <pre className="text-xs mt-2 overflow-auto max-h-80">
+                          {JSON.stringify(intentResult, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+                  {activeTab === 'mapping' && (
+                    <>
                     <button
                       onClick={async () => {
                         setMappingLoading(true);
@@ -286,6 +267,8 @@ export default function DataIntegrationPage() {
                       </div>
                     </>
                   )}
+                  </>
+                )}
                 </div>
               )}
               {/* List existing connections */}

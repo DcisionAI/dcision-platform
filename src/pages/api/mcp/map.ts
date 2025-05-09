@@ -23,6 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       requiredFields,
       databaseFields,
       tablesToScan,
+      modelDefinition,
       problemType: reqProblemType
     } = req.body;
     const problemType = reqProblemType
@@ -51,6 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           metadata: {
             userInput,
             intentDetails,
+            modelDefinition,
             databaseFields: Array.isArray(databaseFields) ? databaseFields : [],
             tablesToScan: Array.isArray(tablesToScan) ? tablesToScan : []
           }

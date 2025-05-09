@@ -49,14 +49,14 @@ const Step1Intent: React.FC<Step1IntentProps> = ({ value, onChange, onInterpret,
       <h3 className="text-lg font-medium mb-2">
         What would you like DcisionAI agents to do?
       </h3>
-      <div className="relative mb-4">
-        <textarea
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          rows={4}
-          className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-4 text-base text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
-          placeholder="E.g., Optimize delivery routes for my fleet to minimize total driving time"
-        />
+    <div className="relative mb-4">
+      <textarea
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        rows={4}
+        className="w-full bg-docs-section border border-docs-section-border rounded-lg p-4 text-base text-docs-text placeholder-docs-muted focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
+        placeholder="E.g., Optimize delivery routes for my fleet to minimize total driving time"
+      />
         <button
           type="button"
           onClick={handleInterpret}
@@ -68,32 +68,32 @@ const Step1Intent: React.FC<Step1IntentProps> = ({ value, onChange, onInterpret,
         </button>
       </div>
       {llmData && (
-        <div className="w-full bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-4">
-          <h3 className="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">LLM Interpretation</h3>
+        <div className="w-full bg-docs-section border border-docs-section-border p-4 rounded-lg shadow mb-4">
+          <h3 className="text-lg font-medium mb-4 text-docs-text">LLM Interpretation</h3>
           <div className="space-y-4">
             <div>
-              <strong className="text-gray-900 dark:text-gray-100">Interpretation:</strong>
-              <p className="text-gray-700 dark:text-gray-300 text-sm mt-1">{llmData.intentInterpretation}</p>
+              <strong className="text-docs-text">Interpretation:</strong>
+              <p className="text-docs-muted text-sm mt-1">{llmData.intentInterpretation}</p>
             </div>
             <div>
-              <strong className="text-gray-900 dark:text-gray-100">Confidence Level:</strong>
-              <p className="text-gray-700 dark:text-gray-300 text-sm mt-1">{llmData.confidenceLevel}%</p>
+              <strong className="text-docs-text">Confidence Level:</strong>
+              <p className="text-docs-muted text-sm mt-1">{llmData.confidenceLevel}%</p>
             </div>
             <div>
-              <strong className="text-gray-900 dark:text-gray-100">Alternatives Considered:</strong>
-              <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 text-sm mt-1">
+              <strong className="text-docs-text">Alternatives Considered:</strong>
+              <ul className="list-disc list-inside text-docs-muted text-sm mt-1">
                 {llmData.alternatives.map((alt, idx) => (
                   <li key={idx}>{alt}</li>
                 ))}
               </ul>
             </div>
             <div>
-              <strong className="text-gray-900 dark:text-gray-100">Explanation:</strong>
-              <p className="text-gray-700 dark:text-gray-300 text-sm mt-1">{llmData.explanation}</p>
+              <strong className="text-docs-text">Explanation:</strong>
+              <p className="text-docs-muted text-sm mt-1">{llmData.explanation}</p>
             </div>
             <div>
-              <strong className="text-gray-900 dark:text-gray-100">Industry Use Cases:</strong>
-              <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 text-sm mt-1">
+              <strong className="text-docs-text">Industry Use Cases:</strong>
+              <ul className="list-disc list-inside text-docs-muted text-sm mt-1">
                 {llmData.useCases.map((u, idx) => (
                   <li key={idx}>{u}</li>
                 ))}

@@ -88,7 +88,7 @@ export default function ModelBuilderPage() {
           />
         );
       case 1:
-        return <Step2DataPrep />;
+        return <Step2DataPrep config={mcpConfig} />;
       case 2:
         return <Step3ModelConstraints />;
       case 3:
@@ -115,7 +115,7 @@ export default function ModelBuilderPage() {
           onStepClick={setCurrentStep}
         />
         <StepCards cards={stepCardsData[currentStep] || []} />
-        <div className="mb-6">
+        <div className="mb-6 w-full">
           {renderStep()}
         </div>
         <div className="flex justify-between">
