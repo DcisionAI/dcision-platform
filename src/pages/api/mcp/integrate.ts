@@ -27,8 +27,22 @@ class IntegrationLLMService implements LLMService {
     throw new Error('Method not implemented.');
   }
 
-  async interpretIntent(description: string): Promise<{ problemType: string, context: any }> {
-    throw new Error('Method not implemented.');
+  // Stub: basic intent interpretation to satisfy interface
+  async interpretIntent(description: string): Promise<{
+    intentInterpretation: string;
+    confidenceLevel: number;
+    alternatives: string[];
+    explanation: string;
+    useCases: string[];
+  }> {
+    // Fallback: echo back description
+    return {
+      intentInterpretation: description,
+      confidenceLevel: 100,
+      alternatives: [],
+      explanation: '',
+      useCases: []
+    };
   }
 
   async enrichData(data: any, context: any): Promise<{ enrichedData: any, reasoning: string }> {

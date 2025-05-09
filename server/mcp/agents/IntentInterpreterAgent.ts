@@ -28,22 +28,28 @@ export class IntentInterpreterAgent implements MCPAgent {
     // Use LLM for enhanced intent interpretation if available
     if (context?.llm && problemDescription) {
       try {
-        // Retrieve full business-focused interpretation from LLM
+        // Retrieve structured interpretation from LLM
         const llmResult = await context.llm.interpretIntent(problemDescription);
-        const { problemType, context: problemContext } = llmResult;
-        thoughtProcess.push(`LLM identified problem type: ${problemType}`);
-        thoughtProcess.push('Problem context:');
-        // Display context if needed for debugging
-        if (typeof problemContext === 'string') {
-          thoughtProcess.push(`- ${problemContext}`);
-        } else if (problemContext && typeof problemContext === 'object') {
-          Object.entries(problemContext).forEach(([key, value]) => {
-            thoughtProcess.push(`- ${key}: ${JSON.stringify(value)}`);
-          });
-        } else {
-          thoughtProcess.push(`- ${JSON.stringify(problemContext)}`);
+        // Destructure expected fields
+        const {
+          intentInterpretation,
+          confidenceLevel,
+          alternatives,
+          explanation,
+          useCases
+        } = llmResult;
+        thoughtProcess.push('Intent interpretation: ' + intentInterpretation);
+        thoughtProcess.push('Confidence level: ' + confidenceLevel + '%');
+        thoughtProcess.push('Alternatives considered:');
+        if (Array.isArray(alternatives)) {
+          alternatives.forEach(alt => thoughtProcess.push('- ' + alt));
         }
-        // Construct output including business insights
+        thoughtProcess.push('Explanation:');
+        thoughtProcess.push(explanation);
+        thoughtProcess.push('Industry use cases:');
+        if (Array.isArray(useCases)) {
+          useCases.forEach(u => thoughtProcess.push('- ' + u));
+        }
         return {
           output: {
             ...llmResult,

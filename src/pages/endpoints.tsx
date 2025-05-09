@@ -54,7 +54,7 @@ interface MCPConfig {
   };
 }
 
-interface Endpoint {
+export interface Endpoint {
   id: string;
   name: string;
   description: string;
@@ -101,7 +101,7 @@ interface NewEndpointFormData {
   };
 }
 
-const mockEndpoints: Endpoint[] = [
+export const mockEndpoints: Endpoint[] = [
   {
     id: 'fleet-opt-1',
     name: 'Fleet Optimization API',

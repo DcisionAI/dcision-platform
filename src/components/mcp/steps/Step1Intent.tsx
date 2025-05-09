@@ -1,0 +1,109 @@
+import React, { useState } from 'react';
+import { ArrowUpIcon } from '@heroicons/react/24/outline';
+
+export interface Step1IntentProps {
+  value: string;
+  onChange: (val: string) => void;
+  /**
+   * Called with LLM agent result (includes output and thoughtProcess)
+   */
+  onInterpret: (result: any) => void;
+  /**
+   * Advance to next step after interpretation
+   */
+  onNext: () => void;
+}
+
+/**
+ * Step 1: Intent input
+ */
+const Step1Intent: React.FC<Step1IntentProps> = ({ value, onChange, onInterpret, onNext }) => {
+  const [interpreting, setInterpreting] = useState(false);
+  // Store structured LLM output for display
+  const [llmData, setLlmData] = useState<{ intentInterpretation: string; confidenceLevel: number; alternatives: string[]; explanation: string; useCases: string[] } | null>(null);
+
+  const handleInterpret = async () => {
+    if (!value.trim()) return;
+    setInterpreting(true);
+    try {
+      const resp = await fetch('/api/mcp/intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userInput: value })
+      });
+      const data = await resp.json();
+      // Update parent with LLM output
+      onInterpret(data);
+      // Capture structured output for display
+      setLlmData(data.output);
+    } catch (error) {
+      console.error('Interpretation error:', error);
+    } finally {
+      setInterpreting(false);
+    }
+  };
+
+  return (
+    <div>
+      <h2 className="text-xl font-semibold mb-4">Step 1: Intent</h2>
+      <h3 className="text-lg font-medium mb-2">
+        What would you like DcisionAI agents to do?
+      </h3>
+      <div className="relative mb-4">
+        <textarea
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          rows={4}
+          className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-4 text-base text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
+          placeholder="E.g., Optimize delivery routes for my fleet to minimize total driving time"
+        />
+        <button
+          type="button"
+          onClick={handleInterpret}
+          disabled={!value.trim() || interpreting}
+          className="absolute bottom-3 right-3 text-blue-600 hover:text-blue-500 focus:outline-none disabled:opacity-50"
+        aria-label="Interpret Intent"
+        >
+          {interpreting ? '⏳' : <ArrowUpIcon className="w-6 h-6" />}
+        </button>
+      </div>
+      {llmData && (
+        <div className="w-full bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-4">
+          <h3 className="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">LLM Interpretation</h3>
+          <div className="space-y-4">
+            <div>
+              <strong className="text-gray-900 dark:text-gray-100">Interpretation:</strong>
+              <p className="text-gray-700 dark:text-gray-300 text-sm mt-1">{llmData.intentInterpretation}</p>
+            </div>
+            <div>
+              <strong className="text-gray-900 dark:text-gray-100">Confidence Level:</strong>
+              <p className="text-gray-700 dark:text-gray-300 text-sm mt-1">{llmData.confidenceLevel}%</p>
+            </div>
+            <div>
+              <strong className="text-gray-900 dark:text-gray-100">Alternatives Considered:</strong>
+              <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 text-sm mt-1">
+                {llmData.alternatives.map((alt, idx) => (
+                  <li key={idx}>{alt}</li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <strong className="text-gray-900 dark:text-gray-100">Explanation:</strong>
+              <p className="text-gray-700 dark:text-gray-300 text-sm mt-1">{llmData.explanation}</p>
+            </div>
+            <div>
+              <strong className="text-gray-900 dark:text-gray-100">Industry Use Cases:</strong>
+              <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 text-sm mt-1">
+                {llmData.useCases.map((u, idx) => (
+                  <li key={idx}>{u}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Step1Intent;

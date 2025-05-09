@@ -18,15 +18,21 @@ export interface LLMService {
   generateConstraints(businessRules: string): Promise<{ constraints: string[], reasoning: string }>;
   validateModel(model: any, problemType: string): Promise<{ issues: string[], suggestions: string[] }>;
   /**
-   * Interpret a problem description, classify its type, and extract context.
-   * Should also return business-focused reasoning, typical industry use cases, and business implications.
+   * Interpret a user problem description like an expert decision maker (optimization PhD with business sense).
+   * Return a structured analysis including:
+   * 1) intentInterpretation: your interpretation of the user’s intent.
+   * 2) confidenceLevel: confidence in this interpretation (percentage).
+   * 3) alternatives: alternative interpretations considered.
+   * 4) explanation: why you chose this interpretation.
+   * 5) useCases: typical industry use cases for this problem.
+   * Respond ONLY in valid JSON with exactly these fields.
    */
-  interpretIntent(description: string): Promise<{ 
-    problemType: string;
-    context: any;
-    reasoning?: string;
-    useCases?: string[];
-    businessImplications?: string[];
+  interpretIntent(description: string): Promise<{
+    intentInterpretation: string;
+    confidenceLevel: number;
+    alternatives: string[];
+    explanation: string;
+    useCases: string[];
   }>;
   enrichData(data: any, context: any): Promise<{ enrichedData: any, reasoning: string }>;
   explainSolution(solution: any, problemType: string): Promise<{ explanation: string, insights: string[] }>;
@@ -127,20 +133,22 @@ export class LLMServiceImpl implements LLMService {
   }
 
   async interpretIntent(description: string): Promise<{
-    problemType: string;
-    context: any;
-    reasoning?: string;
-    useCases?: string[];
-    businessImplications?: string[];
+    intentInterpretation: string;
+    confidenceLevel: number;
+    alternatives: string[];
+    explanation: string;
+    useCases: string[];
   }> {
-    // Business-focused interpretation: classification, context, reasoning, use cases, and benefits
-    const systemPrompt = `You are a business-focused optimization expert. When analyzing a problem description, classify the problem type and extract context. Additionally:
-  - Explain why you classified it as that problem type (reasoning).
-  - Provide 2-3 typical industry use cases for this problem type.
-  - Outline key business implications or benefits of solving it.
-Respond ONLY in valid JSON with fields: problemType, context, reasoning, useCases, businessImplications.`;
+    // Expert decision maker interpretation: a multi-part structured analysis
+    const systemPrompt = `You are a seasoned operations research (OR) specialist with deep business domain expertise. When reviewing a business problem statement, apply rigorous decision-modeling principles to identify the core objective, constraints, and key opportunities. Explain your analysis in clear, business-friendly language without jargon. Include a concise, plain-language description of the underlying model (e.g., "minimize the sum of ... subject to ... constraints") but keep it understandable for business users. Provide exactly these fields in JSON:
+1) intentInterpretation: how you understand the request.
+2) confidenceLevel: your confidence in this interpretation (0-100).
+3) alternatives: other plausible ways to frame the problem.
+4) explanation: why you selected this interpretation.
+5) useCases: 2-3 real-world industry examples where addressing this problem drives significant value.
+Respond ONLY in valid JSON with exactly these keys.`;
 
-    const prompt = `Analyze this optimization problem description and provide business-focused insights: ${description}`;
+    const prompt = `Problem description: ${description}`;
     const response = await this.callLLM(prompt, systemPrompt);
     const content = response.content.trim();
     try {
