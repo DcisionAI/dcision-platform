@@ -102,9 +102,10 @@ export default function ModelBuilderPage() {
     }
   };
 
-  // Disable Next button on step 0 until LLM interpretation completes
+  // Disable Next button on step 0 until LLM returns a positive confidence
+  const confidence = Number(mcpConfig.confidenceLevel ?? 0);
   const isNextDisabled = currentStep === 0
-    ? !mcpConfig.intentInterpretation
+    ? confidence <= 0
     : currentStep === stepLabels.length - 1;
   return (
     <Layout>

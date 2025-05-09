@@ -24,20 +24,6 @@ const Step1Intent: React.FC<Step1IntentProps> = ({ value, onChange, onInterpret,
 
   const handleInterpret = async () => {
     if (!value.trim()) return;
-    // Fallback for unsupported domains
-    const supportRegex = /fleet|route|delivery|workforce|staff|schedule/i;
-    if (!supportRegex.test(value)) {
-      const fallback = {
-        intentInterpretation: 'DcisionAI currently supports Fleet Ops and Workforce Management - please stay tuned as we grow our portfolio of agents to support more domains',
-        confidenceLevel: 0,
-        alternatives: [],
-        explanation: '',
-        useCases: []
-      };
-      setLlmData(fallback);
-      onInterpret({ output: fallback, thoughtProcess: '' });
-      return;
-    }
     setInterpreting(true);
     try {
       const resp = await fetch('/api/mcp/intent', {

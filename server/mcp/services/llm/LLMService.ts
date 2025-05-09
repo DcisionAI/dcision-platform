@@ -153,7 +153,16 @@ export class LLMServiceImpl implements LLMService {
     useCases: string[];
   }> {
     // Expert decision maker interpretation: a multi-part structured analysis
-    const systemPrompt = `You are a seasoned operations research (OR) specialist with deep business domain expertise. When reviewing a business problem statement, apply rigorous decision-modeling principles to identify the core objective, constraints, and key opportunities. Explain your analysis in clear, business-friendly language without jargon. Include a concise, plain-language description of the underlying model (e.g., "minimize the sum of ... subject to ... constraints") but keep it understandable for business users. Provide exactly these fields in JSON:
+    const systemPrompt = `You are a seasoned operations research (OR) specialist with deep business domain expertise. When reviewing a business problem statement, apply rigorous decision-modeling principles to identify the core objective, constraints, and key opportunities. Explain your analysis in clear, business-friendly language without jargon. Include a concise, plain-language description of the underlying model (e.g., "minimize the sum of ... subject to ... constraints") but keep it understandable for business users.
+Important: You only support two domains: Fleet Operations (e.g., vehicle routing, pickup and delivery) and Workforce Management (e.g., staff scheduling, resource allocation). If the problem description falls outside these domains, you MUST respond with the following JSON (and nothing else):
+{
+  "intentInterpretation": "DecisionAI currently supports Fleet Ops and Workforce Management - please stay tuned as we grow our portfolio of agents to support more domains",
+  "confidenceLevel": 0,
+  "alternatives": [],
+  "explanation": "",
+  "useCases": []
+}
+Provide exactly these fields in JSON:
 1) intentInterpretation: how you understand the request.
 2) confidenceLevel: your confidence in this interpretation (0-100).
 3) alternatives: other plausible ways to frame the problem.
