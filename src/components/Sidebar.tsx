@@ -51,7 +51,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside 
+    <aside
       className={`bg-docs-sidebar border-r border-docs-section-border min-h-screen sticky top-16 transition-all duration-300 ease-in-out flex ${
         isExpanded ? 'w-50' : 'w-16'
       }`}

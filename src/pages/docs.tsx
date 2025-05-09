@@ -200,11 +200,11 @@ export default function Docs() {
     <Layout>
       <div className="max-w-6xl mx-auto flex relative">
         <div className="flex-1 min-w-0 px-8">
-          <h1 className="text-3xl font-bold mb-4 text-docs-text">DcisionAI</h1>
+          <h1 className="text-4xl font-bold mb-4 text-docs-text">DcisionAI</h1>
           <form onSubmit={handleSearch} className="mb-6 flex gap-2">
             <input
               type="text"
-              className="flex-1 bg-docs-section border border-docs-section-border text-docs-text placeholder-docs-muted rounded px-3 py-2 text-sm"
+              className="flex-1 bg-docs-section border border-docs-section-border text-docs-text placeholder-docs-muted rounded px-3 py-2 text-base"
               placeholder="Ask a question about DcisionAI..."
               value={query}
               onChange={e => setQuery(e.target.value)}
@@ -212,7 +212,7 @@ export default function Docs() {
             />
             <button
               type="submit"
-              className="bg-docs-accent text-white hover:bg-blue-700 px-4 py-2 rounded text-sm font-semibold transition"
+              className="bg-docs-accent text-white hover:bg-blue-700 px-4 py-2 rounded text-base font-semibold transition"
               disabled={loading || !query.trim()}
             >
               {loading ? 'Searching...' : 'Ask'}
@@ -220,7 +220,7 @@ export default function Docs() {
             {filteredDocs && (
               <button
                 type="button"
-                className="ml-2 bg-gray-700 text-white px-3 py-2 rounded text-sm font-semibold transition"
+                className="ml-2 bg-gray-700 text-white px-3 py-2 rounded text-base font-semibold transition"
                 onClick={handleShowAllDocs}
               >
                 Show all docs

@@ -32,7 +32,7 @@ export default function Navbar() {
   };
 
   return (
-    <header className="flex items-center justify-between px-8 h-16 bg-docs-bg border-b border-docs-section-border sticky top-0 z-20">
+    <header className="flex items-center justify-between px-8 h-16 bg-docs-sidebar border-b border-docs-section-border sticky top-0 z-20">
       <div className="flex items-center gap-2">
         <Link href="/dashboard" legacyBehavior>
           <a className="font-bold text-lg text-docs-text">DcisionAI</a>
@@ -40,11 +40,6 @@ export default function Navbar() {
       </div>
       <nav className="flex items-center gap-8 text-sm">
         {/* Navigation Links */}
-        <Link href="/playground" legacyBehavior>
-          <a className={router.pathname === '/playground' ? 'text-docs-accent font-semibold' : 'text-docs-muted hover:text-docs-accent'}>
-            Playground
-          </a>
-        </Link>
         <Link href="/modelbuilder" legacyBehavior>
           <a className={router.pathname === '/modelbuilder' ? 'text-docs-accent font-semibold' : 'text-docs-muted hover:text-docs-accent'}>
             Dcision Builder

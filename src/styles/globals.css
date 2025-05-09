@@ -2,21 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  /* OpenAI Platform color tokens (dark theme) */
-  --foreground-rgb: 231, 233, 235;       /* #E7E9EB: primary text color */
-  --background-start-rgb: 15, 17, 21;     /* #0F1115: main background */
-  --background-end-rgb: 15, 17, 21;       /* #0F1115: main background end */
-}
+/* Removed duplicate CSS variables in favor of openai-base.css */
 
-body {
-  /* Use Inter variable font across the platform */
-  font-family: 'Inter var', 'Inter', 'IBM Plex Sans', 'Arial', sans-serif;
-  /* Use normal (400) weight for body text for readability */
-  font-weight: 400;
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-start-rgb));
-}
+/* Body typography and colors now handled by openai-base.css */
 
 /* Playground Styles */
 @layer components {
@@ -64,4 +52,153 @@ body {
   .playground-section-title {
     @apply text-white text-sm font-semibold mb-4 uppercase tracking-wider;
   }
+}
+
+/* OpenAI Docs-inspired Light Theme */
+.openai-docs-theme {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  color: #1a202c;
+  background: #fff;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.openai-docs-theme h1,
+.openai-docs-theme h2,
+.openai-docs-theme h3,
+.openai-docs-theme h4,
+.openai-docs-theme h5,
+.openai-docs-theme h6 {
+  color: #1a202c;
+  font-weight: 700;
+  margin-bottom: 0.5em;
+}
+.openai-docs-theme h1 { font-size: 2.25rem; }
+.openai-docs-theme h2 { font-size: 1.5rem; }
+.openai-docs-theme h3 { font-size: 1.25rem; }
+.openai-docs-theme a {
+  color: #0a7cff;
+  text-decoration: none;
+  font-weight: 500;
+}
+.openai-docs-theme a:hover {
+  text-decoration: underline;
+}
+.openai-docs-theme code,
+.openai-docs-theme pre {
+  font-family: "Fira Mono", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace;
+  background: #f6f8fa;
+  color: #2d3748;
+  border-radius: 0.5rem;
+  padding: 0.2em 0.4em;
+}
+.openai-docs-theme pre {
+  padding: 1em;
+  overflow-x: auto;
+}
+.openai-docs-theme hr {
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  margin: 2em 0;
+}
+
+/* OpenAI Docs-inspired Dark Theme */
+.openai-docs-dark {
+  background: #22272A;
+  color: #ECEDEE;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  font-size: 17px;
+  line-height: 1.7;
+}
+.openai-docs-dark h1, .openai-docs-dark h2, .openai-docs-dark h3 {
+  color: #fff;
+  font-weight: 700;
+  margin-bottom: 0.7em;
+}
+.openai-docs-dark h1 { font-size: 2.5rem; }
+.openai-docs-dark h2 { font-size: 2rem; }
+.openai-docs-dark h3 { font-size: 1.5rem; }
+.openai-docs-dark a {
+  color: #10A37F;
+  font-weight: 500;
+  text-decoration: none;
+}
+.openai-docs-dark a:hover {
+  text-decoration: underline;
+}
+.openai-docs-dark table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #21262C;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+.openai-docs-dark th, .openai-docs-dark td {
+  border: 1px solid #2D333B;
+  padding: 0.75em 1em;
+}
+.openai-docs-dark th {
+  color: #10A37F;
+  background: #22272A;
+  font-weight: 600;
+}
+.openai-docs-dark tr {
+  border-bottom: 1px solid #2D333B;
+}
+.openai-docs-dark code, .openai-docs-dark pre {
+  background: #161B22;
+  color: #ECEDEE;
+  border-radius: 0.5rem;
+  padding: 0.2em 0.4em;
+  font-family: "Fira Mono", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace;
+}
+.openai-docs-dark pre {
+  padding: 1em;
+  overflow-x: auto;
+}
+
+/* OpenAI Docs Sidebar Style */
+.openai-docs-dark .sidebar-menu {
+  padding: 0;
+  margin: 0;
+}
+.openai-docs-dark .sidebar-link {
+  color: #ECEDEE !important;
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  background: none;
+  transition: background 0.2s, color 0.2s;
+}
+.openai-docs-dark .sidebar-link:hover {
+  background: #21262C;
+  color: #fff !important;
+}
+.openai-docs-dark .sidebar-link.active {
+  color: #10A37F !important;
+  background: rgba(16,163,127,0.12);
+  font-weight: 600;
+}
+.openai-docs-dark .sidebar-link .w-4,
+.openai-docs-dark .sidebar-link .h-4 {
+  color: #ECEDEE !important;
+  stroke: #ECEDEE !important;
+}
+.openai-docs-dark .sidebar-link.active .w-4,
+.openai-docs-dark .sidebar-link.active .h-4 {
+  color: #10A37F !important;
+  stroke: #10A37F !important;
+}
+.openai-docs-dark .sidebar-link-text {
+  font-size: 17px;
+  font-weight: 400;
+  color: inherit !important;
+}
+.openai-docs-dark .section-title {
+  color: #A1A1AA;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-top: 2em;
+  margin-bottom: 0.5em;
+  letter-spacing: 0.08em;
 } 

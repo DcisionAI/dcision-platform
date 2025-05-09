@@ -79,12 +79,12 @@ export default function AgentsPage() {
 
   return (
     <Layout>
-      <div className="h-[calc(100vh-4rem)] bg-docs-body overflow-y-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+      <div className="h-[calc(100vh-4rem)] bg-docs-bg overflow-y-auto">
+        <div className="mx-auto max-w-4xl px-6 pt-8">
           <div className="bg-docs-section rounded-xl p-8 shadow-lg border border-docs-section-border">
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-docs-heading">Agent Configuration</h1>
-              <p className="mt-4 text-xl text-docs-muted">
+              <h1 className="text-4xl font-bold text-docs-text">Agent Configuration</h1>
+              <p className="mt-4 text-base text-docs-muted">
                 Configure AI agents for optimization problem-solving
               </p>
             </div>
@@ -111,7 +111,7 @@ export default function AgentsPage() {
                           <h3 className="text-lg font-medium text-docs-heading">
                             {agent.name}
                           </h3>
-                          <p className="text-sm text-docs-text">
+                          <p className="text-base text-docs-text">
                             {agent.description}
                           </p>
                         </div>
@@ -252,7 +252,7 @@ export default function AgentsPage() {
                                 onChange={(e) => updateAgentConfig(agent.id, {
                                   notifications: { ...config.notifications, webhook: e.target.value }
                                 })}
-                                className="mt-1 block w-full rounded-md bg-docs-bg border-docs-border text-docs-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-docs-accent"
+                                className="mt-1 block w-full rounded-md bg-docs-bg border border-docs-section-border text-docs-text px-3 py-2 text-base focus:outline-none focus:border-docs-accent focus:ring-2 focus:ring-docs-accent"
                                 placeholder="https://"
                               />
                             </div>

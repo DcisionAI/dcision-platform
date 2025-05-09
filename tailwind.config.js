@@ -6,32 +6,35 @@ module.exports = {
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
-    extend: {
+      extend: {
       fontFamily: {
-        // Use Inter variable font for primary typography, fallback to IBM Plex Sans and Arial
-        sans: ['Inter var', 'Inter', 'IBM Plex Sans', 'Arial', 'sans-serif'],
+        // Use OpenAI Sans for primary typography, fallback to Inter and others
+        sans: ['OpenAI Sans', 'Inter var', 'Inter', 'IBM Plex Sans', 'Arial', 'sans-serif'],
       },
-      colors: {
-        'playground-bg': '#0D0D0D',
-        'playground-sidebar': '#171717',
-        'playground-border': '#2D2D2D',
-        'playground-button': '#10A37F',
-        'playground-button-hover': '#0D856A',
-        'docs-bg': '#0D1117',
-        'docs-sidebar': '#161B22',
-        'docs-sidebar-active': '#21262D',
-        // Primary text color for documentation, matching platform.openai.com
-        'docs-text': '#E7E9EB',
-        'docs-accent': '#2F81F7',
-        'docs-section': '#161B22',
-        'docs-section-border': '#21262D',
-        // Secondary (muted) text color
-        'docs-muted': '#A3A3A3',
-        'pastel-blue': '#BFDBFE',
-        'pastel-blue-dark': '#1E3A8A',
-        'pastel-blue-hover': '#93C5FD',
+        colors: {
+          'playground-bg': '#0D0D0D',
+          'playground-sidebar': '#171717',
+          'playground-border': '#2D2D2D',
+          'playground-button': '#10A37F',
+          'playground-button-hover': '#0D856A',
+          // OpenAI Docs Dark theme colors
+          'docs-bg': '#22272A',        // page background (under main overlay)
+          // Main content overlay background
+          'docs-main-bg': 'rgba(16,17,17,0.93)',
+          'docs-sidebar': '#060606',   // sidebar and nav background (darker)
+          'docs-sidebar-active': '#161B22',
+          'docs-section': '#161B22',    // content cards background
+          'docs-section-border': '#21262C',
+          // Typography colors
+          'docs-text': '#E7E9EB',       // primary text
+          'docs-muted': '#8F959E',      // secondary text
+          // Accent color (links, active states)
+          'docs-accent': '#0A7CFF',
+          'pastel-blue': '#BFDBFE',
+          'pastel-blue-dark': '#1E3A8A',
+          'pastel-blue-hover': '#93C5FD',
+        },
       },
-    },
   },
   plugins: [],
 } 

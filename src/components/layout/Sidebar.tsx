@@ -79,9 +79,9 @@ export default function Sidebar() {
 
       <div className={`p-3 ${isExpanded ? '' : 'opacity-0'}`}>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xs font-medium text-[#8B949E] tracking-wider">DECISION WORKFLOWS</h2>
+          <h2 className="section-title">DECISION WORKFLOWS</h2>
         </div>
-        <nav className="space-y-0.5 mb-6">
+        <nav className="sidebar-menu space-y-0.5 mb-6">
           {decisionWorkflows.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -89,14 +89,14 @@ export default function Sidebar() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center px-2 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                className={`flex items-center px-2 py-1.5 rounded-md transition-colors sidebar-link ${
                   isActive
-                    ? 'bg-[#1F6FEB] text-white'
-                    : 'text-[#8B949E] hover:bg-[#21262D] hover:text-white'
+                    ? 'active'
+                    : ''
                 }`}
               >
                 <Icon className="w-4 h-4 mr-2 flex-shrink-0" />
-                <span className={`transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0'} text-xs`}>
+                <span className={`transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0'} sidebar-link-text`}>
                   {item.name}
                 </span>
               </Link>
@@ -105,9 +105,9 @@ export default function Sidebar() {
         </nav>
 
         <div className="mb-3">
-          <h2 className="text-xs font-medium text-[#8B949E] tracking-wider">PLATFORM CONCEPTS</h2>
+          <h2 className="section-title">PLATFORM CONCEPTS</h2>
         </div>
-        <nav className="space-y-0.5">
+        <nav className="sidebar-menu space-y-0.5">
           {platformConcepts.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -115,14 +115,14 @@ export default function Sidebar() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center px-2 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                className={`flex items-center px-2 py-1.5 rounded-md transition-colors sidebar-link ${
                   isActive
-                    ? 'bg-[#1F6FEB] text-white'
-                    : 'text-[#8B949E] hover:bg-[#21262D] hover:text-white'
+                    ? 'active'
+                    : ''
                 }`}
               >
                 <Icon className="w-4 h-4 mr-2 flex-shrink-0" />
-                <span className={`transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0'} text-xs`}>
+                <span className={`transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0'} sidebar-link-text`}>
                   {item.name}
                 </span>
               </Link>
@@ -133,7 +133,7 @@ export default function Sidebar() {
 
       {/* Collapsed state - only show icons */}
       <div className={`p-2 ${isExpanded ? 'hidden' : 'block'}`}>
-        <nav className="space-y-1">
+        <nav className="sidebar-menu space-y-1">
           {[...decisionWorkflows, ...platformConcepts].map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -142,10 +142,10 @@ export default function Sidebar() {
                 key={item.name}
                 href={item.href}
                 title={item.name}
-                className={`flex items-center justify-center p-1.5 rounded-md transition-colors ${
+                className={`flex items-center justify-center p-1.5 rounded-md transition-colors sidebar-link ${
                   isActive
-                    ? 'bg-[#1F6FEB] text-white'
-                    : 'text-[#8B949E] hover:bg-[#21262D] hover:text-white'
+                    ? 'active'
+                    : ''
                 }`}
               >
                 <Icon className="w-4 h-4" />

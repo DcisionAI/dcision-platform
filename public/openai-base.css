@@ -1,0 +1,50 @@
+@charset "UTF-8";
+
+/*
+  OpenAI Base CSS Reset & Design Tokens
+  Copied from OpenAI platform stylesheet:
+  https://platform.openai.com/docs/static/css/reset-and-tokens.css
+*/
+
+*, ::after, ::before, ::backdrop, ::file-selector-button {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0 solid;
+}
+
+html, :host {
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  tab-size: 4;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* More resets... */
+
+@font-face {
+  font-family: OpenAI Sans;
+  src: url("https://cdn.openai.com/common/fonts/openai-sans/OpenAISans-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Additional @font-face declarations... */
+
+:root {
+  --sans-serif: "OpenAI Sans", helvetica, sans-serif;
+  --monospace: "SF Mono", ui-monospace, monospace;
+  --green-50: #ebfaeb;
+  --green-100: #d2f4d3;
+  --green-200: #b9eebc;
+  /* … all other OpenAI CSS variables … */
+}
+
+/* Dark theme overrides */
+:root:where([data-theme="dark"]) {
+  --gray-0: #000;
+  /* … */
+}
+
+/* End of OpenAI Base CSS */

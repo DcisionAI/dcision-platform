@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Layout from '@/components/Layout';
 import AgentConversation, { AgentStep, AgentStatus } from '@/components/AgentConversation';
 import { v4 as uuidv4 } from 'uuid';
+import { ArrowUpIcon, CubeIcon, GlobeAltIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 
 // Session type for pipeline
 interface Session {
@@ -32,7 +33,25 @@ const baseSteps: AgentStep[] = [
   { name: 'ProcessAutomationAgent', description: 'Deploy the solution as an API or workflow', status: 'pending' },
 ];
 
- export default function ModelBuilderPage() {
+// Introductory cards explaining DecisionAI + Model Context Protocol
+const introCards = [
+  {
+    icon: CubeIcon,
+    title: 'Model',
+    description: 'DecisionAI structures your problem as a formal optimization model using the Model Context Protocol, translating business requirements into variables, constraints, and objectives.',
+  },
+  {
+    icon: GlobeAltIcon,
+    title: 'Context',
+    description: 'It dynamically integrates your business context—data sources, operational parameters, and external signals—enabling tailored AI-driven decision making.',
+  },
+  {
+    icon: ArrowPathIcon,
+    title: 'Protocol',
+    description: 'The Model Context Protocol orchestrates specialized agents in a repeatable, transparent, and auditable workflow to deliver actionable insights.',
+  },
+];
+export default function ModelBuilderPage() {
   const [userInput, setUserInput] = useState<string>('');
   const [mcpConfig, setMcpConfig] = useState<any>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -174,22 +193,44 @@ const baseSteps: AgentStep[] = [
     <Layout>
       <div className="p-6">
         {!mcpConfig ? (
-          <div className="max-w-xl mx-auto">
-            <h1 className="text-3xl font-bold mb-4">Describe the decision you want to automate</h1>
-            <textarea
-              value={userInput}
-              onChange={e => setUserInput(e.target.value)}
-              rows={6}
-              className="w-full p-3 border rounded mb-4 bg-gray-800 text-white"
-              placeholder="E.g., Optimize delivery routes for my fleet to minimize total driving time"
-            />
-            <button
-              onClick={handleStart}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded"
-            >
-              Start
-            </button>
-          </div>
+          <>
+            <div className="max-w-7xl mx-auto mb-8">
+              <h2 className="text-2xl font-semibold mb-4 text-docs-text">How DecisionAI Works</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {introCards.map((card, idx) => {
+                  const Icon = card.icon;
+                  return (
+                    <div key={idx} className="bg-[#1C2128] rounded-lg p-6 flex flex-col">
+                      <Icon className="w-6 h-6 text-[#58A6FF] mb-2" />
+                      <h3 className="text-white font-medium mb-2">{card.title}</h3>
+                      <p className="text-[#8B949E] text-sm">{card.description}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            
+              <h1 className="text-xl md:text-xl font-semibold mb-4 text-docs-text">
+                <center>What would you like DcisionAI agents to do?</center>
+              </h1>
+              <div className="relative mb-4">
+                <textarea
+                  value={userInput}
+                  onChange={e => setUserInput(e.target.value)}
+                  rows={4}
+                  className="w-full bg-[rgb(28_33_40_/var(--tw-bg-opacity,_1))] border border-[#343541] rounded-xl p-4 text-base text-docs-text placeholder-docs-muted focus:outline-none focus:ring-2 focus:ring-docs-accent transition-all resize-none"
+                  placeholder="E.g., Optimize delivery routes for my fleet to minimize total driving time"
+                />
+                <button
+                  onClick={handleStart}
+                  className="absolute bottom-3 right-3 text-docs-accent hover:text-docs-accent/80 focus:outline-none"
+                  aria-label="Send"
+                >
+                  <ArrowUpIcon className="w-6 h-6" />
+                </button>
+              </div>
+            
+          </>
         ) : !session ? (
           <div className="text-gray-400">Initializing agent pipeline...</div>
         ) : (

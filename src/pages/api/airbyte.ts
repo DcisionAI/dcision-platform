@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 // Default to local Airbyte open-source API endpoint if not explicitly set
-const AIRBYTE_API_URL = process.env.AIRBYTE_API_URL || 'http://localhost:8000';
+// If running Airbyte UI under a '/connectors' path in development, point to that route
+const AIRBYTE_API_URL = process.env.AIRBYTE_API_URL || 'http://localhost:3000/connectors';
 const AIRBYTE_API_KEY = process.env.AIRBYTE_API_KEY;
 const AIRBYTE_WORKSPACE_ID = process.env.AIRBYTE_WORKSPACE_ID; // optional default workspace
 
