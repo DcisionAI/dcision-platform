@@ -110,7 +110,7 @@ export default function ApiReference({ content }: ApiRefProps) {
   return (
     <Layout sidebarOverride={<PageTOC headings={headings} onClick={handleScroll} />}>
       <div className="openai-docs-dark relative pt-8 pb-8">
-        <div className="max-w-2xl mx-auto px-6 text-sm font-sans">
+        <div className="max-w-6xl mx-auto px-6 text-sm font-sans">
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
             {content}
           </ReactMarkdown>
