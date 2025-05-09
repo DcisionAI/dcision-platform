@@ -51,8 +51,8 @@ export default function Navbar() {
             Docs
           </a>
         </Link>
-        <Link href="/docs" legacyBehavior>
-          <a className={router.pathname === '/docs' ? 'text-docs-accent font-semibold' : 'text-docs-muted hover:text-docs-accent'}>
+        <Link href="/api-reference" legacyBehavior>
+          <a className={router.pathname.startsWith('/api-reference') ? 'text-docs-accent font-semibold' : 'text-docs-muted hover:text-docs-accent'}>
             API reference
           </a>
         </Link>

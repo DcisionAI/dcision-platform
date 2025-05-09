@@ -1,6 +1,160 @@
-# API Documentation
+# API Reference
 
-This document provides comprehensive documentation for the DcisionAI platform's API.
+Welcome to the DcisionAI Platform API. Use these endpoints to run optimization workflows (Model Context Protocol) programmatically without the Console.
+
+## Authentication
+
+All requests should include a valid JWT or API key in the `Authorization` header:
+```http
+Authorization: Bearer <your_token>
+```
+_Note: Authentication is not enforced in this beta release._
+
+## Base URL
+
+This API is served under the same domain as the Console. When running locally (Next.js dev), use:
+```text
+http://localhost:3000/api
+```
+
+## Endpoints
+
+### Model Context Protocol (MCP)
+
+#### Submit MCP
+Run a full MCP JSON through the orchestrator.
+```http
+POST /api/mcp/submit
+Content-Type: application/json
+
+{
+  "sessionId": "string",
+  "version": "1.0.0",
+  "model": { /* variables, constraints, objective */ },
+  "context": { /* environment, dataset, problemType, etc. */ },
+  "protocol": {
+    "steps": [ /* array of protocol steps */ ],
+    "allowPartialSolutions": true,
+    "explainabilityEnabled": true,
+    "humanInTheLoop": { "required": false, "approvalSteps": [] }
+  }
+}
+```
+**Response**
+```json
+{
+  "results": [
+    {
+      "step": { "id": "interpret_intent", "action": "interpret_intent", /* ... */ },
+      "agent": "Intent Interpreter Agent",
+      "result": { /* agent output */ },
+      "thoughtProcess": "...",
+      "error": null
+    },
+    /* more step results */
+  ]
+}
+```
+
+#### Retrieve Decision
+Fetch the solve result for a previously submitted MCP session.
+```http
+GET /api/decision/{sessionId}
+```
+**Response**
+```json
+// If solve_model step completed
+{
+  "solution": { /* solution payload */ },
+  "details": { /* full solve_model OrchestrationResult */ }
+}
+```
+
+### Optional: Step-by-Step Agents
+These endpoints allow running individual MCP steps in isolation.
+
+#### Interpret Intent
+Classify problem type and extract context from free-form input.
+```http
+POST /api/mcp/intent
+Content-Type: application/json
+
+{
+  "userInput": "Deliver 100 packages with 5 vehicles in 2 hours"
+}
+```
+**Response**
+```json
+{
+  "output": { "problemType": "vehicle_routing", "context": { /* ... */ } },
+  "thoughtProcess": "...",
+  "provider": { "type": "openai", "model": "gpt-4-turbo-preview" }
+}
+```
+
+#### Data Mapping
+Auto-map required fields to database columns (Supabase).
+```http
+POST /api/mcp/map
+Content-Type: application/json
+
+{
+  "sessionId": "string",
+  "userInput": "...",
+  "intentDetails": { /* output of interpret_intent */ },
+  "requiredFields": ["orders.id", "drivers.id"],
+  "databaseFields": [],
+  "tablesToScan": ["orders","drivers"],
+  "problemType": "vehicle_routing"
+}
+```
+**Response**
+```json
+{
+  "output": [ /* array of field mappings */ ],
+  "thoughtProcess": "..."
+}
+```
+
+#### Data Integration
+Fetch and enrich data for mapped fields.
+```http
+POST /api/mcp/integrate
+Content-Type: application/json
+
+{
+  "sessionId": "string",
+  "problemType": "vehicle_routing",
+  "userInput": "..."
+}
+```
+**Response**
+```json
+{
+  "output": {
+    "featureSet": { /* suggested features */ },
+    "fieldMappings": [ /* validated mappings */ ],
+    "collectedData": { /* raw rows per field */ },
+    "needsHumanReview": false,
+    /* ... */
+  },
+  "thoughtProcess": "..."
+}
+```
+
+## Error Handling
+
+All error responses use HTTP status codes and return:
+```json
+{
+  "error": "Error message",
+  "details": "Optional details"
+}
+```
+
+## SDK Support
+
+Use our JavaScript/TypeScript and Python SDKs to wrap these endpoints very easily—see [SDK docs](./sdk.md).
 
 ## Overview
 
