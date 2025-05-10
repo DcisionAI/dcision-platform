@@ -16,26 +16,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
   try {
+    // Try to fetch connector types (global catalog), fallback to connector instances
     const projectId = process.env.GCLOUD_PROJECT || process.env.NEXT_PUBLIC_PROJECT_ID;
     if (!projectId) {
       throw new Error('GCLOUD_PROJECT or NEXT_PUBLIC_PROJECT_ID env var is required');
     }
-    // List all connector types across all providers in global location
-    const url = `https://connectors.googleapis.com/v1/projects/${projectId}/locations/global/providers/-/connectors`;
     const auth = new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] });
     const client = await auth.getClient();
-    // Call Google Integration Connectors API
-    // Call Google Integration Connectors API
-    const resp = await client.request({ url, method: 'GET' });
-    const data = (resp as any).data;
-    // Parse the connectors array from the response
-    const items: any[] = data?.connectors || [];
+    let items: any[] = [];
+    try {
+      // Global connectorTypes catalog endpoint under all providers
+      const typesUrl = `https://connectors.googleapis.com/v1/projects/${projectId}/locations/global/providers/-/connectorTypes`;
+      const resp = await client.request({ url: typesUrl, method: 'GET' });
+      const data = (resp as any).data;
+      items = Array.isArray(data?.connectorTypes) ? data.connectorTypes : [];
+    } catch (_) {
+      // Fallback: list connector instances under all providers
+      const instUrl = `https://connectors.googleapis.com/v1/projects/${projectId}/locations/global/providers/-/connectors`;
+      const resp2 = await client.request({ url: instUrl, method: 'GET' });
+      const data2 = (resp2 as any).data;
+      items = Array.isArray(data2?.connectors) ? data2.connectors : [];
+    }
+    // Map each connector type or instance to a uniform object
     const list = items.map((c: any) => {
-      // Connector resource name is projects/{p}/locations/{r}/connectors/{id}
-      const name = c.name || '';
-      const parts = name.split('/');
-      const id = parts[parts.length - 1] || name;
-      return { id, name: c.displayName || id };
+      // Determine connector id
+      let id: string;
+      if (c.connectorTypeId) {
+        id = c.connectorTypeId;
+      } else if (typeof c.name === 'string') {
+        const parts = c.name.split('/');
+        id = parts[parts.length - 1] || c.name;
+      } else {
+        id = '';
+      }
+      const name = c.displayName || c.title || id;
+      const icon = c.iconUri || c.iconUrl || `https://www.gstatic.com/connectors/${id}.svg`;
+      return { id, name, icon };
     });
     return res.status(200).json(list);
   } catch (error: any) {

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 interface Connector {
   id: string;
   name: string;
+  icon?: string;
 }
 
 interface ConfigEntry {
@@ -71,6 +72,10 @@ export default function DataPluginsPage() {
   const filtered = connectors.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase())
   );
+  const [page, setPage] = useState<number>(1);
+  const pageSize = 8;
+  const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+  const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const handleSave = async (id: string) => {
     try {
@@ -105,36 +110,72 @@ export default function DataPluginsPage() {
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-semibold">Data Plugins</h1>
-      {/* Search & list */}
-      <div className="p-4 bg-docs-section border rounded">
+      {/* Search & connector cards */}
+      <div className="p-4 bg-docs-section border rounded space-y-4">
         <input
           type="text"
-          placeholder="Search connectors..."
+          placeholder="Search plugins..."
           value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="w-full p-2 mb-4 border rounded"
+          onChange={e => { setSearch(e.target.value); setPage(1); }}
+          className="w-full p-2 border rounded"
         />
-        <ul className="space-y-2">
-          {filtered.map(c => (
-            <li key={c.id} className="flex justify-between items-center">
-              <span>{c.name}</span>
-              {configs.find(cfg => cfg.id === c.id) ? (
-                <button
-                  className="text-red-600 text-sm"
-                  onClick={() => handleDelete(c.id)}
-                >Delete</button>
-              ) : (
-                <button
-                  className="text-blue-600 text-sm"
-                  onClick={() => {
-                    setEditing(c.id);
-                    setEditConfig('{}');
-                  }}
-                >Configure</button>
-              )}
-            </li>
-          ))}
-        </ul>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {paged.map(c => {
+            const isConfigured = configs.some(cfg => cfg.id === c.id);
+            return (
+              <div
+                key={c.id}
+                className="bg-[rgb(22_27_34_/var(--tw-bg-opacity,1))] border rounded overflow-hidden flex flex-col"
+              >
+                {c.icon ? (
+                  <img
+                    src={c.icon}
+                    alt={c.name}
+                    className="h-32 w-full object-contain bg-transparent"
+                  />
+                ) : (
+                  <div className="h-32 w-full bg-transparent flex items-center justify-center text-xl">
+                    {c.name.charAt(0)}
+                  </div>
+                )}
+                <div className="p-2 flex-1 flex flex-col justify-between">
+                  <h3 className="text-base font-medium mb-2 truncate">{c.name}</h3>
+                  <div className="mt-auto space-x-2">
+                    {isConfigured ? (
+                      <button
+                        className="px-2 py-1 bg-red-600 text-white text-xs rounded"
+                        onClick={() => handleDelete(c.id)}
+                      >Delete</button>
+                    ) : (
+                      <button
+                        className="px-2 py-1 bg-blue-600 text-white text-xs rounded"
+                        onClick={() => { setEditing(c.id); setEditConfig('{}'); }}
+                      >Configure</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center space-x-2">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1 bg-docs-sidebar-active text-docs-accent rounded disabled:opacity-50"
+            >Prev</button>
+            <span className="px-2 py-1">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-3 py-1 bg-docs-sidebar-active text-docs-accent rounded disabled:opacity-50"
+            >Next</button>
+          </div>
+        )}
       </div>
       {/* Edit panel */}
       {editing && (
