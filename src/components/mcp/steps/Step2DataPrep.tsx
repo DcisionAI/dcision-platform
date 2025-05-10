@@ -3,14 +3,24 @@ const tabs = ['Analysis', 'Mapping', 'Enrich', 'Validate'];
 
 export interface Step2DataPrepProps {
   config: any;
+  // Callback when data source connectors selection changes
+  onUpdate?: (update: any) => void;
 }
 
-const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config }) => {
+const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
   const [activeTab, setActiveTab] = useState<string>(tabs[0]);
   const [mappingResult, setMappingResult] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [modelDef, setModelDef] = useState<any>(null);
   const [modelLoading, setModelLoading] = useState<boolean>(false);
+  const [connectors, setConnectors] = useState<Array<{id: string; name: string}>>([]);
+  const [selectedConnectors, setSelectedConnectors] = useState<string[]>([]);
+  // Notify parent of connector selection changes
+  useEffect(() => {
+    if (typeof onUpdate === 'function') {
+      onUpdate({ connectors: selectedConnectors });
+    }
+  }, [selectedConnectors, onUpdate]);
 
   // Fetch recommended data requirements from Data Mapping Agent
   useEffect(() => {
@@ -32,6 +42,16 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config }) => {
         .finally(() => setLoading(false));
     }
   }, [config, modelDef, mappingResult]);
+
+  // Fetch available connectors when entering Mapping tab
+  useEffect(() => {
+    if (activeTab === 'Mapping') {
+      fetch('/api/connectors')
+        .then(res => res.json())
+        .then((data) => setConnectors(data))
+        .catch(console.error)
+    }
+  }, [activeTab]);
   
   // Fetch model definition via LLM-based agent
   useEffect(() => {
@@ -183,6 +203,26 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config }) => {
         {activeTab === 'Mapping' && (
           <div>
             <h3 className="text-lg font-medium text-docs-text mb-2">Data Requirements</h3>
+            {/* Connector Selection UI */}
+            <div className="mt-4">
+              <h4 className="font-medium mb-2">Select Data Connectors</h4>
+              {connectors.map(c => (
+                <div key={c.id} className="flex items-center mb-1">
+                  <input
+                    type="checkbox"
+                    id={c.id}
+                    className="mr-2"
+                    checked={selectedConnectors.includes(c.id)}
+                    onChange={() => {
+                      setSelectedConnectors(prev =>
+                        prev.includes(c.id) ? prev.filter(x => x !== c.id) : [...prev, c.id]
+                      );
+                    }}
+                  />
+                  <label htmlFor={c.id}>{c.name}</label>
+                </div>
+              ))}
+            </div>
             {mappingResult ? (
               <div className="space-y-4 text-docs-text text-sm">
                 {mappingResult.required_fields && (

@@ -88,7 +88,14 @@ export default function ModelBuilderPage() {
           />
         );
       case 1:
-        return <Step2DataPrep config={mcpConfig} />;
+        return (
+          <Step2DataPrep
+            config={mcpConfig}
+            onUpdate={(update: any) =>
+              setMcpConfig((prev: any) => ({ ...prev, ...update }))
+            }
+          />
+        );
       case 2:
         return <Step3ModelConstraints />;
       case 3:

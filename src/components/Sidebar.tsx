@@ -26,6 +26,7 @@ const menu = [
       { href: '/agents', label: 'Agents', icon: BeakerIcon },
       { href: '/explainability', label: 'Explainability', icon: LightBulbIcon },
       { href: '/endpoints', label: 'Endpoints', icon: CloudArrowUpIcon },
+      { href: '/integrations', label: 'Data Plugins', icon: ArrowsPointingInIcon },
     ],
   },
   {

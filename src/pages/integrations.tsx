@@ -1,10 +1,12 @@
-import UnderDevelopment from '@/components/UnderDevelopment';
+import DataPluginsPage from '@/components/DataPluginsPage';
 import Layout from '@/components/Layout';
 
 export default function Integrations() {
   return (
     <Layout>
-      <UnderDevelopment pageName="Data Integrations" />
+      <div className="p-6">
+        <DataPluginsPage />
+      </div>
     </Layout>
   );
-} 
+}
