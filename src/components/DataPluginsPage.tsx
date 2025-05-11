@@ -26,13 +26,7 @@ export default function DataPluginsPage() {
   const [testingId, setTestingId] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<Record<string, boolean>>({});
 
-  const gradients = [
-    'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)', // blue
-    'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)', // pink/purple
-    'linear-gradient(135deg, #fceabb 0%, #f8b500 100%)', // yellow
-    'linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%)', // green
-    'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)', // purple/blue
-  ];
+  // Using unified docs-section styling for plugin cards; background gradients removed
 
   // Helper: default config templates per connector type
   const getTemplateForConnector = (id: string): any => {
@@ -204,8 +198,8 @@ export default function DataPluginsPage() {
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-semibold">Data Plugins</h1>
-      {/* Search & connector cards */}
-      <div className="p-4 bg-docs-section border rounded space-y-4">
+      {/* Search input */}
+      <div className="p-4 bg-docs-section border rounded">
         <input
           type="text"
           placeholder="Search plugins..."
@@ -213,17 +207,16 @@ export default function DataPluginsPage() {
           onChange={e => { setSearch(e.target.value); setPage(1); }}
           className="w-full p-2 bg-docs-section border border-docs-section-border rounded text-docs-text placeholder-docs-muted focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
         />
-        {/* Card grid: adjust columns and gaps to fit more cards */}
-        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-1">
-          {paged.map((c, idx) => {
-            const isConfigured = configs.some(cfg => cfg.id === c.id);
-            const gradient = gradients[idx % gradients.length];
-            return (
-              <div
-                key={c.id}
-                className="rounded-lg shadow flex flex-col items-center overflow-hidden transition-shadow duration-200 ease-in-out hover:shadow-xl"
-                style={{ background: gradient, maxWidth: '150px', minWidth: '0', padding: '6px 0', fontFamily: `'OpenAI Sans', 'Inter', ui-sans-serif, system-ui, sans-serif` }}
-              >
+      </div>
+      {/* Plugin cards grid */}
+      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-6 mb-8">
+        {paged.map((c) => {
+          const isConfigured = configs.some(cfg => cfg.id === c.id);
+          return (
+            <div
+              key={c.id}
+              className="bg-docs-section rounded-xl p-6 flex flex-col items-center shadow border border-docs-section-border overflow-hidden transition-shadow duration-200 ease-in-out hover:shadow-xl"
+            >
                 <div className="flex items-center justify-center aspect-square w-full">
                   {c.icon ? (
                     <img
@@ -237,8 +230,8 @@ export default function DataPluginsPage() {
                   )}
                 </div>
                 <div className="flex-1 flex flex-col justify-between p-1">
-                  <h3 className="text-xs font-bold text-black truncate w-full text-center">{c.name}</h3>
-                  <h4 className="text-[10px] font-normal mb-1 truncate w-full text-center" style={{ color: '#222', fontFamily: `'OpenAI Sans', 'Inter', ui-sans-serif, system-ui, sans-serif` }}>{c.category}</h4>
+                  <h3 className="text-xs font-bold text-docs-text truncate w-full text-center">{c.name}</h3>
+                  <h4 className="text-[10px] font-normal mb-1 truncate w-full text-center text-docs-muted">{c.category}</h4>
                   <div className="mt-auto">
                     {isConfigured ? (
                       <button
@@ -279,7 +272,6 @@ export default function DataPluginsPage() {
             >Next</button>
           </div>
         )}
-      </div>
       {/* Edit panel */}
       {editing && (
         <div className="p-4 bg-docs-section border rounded space-y-4">

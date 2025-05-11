@@ -41,13 +41,15 @@
     "dotenv": "^16.5.0",
     "express": "5.0.0-beta.1",
     "express-rate-limit": "^7.5.0",
+    "firebase-admin": "^11.7.0",
+    "google-auth-library": "^8.7.0",
     "gray-matter": "^4.0.3",
     "jsonwebtoken": "^9.0.2",
     "lru-cache": "^11.1.0",
     "monaco-editor": "^0.52.2",
     "next": "^14.0.0",
     "openai": "^4.96.0",
-    "pg": "^8.15.6",
+    "pg": "^8.11.0",
     "pino": "^9.6.0",
     "rate-limiter-flexible": "^7.0.0",
     "react": "^18.2.0",
@@ -59,10 +61,7 @@
     "remark-parse": "^11.0.0",
     "unified": "^11.0.5",
     "uuid": "^11.1.0",
-    "zod": "^3.24.3",
-    "google-auth-library": "^8.7.0",
-    "firebase-admin": "^11.7.0",
-    "google-auth-library": "^8.7.0"
+    "zod": "^3.24.3"
   },
   "devDependencies": {
     "@next/bundle-analyzer": "^15.3.1",

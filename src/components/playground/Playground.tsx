@@ -72,7 +72,7 @@ function InfoCard({ icon: Icon, title, description, highlight, agents }: {
   agents: string;
 }) {
   return (
-    <div className="bg-[#1C2128] rounded-lg p-4 flex flex-col h-full">
+    <div className="bg-docs-section border border-docs-section-border shadow rounded-lg p-4 flex flex-col h-full">
       <div className="flex items-center gap-2 mb-2">
         <div className="p-1.5 bg-[#2D333B] rounded-lg">
           <Icon className="w-4 h-4 text-[#58A6FF]" />

@@ -1,4 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import dns from 'dns';
+import { URL } from 'url';
+
+// Force DNS to prefer IPv4 to avoid IPv6 connection refused errors
+dns.setDefaultResultOrder('ipv4first');
 import { GoogleAuth } from 'google-auth-library';
 import { Client } from 'pg';
 
@@ -18,14 +23,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!dbUrl) {
         throw new Error('SUPABASE_DB_URL env var is required for supabase connector');
       }
-      // Manual parse of connection string to support passwords with special characters
-      // Expected format: postgresql://user:password@host:port/database
-      const stripped = dbUrl.replace(/^postgres(?:ql)?:\/\//, '');
-      const [userInfo, hostDb] = stripped.split('@');
-      const [user, password] = userInfo.split(':');
-      const [hostPort, database] = hostDb.split('/');
-      const [host, portStr] = hostPort.split(':');
-      const port = parseInt(portStr, 10);
+      // Parse the connection string using URL to correctly decode credentials
+      const { username: user, password, hostname: host, port: portStr, pathname } = new URL(dbUrl);
+      const port = parseInt(portStr || '', 10) || 5432;
+      const database = pathname?.startsWith('/') ? pathname.slice(1) : pathname;
       const pgClient = new Client({ user, password, host, port, database, ssl: { rejectUnauthorized: false } });
       await pgClient.connect();
       const result = await pgClient.query(
