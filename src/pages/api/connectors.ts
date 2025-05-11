@@ -50,8 +50,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         id = '';
       }
       const name = c.displayName || c.title || id;
-      const icon = c.iconUri || c.iconUrl || `https://www.gstatic.com/connectors/${id}.svg`;
-      return { id, name, icon };
+      const category = c.category || "N/A";
+      const icon = c.iconUri || c.webAssetsLocation || `https://www.gstatic.com/connectors/${id}.svg`;
+      return { id, name, category, icon };
     });
     return res.status(200).json(list);
   } catch (error: any) {

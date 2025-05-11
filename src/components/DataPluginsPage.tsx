@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 
 interface Connector {
+  /** Unique connector identifier */
   id: string;
+  /** Human-readable connector name */
   name: string;
+  /** Optional icon URL for the connector */
   icon?: string;
+  /** Optional category/grouping for the connector */
+  category?: string;
 }
 
 interface ConfigEntry {
@@ -32,6 +37,7 @@ export default function DataPluginsPage() {
       })
       .then((data) => {
         if (Array.isArray(data)) {
+          console.log(data);
           setConnectors(data);
         } else {
           console.error('Invalid connectors response:', data);
@@ -73,7 +79,8 @@ export default function DataPluginsPage() {
     c.name.toLowerCase().includes(search.toLowerCase())
   );
   const [page, setPage] = useState<number>(1);
-  const pageSize = 8;
+  // Show more cards per page to reduce scrolling
+  const pageSize = 10;
   const totalPages = Math.ceil(filtered.length / pageSize) || 1;
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
@@ -117,29 +124,31 @@ export default function DataPluginsPage() {
           placeholder="Search plugins..."
           value={search}
           onChange={e => { setSearch(e.target.value); setPage(1); }}
-          className="w-full p-2 border rounded"
+          className="w-full p-2 bg-docs-section border border-docs-section-border rounded text-docs-text placeholder-docs-muted focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
         />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card grid: adjust columns and gaps to fit more cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
           {paged.map(c => {
             const isConfigured = configs.some(cfg => cfg.id === c.id);
             return (
-              <div
-                key={c.id}
-                className="bg-[rgb(22_27_34_/var(--tw-bg-opacity,1))] border rounded overflow-hidden flex flex-col"
-              >
+            <div
+              key={c.id}
+              className="isolate bg-docs-section border border-docs-section-border rounded overflow-hidden flex flex-col"
+            >
                 {c.icon ? (
                   <img
                     src={c.icon}
                     alt={c.name}
-                    className="h-32 w-full object-contain bg-transparent"
+                    className="h-20 w-full object-contain bg-transparent"
                   />
                 ) : (
-                  <div className="h-32 w-full bg-transparent flex items-center justify-center text-xl">
+                  <div className="h-20 w-full bg-transparent flex items-center justify-center text-xl">
                     {c.name.charAt(0)}
                   </div>
                 )}
-                <div className="p-2 flex-1 flex flex-col justify-between">
+                <div className="p-1 flex-1 flex flex-col justify-between">
                   <h3 className="text-base font-medium mb-2 truncate">{c.name}</h3>
+                  <h3 className="text-base font-medium mb-2 truncate">{c.category}</h3>
                   <div className="mt-auto space-x-2">
                     {isConfigured ? (
                       <button
