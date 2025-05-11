@@ -9,7 +9,7 @@ module.exports = {
       extend: {
       fontFamily: {
         // Use OpenAI Sans for primary typography, fallback to Inter and others
-        sans: ['OpenAI Sans', 'Inter var', 'Inter', 'IBM Plex Sans', 'Arial', 'sans-serif'],
+        sans: ["'OpenAI Sans'", 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
         colors: {
           'playground-bg': '#0D0D0D',

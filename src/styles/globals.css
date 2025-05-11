@@ -201,4 +201,8 @@
   margin-top: 2em;
   margin-bottom: 0.5em;
   letter-spacing: 0.08em;
+}
+
+html, body {
+  font-family: 'OpenAI Sans', Inter, ui-sans-serif, system-ui, sans-serif;
 } 

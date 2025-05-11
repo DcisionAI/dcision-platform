@@ -2,10 +2,11 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 
 // Fallback static list of connector types if API call fails (with icon URLs)
 const staticConnectorTypes = [
-  { id: 'bigquery',      name: 'BigQuery',      icon: 'https://www.gstatic.com/connectors/bigquery.svg' },
-  { id: 'cloud_storage', name: 'Cloud Storage', icon: 'https://www.gstatic.com/connectors/cloud_storage.svg' },
-  { id: 'cloud_sql',     name: 'Cloud SQL',     icon: 'https://www.gstatic.com/connectors/cloud_sql.svg' },
-  { id: 'pubsub',        name: 'Pub/Sub',       icon: 'https://www.gstatic.com/connectors/pubsub.svg' }
+  { id: 'supabase',       name: 'Supabase (Postgres)', icon: 'https://cdn.worldvectorlogo.com/logos/supabase-1.svg' },
+  { id: 'bigquery',      name: 'BigQuery',             icon: 'https://www.gstatic.com/connectors/bigquery.svg' },
+  { id: 'cloud_storage', name: 'Cloud Storage',        icon: 'https://www.gstatic.com/connectors/cloud_storage.svg' },
+  { id: 'cloud_sql',     name: 'Cloud SQL',            icon: 'https://www.gstatic.com/connectors/cloud_sql.svg' },
+  { id: 'pubsub',        name: 'Pub/Sub',              icon: 'https://www.gstatic.com/connectors/pubsub.svg' }
 ];
 
 import { GoogleAuth } from 'google-auth-library';

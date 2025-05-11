@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { GoogleAuth } from 'google-auth-library';
+import { Client } from 'pg';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -11,7 +12,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Connector id and config are required' });
   }
   try {
-    // body already destructured above
+    // Supabase connector test: list tables in the public schema
+    if (id === 'supabase') {
+      const dbUrl = process.env.SUPABASE_DB_URL;
+      if (!dbUrl) {
+        throw new Error('SUPABASE_DB_URL env var is required for supabase connector');
+      }
+      // Manual parse of connection string to support passwords with special characters
+      // Expected format: postgresql://user:password@host:port/database
+      const stripped = dbUrl.replace(/^postgres(?:ql)?:\/\//, '');
+      const [userInfo, hostDb] = stripped.split('@');
+      const [user, password] = userInfo.split(':');
+      const [hostPort, database] = hostDb.split('/');
+      const [host, portStr] = hostPort.split(':');
+      const port = parseInt(portStr, 10);
+      const pgClient = new Client({ user, password, host, port, database, ssl: { rejectUnauthorized: false } });
+      await pgClient.connect();
+      const result = await pgClient.query(
+        "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'"
+      );
+      await pgClient.end();
+      return res.status(200).json({ success: true, details: { tables: result.rows.map(r => r.table_name) } });
+    }
+    // Google Connectors API test
     const projectId = process.env.GCLOUD_PROJECT || process.env.NEXT_PUBLIC_PROJECT_ID;
     const region = process.env.GCP_REGION || 'us-central1';
     if (!projectId) {
