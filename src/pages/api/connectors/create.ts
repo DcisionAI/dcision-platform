@@ -23,8 +23,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const endpoint =
       `https://connectors.googleapis.com/v1/${parent}/connectors` +
       `?connectorId=${encodeURIComponent(id)}`;
-    // Authenticate with GCP
+    // Authenticate with GCP, use SA key if provided, else fall back to ADC
+    const saKey = process.env.GCP_SA_KEY;
     const auth = new GoogleAuth({
+      credentials: saKey ? JSON.parse(saKey) : undefined,
       scopes: ['https://www.googleapis.com/auth/cloud-platform'],
     });
     const client = await auth.getClient();

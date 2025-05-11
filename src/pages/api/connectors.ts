@@ -12,6 +12,8 @@ const staticConnectorTypes = [
 import { GoogleAuth } from 'google-auth-library';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Prevent HTTP caching to avoid 304 responses client-side
+  res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).end(`Method ${req.method} Not Allowed`);
@@ -22,7 +24,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!projectId) {
       throw new Error('GCLOUD_PROJECT or NEXT_PUBLIC_PROJECT_ID env var is required');
     }
-    const auth = new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] });
+    // Initialize GoogleAuth, use service account JSON if provided, else fall back to ADC
+    const saKey = process.env.GCP_SA_KEY;
+    const auth = new GoogleAuth({
+      credentials: saKey ? JSON.parse(saKey) : undefined,
+      scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+    });
     const client = await auth.getClient();
     let items: any[] = [];
     try {

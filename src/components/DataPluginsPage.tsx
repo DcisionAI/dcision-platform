@@ -97,7 +97,8 @@ export default function DataPluginsPage() {
   };
   // Fetch available connectors
   useEffect(() => {
-    fetch('/api/connectors')
+    // Disable caching to ensure fresh connector list (avoid 304 Not Modified)
+    fetch('/api/connectors', { cache: 'no-store' })
       .then(async (res) => {
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
