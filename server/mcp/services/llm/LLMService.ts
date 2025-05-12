@@ -20,7 +20,7 @@ export interface LLMService {
   /**
    * Interpret a user problem description like an expert decision maker (optimization PhD with business sense).
    * Return a structured analysis including:
-   * 1) intentInterpretation: your interpretation of the user’s intent.
+   * 1) intentInterpretation: your interpretation of the user's intent.
    * 2) confidenceLevel: confidence in this interpretation (percentage).
    * 3) alternatives: alternative interpretations considered.
    * 4) explanation: why you chose this interpretation.
@@ -225,7 +225,7 @@ Respond ONLY in valid JSON with exactly these keys.`;
   }> {
     const systemPrompt = `You are an expert in optimization modeling. Given a business problem statement, identify and extract:\n` +
       `1) variables: list of decision variables with {name, description, domain (optional), businessContext (business relevance)};\n` +
-      `2) constraints: list of model constraints with {name (optional), description, expression (optional), businessContext};\n` +
+      `2) constraints: list of model constraints with {name (required, short descriptive label), description, expression (optional), businessContext}. For each constraint, always provide a short, descriptive name (e.g., "Vehicle Capacity", "Fuel Limit", "Route Coverage");\n` +
       `3) objective: model objective with {type ('minimize' or 'maximize'), expression (optional), description, businessContext};\n` +
       `4) externalDataSources: list of optional external data sources that can augment model accuracy, with {source, description, valueAdd}.\n` +
       `Respond ONLY with valid JSON containing exactly these four fields.`;

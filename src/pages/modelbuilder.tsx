@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Layout from '@/components/Layout';
 import Stepper from '@/components/mcp/Stepper';
 import StepCards from '@/components/mcp/StepCards';
@@ -39,13 +39,13 @@ const stepCardsData: { title: string; description: string }[][] = [
   ],
   [
     { title: 'What', description: 'Review the LLM-generated MCP JSON before execution.' },
-    { title: 'Why', description: 'Ensure the LLM’s interpretation aligns with your business context.' },
+    { title: 'Why', description: "Ensure the LLM's interpretation aligns with your business context." },
     { title: 'How', description: 'Copy, download, or edit the config directly in the preview.' }
   ],
   [
     { title: 'What', description: 'Invoke LLM-based agents to solve and explain your optimization.' },
     { title: 'Why', description: 'Agents leverage LLMs to orchestrate complex solve flows with real-time insights.' },
-    { title: 'How', description: 'Click Solve and watch the agent’s step-by-step explanation stream in.' }
+    { title: 'How', description: "Click Solve and watch the agent's step-by-step explanation stream in." }
   ],
   [
     { title: 'What', description: 'Deploy your decision agent endpoint powered by LLM and optimization.' },
@@ -56,8 +56,11 @@ const stepCardsData: { title: string; description: string }[][] = [
 
 export default function ModelBuilderPage() {
   const [currentStep, setCurrentStep] = useState<number>(0);
-  const [mcpConfig, setMcpConfig] = useState<any>({});
+  const [mcpConfigState, setMcpConfigState] = useState<any>({});
   const [intentText, setIntentText] = useState<string>('');
+
+  // Memoize mcpConfig so its reference only changes when its contents change
+  const mcpConfig = useMemo(() => mcpConfigState, [JSON.stringify(mcpConfigState)]);
 
   // Advance to the next step
   const handleNext = () => {
@@ -79,11 +82,10 @@ export default function ModelBuilderPage() {
             value={intentText}
             onChange={setIntentText}
             // Interpret intent via LLM and update MCP config
-            onInterpret={result => setMcpConfig((prev: any) => ({
-              ...prev,
-              ...result.output,
-              thoughtProcess: result.thoughtProcess
-            }))}
+            onInterpret={result => setMcpConfigState((prev: any) => {
+              const next = { ...prev, ...result.output, thoughtProcess: result.thoughtProcess };
+              return JSON.stringify(next) === JSON.stringify(prev) ? prev : next;
+            })}
             onNext={handleNext}
           />
         );
@@ -92,7 +94,10 @@ export default function ModelBuilderPage() {
           <Step2DataPrep
             config={mcpConfig}
             onUpdate={(update: any) =>
-              setMcpConfig((prev: any) => ({ ...prev, ...update }))
+              setMcpConfigState((prev: any) => {
+                const next = { ...prev, ...update };
+                return JSON.stringify(next) === JSON.stringify(prev) ? prev : next;
+              })
             }
           />
         );

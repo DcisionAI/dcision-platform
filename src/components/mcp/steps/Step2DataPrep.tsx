@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 const tabs = ['Analysis', 'Mapping', 'Enrich', 'Validate'];
 
+const loadingMessages = [
+  'analyzing your business problem...',
+  'identifying key decision variables for your business...',
+  'defining operational and business constraints...',
+  'formulating the optimization objective for your goals...',
+  'exploring external data sources to enhance your solution...'
+];
+
 export interface Step2DataPrepProps {
   config: any;
   // Callback when data source connectors selection changes
@@ -15,6 +23,15 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
   const [modelLoading, setModelLoading] = useState<boolean>(false);
   const [connectors, setConnectors] = useState<Array<{id: string; name: string}>>([]);
   const [selectedConnectors, setSelectedConnectors] = useState<string[]>([]);
+  const lastMappingKey = React.useRef<string | null>(null);
+  const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
+
+  // Reset modelDef and mappingResult when intent changes
+  useEffect(() => {
+    setModelDef(null);
+    setMappingResult(null);
+  }, [config.intentInterpretation]);
+
   // Notify parent of connector selection changes
   useEffect(() => {
     if (typeof onUpdate === 'function') {
@@ -24,8 +41,12 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
 
   // Fetch recommended data requirements from Data Mapping Agent
   useEffect(() => {
-    // Only fetch mapping after model definition is available
-    if (config.intentInterpretation && modelDef && !mappingResult) {
+    const mappingKey = config.intentInterpretation + JSON.stringify(modelDef);
+    if (
+      config.intentInterpretation &&
+      modelDef &&
+      lastMappingKey.current !== mappingKey
+    ) {
       setLoading(true);
       fetch('/api/mcp/map', {
         method: 'POST',
@@ -37,11 +58,14 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
         })
       })
         .then(res => res.json())
-        .then(result => setMappingResult(result.output))
+        .then(result => {
+          setMappingResult(result.output);
+          lastMappingKey.current = mappingKey;
+        })
         .catch(console.error)
         .finally(() => setLoading(false));
     }
-  }, [config, modelDef, mappingResult]);
+  }, [config.intentInterpretation, modelDef]);
 
   // Fetch available connectors when entering Mapping tab
   useEffect(() => {
@@ -55,7 +79,7 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
   
   // Fetch model definition via LLM-based agent
   useEffect(() => {
-    if (config.intentInterpretation && !modelDef) {
+    if (config.intentInterpretation) {
       setModelLoading(true);
       fetch('/api/mcp/define', {
         method: 'POST',
@@ -67,7 +91,17 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
         .catch(console.error)
         .finally(() => setModelLoading(false));
     }
-  }, [config, modelDef]);
+  }, [config.intentInterpretation]);
+
+  useEffect(() => {
+    if (modelLoading) {
+      setLoadingMsgIdx(0);
+      const interval = setInterval(() => {
+        setLoadingMsgIdx(idx => (idx + 1) % loadingMessages.length);
+      }, 4000);
+      return () => clearInterval(interval);
+    }
+  }, [modelLoading]);
 
   return (
     <div className="w-full">
@@ -97,7 +131,13 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
           <div>
             <h3 className="text-lg font-medium text-docs-text mb-2">Model Definition</h3>
             {modelLoading ? (
-              <p className="text-docs-muted">Loading model definition...</p>
+              <div className="flex items-center gap-2 text-docs-muted animate-pulse">
+                <svg className="animate-spin h-5 w-5 text-blue-400" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+                <span>DcisionAI is {loadingMessages[loadingMsgIdx]}</span>
+              </div>
             ) : modelDef ? (
               <div className="space-y-6">
                 {/* Variables Table */}

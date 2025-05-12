@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowUpIcon } from '@heroicons/react/24/outline';
 
 export interface Step1IntentProps {
@@ -21,6 +21,24 @@ const Step1Intent: React.FC<Step1IntentProps> = ({ value, onChange, onInterpret,
   const [interpreting, setInterpreting] = useState(false);
   // Store structured LLM output for display
   const [llmData, setLlmData] = useState<{ intentInterpretation: string; confidenceLevel: number; alternatives: string[]; explanation: string; useCases: string[] } | null>(null);
+
+  const loadingMessages = [
+    'interpreting your business intent...',
+    'assessing confidence in understanding your request...',
+    'considering alternative interpretations...',
+    'explaining the reasoning behind the interpretation...',
+    'identifying real-world industry use cases...'
+  ];
+  const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
+  useEffect(() => {
+    if (interpreting) {
+      setLoadingMsgIdx(0);
+      const interval = setInterval(() => {
+        setLoadingMsgIdx(idx => (idx + 1) % loadingMessages.length);
+      }, 2000); // 2 seconds for realism
+      return () => clearInterval(interval);
+    }
+  }, [interpreting]);
 
   const handleInterpret = async () => {
     if (!value.trim()) return;
@@ -65,6 +83,15 @@ const Step1Intent: React.FC<Step1IntentProps> = ({ value, onChange, onInterpret,
           {interpreting ? '⏳' : <ArrowUpIcon className="w-6 h-6" />}
         </button>
       </div>
+      {interpreting && (
+        <div className="flex items-center gap-2 text-docs-muted animate-pulse mb-4">
+          <svg className="animate-spin h-5 w-5 text-blue-400" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+          </svg>
+          <span>DcisionAI is {loadingMessages[loadingMsgIdx]}</span>
+        </div>
+      )}
       {llmData && (
         <div className="w-full bg-docs-section border border-docs-section-border p-4 rounded-lg shadow mb-4">
           <h3 className="text-lg font-medium mb-4 text-docs-text">LLM Interpretation</h3>
