@@ -1,6 +1,6 @@
 import Layout from '@/components/Layout';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 
 // Mock data for the usage charts - separate for each function
 const gpt4Usage = {

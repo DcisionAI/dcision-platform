@@ -109,14 +109,6 @@ export default function Quickstart() {
               <p className="text-docs-muted ml-12">Use AgentAI to refine your workflows, generate explanations, and deploy solutions to production.</p>
             </li>
           </ol>
-          <div className="mt-12 text-center">
-            <a
-              href="/playground"
-              className="inline-block bg-docs-accent text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition"
-            >
-              Try it in the Playground
-            </a>
-          </div>
         </div>
         <div className="w-72 flex-shrink-0">
           <QuickstartTOC />
