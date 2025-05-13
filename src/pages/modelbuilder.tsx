@@ -109,7 +109,24 @@ export default function ModelBuilderPage() {
           />
         );
       case 3:
-        return <Step4PreviewMCP config={mcpConfig} />;
+        return (
+          <Step4PreviewMCP
+            sessionId={mcpConfig.sessionId || 'session-' + Date.now()}
+            intent={mcpConfig}
+            enrichedData={mcpConfig.enrichedData}
+            modelDef={mcpConfig.modelDef || {
+              variables: mcpConfig.variables || [],
+              constraints: mcpConfig.constraints || [],
+              objective: mcpConfig.objective || { type: 'minimize', field: '', description: '', weight: 1 }
+            }}
+            environment={mcpConfig.environment || { region: 'us-east-1', timezone: 'UTC' }}
+            dataset={mcpConfig.dataset || { internalSources: [] }}
+            protocolSteps={mcpConfig.protocolSteps || []}
+            industry={mcpConfig.industry || 'logistics'}
+            version={mcpConfig.version || '1.0.0'}
+            status={mcpConfig.status || 'pending'}
+          />
+        );
       case 4:
         return <Step5SolveExplain />;
       case 5:

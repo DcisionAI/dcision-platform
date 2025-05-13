@@ -193,6 +193,7 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
     if (activeTab === 'Enrich' && sampleData && modelDef && modelDef.externalDataSources) {
       setEnrichLoading(true);
       setEnrichError(null);
+      console.log('Enriching with:', { sampleData, enrichmentSuggestions: modelDef.externalDataSources });
       fetch('/api/mcp/enrich', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
