@@ -2,7 +2,18 @@
 
 ## Introduction
 
-The Model Context Protocol (MCP) is a standardized framework for defining, executing, and managing optimization and operations research problems. This document outlines the protocol's structure, components, and implementation details.
+The Model Context Protocol (MCP) is a standardized framework for defining, executing, managing, and deploying optimization and operations research problems. MCP is both an authoring artifact (for interactive, LLM/agent-powered workflows) and a deployable, versioned contract for real-time, production-grade endpoints.
+
+## MCP as a Deployable Contract
+
+- **Authoring Phase:**
+  - Users interactively build and validate an MCP using the console and LLM/agent-powered steps (intent, data, model, preview, solve).
+  - The MCP document encodes all context, model, and protocol steps required for the problem.
+
+- **Deployment Phase:**
+  - A validated MCP can be deployed as a versioned, immutable endpoint.
+  - The deployed MCP serves as a contract: new data can be POSTed to the endpoint for real-time optimization/decisioning, skipping the authoring steps.
+  - See [MCP Deployment & Serving](../../mcp/deployment.md) for endpoint API and lifecycle details.
 
 ## Protocol Structure
 
@@ -48,6 +59,13 @@ The Model Context Protocol (MCP) is a standardized framework for defining, execu
    }
    ```
 
+## Authoring vs. Serving
+
+| Phase      | Purpose                                   | Main Actors         | Typical Actions                                 |
+|------------|-------------------------------------------|---------------------|-------------------------------------------------|
+| Authoring  | Build, validate, and deploy MCPs          | Console, LLM/Agents | Intent, data prep, model, preview, deploy        |
+| Serving    | Real-time optimization with new data      | Services, API       | POST new data, get solution/explanation          |
+
 ## Protocol Steps
 
 ### Step Types
@@ -67,23 +85,20 @@ The Model Context Protocol (MCP) is a standardized framework for defining, execu
 4. **Solution Processing**
    - `explain_solution`: Generate solution explanations
    - `human_review`: Human validation step
+   - `productionalize_workflow`: Deploy as endpoint (authoring only)
 
-### Step Execution
+### Example Protocol Flow
 
-1. **Sequential Execution**
-   - Steps are executed in defined order
-   - Dependencies between steps are respected
-   - Error handling and recovery
-
-2. **Parallel Execution**
-   - Independent steps can run in parallel
-   - Resource allocation and management
-   - Result aggregation
-
-3. **Conditional Execution**
-   - Step execution based on conditions
-   - Branching and merging
-   - Error handling strategies
+```json
+[
+  { "action": "interpret_intent", "description": "Analyze user input and select model template.", "required": true },
+  { "action": "collect_data", "description": "Identify and validate required data sources.", "required": true },
+  { "action": "build_model", "description": "Construct and validate the optimization model.", "required": true },
+  { "action": "solve_model", "description": "Solve the optimization problem.", "required": true },
+  { "action": "explain_solution", "description": "Explain and review the solution.", "required": false },
+  { "action": "productionalize_workflow", "description": "Deploy the workflow as a live endpoint.", "required": true }
+]
+```
 
 ## Agent System
 
@@ -126,149 +141,21 @@ The Model Context Protocol (MCP) is a standardized framework for defining, execu
    - Load balancing
    - Performance monitoring
 
-## Implementation Guidelines
+## Best Practices for Protocol Design
 
-### Best Practices
+- **Explicit Step Definitions:** Each protocol step should have a clear action, description, and requirements.
+- **Version Management:** MCPs are versioned and immutable once deployed. Updates create new versions/endpoints.
+- **Error Handling:** Define error handling and recovery strategies for each step.
+- **Extensibility:** New protocol steps and agent types can be added as the platform evolves.
+- **Security:** Validate all inputs, enforce access control, and audit all actions.
 
-1. **Protocol Design**
-   - Clear step definitions
-   - Proper error handling
-   - Version management
-   - Documentation
+## Reference
+- See [MCP Deployment & Serving](../../mcp/deployment.md) for endpoint API, versioning, and lifecycle.
+- See [MCP Examples](../../mcp/examples/README.md) for real-world protocol flows.
 
-2. **Agent Implementation**
-   - Single responsibility
-   - Error handling
-   - Logging and monitoring
-   - Performance optimization
+## Summary
 
-3. **Security Considerations**
-   - Input validation
-   - Access control
-   - Data protection
-   - Audit logging
-
-### Error Handling
-
-1. **Error Types**
-   - Validation errors
-   - Execution errors
-   - Resource errors
-   - Communication errors
-
-2. **Recovery Strategies**
-   - Retry mechanisms
-   - Fallback options
-   - State recovery
-   - Error reporting
-
-### Performance Optimization
-
-1. **Resource Management**
-   - Memory optimization
-   - CPU utilization
-   - Network efficiency
-   - Storage optimization
-
-2. **Caching Strategies**
-   - Result caching
-   - State caching
-   - Resource caching
-   - Metadata caching
-
-## Versioning and Compatibility
-
-### Version Management
-
-1. **Protocol Versioning**
-   - Major version changes
-   - Minor version updates
-   - Backward compatibility
-   - Migration strategies
-
-2. **Agent Versioning**
-   - Version compatibility
-   - Feature support
-   - Deprecation policies
-   - Upgrade paths
-
-### Compatibility Guidelines
-
-1. **Forward Compatibility**
-   - New feature support
-   - Optional features
-   - Default behaviors
-   - Error handling
-
-2. **Backward Compatibility**
-   - Legacy support
-   - Feature deprecation
-   - Migration tools
-   - Documentation
-
-## Security Considerations
-
-### Authentication and Authorization
-
-1. **Access Control**
-   - Role-based access
-   - Resource permissions
-   - Action authorization
-   - Audit logging
-
-2. **Data Protection**
-   - Encryption
-   - Secure storage
-   - Secure communication
-   - Data validation
-
-### Compliance
-
-1. **Data Privacy**
-   - Data minimization
-   - Access control
-   - Data retention
-   - Privacy policies
-
-2. **Security Standards**
-   - Industry standards
-   - Best practices
-   - Security testing
-   - Vulnerability management
-
-## Monitoring and Observability
-
-### Logging
-
-1. **Event Logging**
-   - Step execution
-   - Agent activities
-   - System events
-   - Error events
-
-2. **Performance Metrics**
-   - Execution time
-   - Resource usage
-   - Error rates
-   - Success rates
-
-### Monitoring
-
-1. **System Health**
-   - Agent status
-   - Resource usage
-   - Error rates
-   - Performance metrics
-
-2. **Alerting**
-   - Error alerts
-   - Performance alerts
-   - Security alerts
-   - System alerts
-
-## Related Documents
-
-- [Agent System Architecture](./agents.md)
-- [Implementation Guide](./implementation.md)
-- [Security Guidelines](./security.md)
-- [API Documentation](../api/README.md) 
+The MCP protocol is the backbone of DcisionAI's agentic workflow, enabling:
+- Interactive, LLM/agent-powered authoring of optimization workflows.
+- Seamless deployment as production endpoints for real-time serving.
+- Full auditability, versioning, and extensibility for enterprise use. 
