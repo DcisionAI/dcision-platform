@@ -231,6 +231,13 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
     }
   }, [enrichLoading]);
 
+  // After enrichment completes, update parent with enrichedData
+  useEffect(() => {
+    if (enrichedData && typeof onUpdate === 'function') {
+      onUpdate({ enrichedData });
+    }
+  }, [enrichedData, onUpdate]);
+
   return (
     <div className="w-full">
       <h2 className="text-xl font-semibold mb-4">Step 2: Data Prep</h2>

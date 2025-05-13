@@ -102,7 +102,12 @@ export default function ModelBuilderPage() {
           />
         );
       case 2:
-        return <Step3ModelConstraints />;
+        return (
+          <Step3ModelConstraints
+            enrichedData={mcpConfig.enrichedData}
+            intentInterpretation={mcpConfig.intentInterpretation}
+          />
+        );
       case 3:
         return <Step4PreviewMCP config={mcpConfig} />;
       case 4:
