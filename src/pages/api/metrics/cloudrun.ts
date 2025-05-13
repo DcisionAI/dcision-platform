@@ -1,11 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { MetricServiceClient } from '@google-cloud/monitoring';
 
-const client = new MetricServiceClient();
+const saKey = process.env.GCP_SA_KEY ? JSON.parse(process.env.GCP_SA_KEY) : undefined;
+const client = new MetricServiceClient(saKey ? {
+  credentials: saKey,
+  projectId: saKey.project_id,
+} : {});
 const allowedServices = ['gpt4all', 'llm-service', 'mcp-service', 'solver-service'];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const projectId = process.env.GCP_PROJECT || 'dcisionai';
+  const projectId = saKey?.project_id || process.env.GCP_PROJECT || 'dcisionai';
   const { service } = req.query;
   if (!service || typeof service !== 'string' || !allowedServices.includes(service)) {
     return res.status(400).json({ error: 'Missing or invalid service parameter' });
