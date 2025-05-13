@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-const tabs = ['Analysis', 'Mapping', 'Enrich', 'Validate'];
+const tabs = ['Analysis', 'Mapping', 'Enrich'];
 
 const loadingMessages = [
   'analyzing your business problem...',
@@ -9,10 +9,57 @@ const loadingMessages = [
   'exploring external data sources to enhance your solution...'
 ];
 
+const mappingLoadingMessages = [
+  'generating realistic sample data... 🚚',
+  'simulating business scenarios...',
+  'populating demo dataset with entities...',
+  'crafting optimization-ready data...'
+];
+
+const enrichLoadingMessages = [
+  'enriching your data with external sources... 🌦️',
+  'augmenting with climate and traffic data...',
+  'adding real-world context to your dataset...',
+  'boosting data quality with enrichment...'
+];
+
 export interface Step2DataPrepProps {
   config: any;
   // Callback when data source connectors selection changes
   onUpdate?: (update: any) => void;
+}
+
+// Helper to render a table from an array of objects
+function SampleDataTable({ data, title }: { data: any[]; title?: string }) {
+  if (!Array.isArray(data) || data.length === 0) return null;
+  const columns = Object.keys(data[0]);
+  return (
+    <div className="mb-4">
+      {title && <h4 className="font-medium mb-1">{title}</h4>}
+      <table className="w-full text-sm border-collapse mb-2">
+        <thead>
+          <tr className="bg-docs-section-border">
+            {columns.map(col => (
+              <th key={col} className="border p-2 text-left">{col}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, i) => (
+            <tr key={i} className={i % 2 === 0 ? '' : 'bg-docs-section'}>
+              {columns.map(col => (
+                <td key={col} className="border p-2">
+                  {typeof row[col] === 'object' && row[col] !== null
+                    ? <pre className="whitespace-pre-wrap">{JSON.stringify(row[col], null, 2)}</pre>
+                    : String(row[col])}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
@@ -25,11 +72,26 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
   const [selectedConnectors, setSelectedConnectors] = useState<string[]>([]);
   const lastMappingKey = React.useRef<string | null>(null);
   const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
+  const [dataMode, setDataMode] = useState<'demo' | 'customer'>('demo');
+  const [sampleData, setSampleData] = useState<any>(null);
+  const [sampleLoading, setSampleLoading] = useState(false);
+  const [enrichedData, setEnrichedData] = useState<any>(null);
+  const [enrichLoading, setEnrichLoading] = useState(false);
+  const [enrichSources, setEnrichSources] = useState<any>(null);
+  const [enrichError, setEnrichError] = useState<string | null>(null);
+  const [mappingLoadingMsgIdx, setMappingLoadingMsgIdx] = useState(0);
+  const [enrichLoadingMsgIdx, setEnrichLoadingMsgIdx] = useState(0);
 
-  // Reset modelDef and mappingResult when intent changes
+  // Reset modelDef and mappingResult only if intent actually changes
+  const prevIntent = React.useRef(config.intentInterpretation);
   useEffect(() => {
-    setModelDef(null);
-    setMappingResult(null);
+    if (prevIntent.current !== config.intentInterpretation) {
+      console.log('Resetting modelDef because intent changed:', config.intentInterpretation);
+      setModelDef(null);
+      setMappingResult(null);
+      setSampleData(null);
+      prevIntent.current = config.intentInterpretation;
+    }
   }, [config.intentInterpretation]);
 
   // Notify parent of connector selection changes
@@ -39,44 +101,6 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
     }
   }, [selectedConnectors, onUpdate]);
 
-  // Fetch recommended data requirements from Data Mapping Agent
-  useEffect(() => {
-    const mappingKey = config.intentInterpretation + JSON.stringify(modelDef);
-    if (
-      config.intentInterpretation &&
-      modelDef &&
-      lastMappingKey.current !== mappingKey
-    ) {
-      setLoading(true);
-      fetch('/api/mcp/map', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userInput: config.intentInterpretation,
-          intentDetails: { output: config },
-          modelDefinition: modelDef
-        })
-      })
-        .then(res => res.json())
-        .then(result => {
-          setMappingResult(result.output);
-          lastMappingKey.current = mappingKey;
-        })
-        .catch(console.error)
-        .finally(() => setLoading(false));
-    }
-  }, [config.intentInterpretation, modelDef]);
-
-  // Fetch available connectors when entering Mapping tab
-  useEffect(() => {
-    if (activeTab === 'Mapping') {
-      fetch('/api/connectors')
-        .then(res => res.json())
-        .then((data) => setConnectors(data))
-        .catch(console.error)
-    }
-  }, [activeTab]);
-  
   // Fetch model definition via LLM-based agent
   useEffect(() => {
     if (config.intentInterpretation) {
@@ -93,6 +117,67 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
     }
   }, [config.intentInterpretation]);
 
+  // Only fetch sample data when Mapping tab is active, in demo mode, and intentInterpretation is available
+  useEffect(() => {
+    if (activeTab === 'Mapping' && dataMode === 'demo' && config.intentInterpretation) {
+      setSampleLoading(true);
+      fetch('/api/mcp/sample-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ intentInterpretation: config.intentInterpretation })
+      })
+        .then(res => res.json())
+        .then(data => setSampleData(data.sample))
+        .catch(console.error)
+        .finally(() => setSampleLoading(false));
+    }
+  }, [activeTab, dataMode, config.intentInterpretation]);
+
+  // Only fetch mapping when Mapping tab is active
+  useEffect(() => {
+    const mappingKey = config.intentInterpretation + JSON.stringify(modelDef) + dataMode + JSON.stringify(sampleData) + selectedConnectors.join(',');
+    if (
+      activeTab === 'Mapping' &&
+      config.intentInterpretation &&
+      modelDef &&
+      lastMappingKey.current !== mappingKey
+    ) {
+      setLoading(true);
+      if (dataMode != 'demo') {
+        fetch('/api/mcp/map', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userInput: config.intentInterpretation,
+            intentDetails: { output: config },
+            modelDefinition: modelDef,
+            data: sampleData
+          })
+        })
+          .then(res => res.json())
+          .then(result => {
+            setMappingResult(result.output);
+            lastMappingKey.current = mappingKey;
+          })
+          .catch(console.error)
+          .finally(() => setLoading(false));
+      } else {
+        setMappingResult({ error: 'Customer data integration not yet implemented.' });
+        setLoading(false);
+      }
+    }
+  }, [activeTab, config.intentInterpretation, modelDef, dataMode, sampleData, selectedConnectors]);
+
+  // Only fetch connectors if Mapping tab is active AND Customer Data is selected
+  useEffect(() => {
+    if (activeTab === 'Mapping' && dataMode === 'customer') {
+      fetch('/api/connectors')
+        .then(res => res.json())
+        .then((data) => setConnectors(data))
+        .catch(console.error)
+    }
+  }, [activeTab, dataMode]);
+
   useEffect(() => {
     if (modelLoading) {
       setLoadingMsgIdx(0);
@@ -103,11 +188,52 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
     }
   }, [modelLoading]);
 
+  // Fetch enriched data when Enrich tab is active
+  useEffect(() => {
+    if (activeTab === 'Enrich' && sampleData && modelDef && modelDef.externalDataSources) {
+      setEnrichLoading(true);
+      setEnrichError(null);
+      fetch('/api/mcp/enrich', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sampleData, enrichmentSuggestions: modelDef.externalDataSources })
+      })
+        .then(res => res.json())
+        .then(data => {
+          setEnrichSources(data.enrichmentSources);
+          setEnrichedData(data.enrichedData);
+          setEnrichError(data.error || null);
+        })
+        .catch(err => setEnrichError('Failed to enrich data'))
+        .finally(() => setEnrichLoading(false));
+    }
+  }, [activeTab, sampleData, modelDef]);
+
+  // Animated loading for Mapping (sample data)
+  useEffect(() => {
+    if (sampleLoading) {
+      setMappingLoadingMsgIdx(0);
+      const interval = setInterval(() => {
+        setMappingLoadingMsgIdx(idx => (idx + 1) % mappingLoadingMessages.length);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [sampleLoading]);
+
+  // Animated loading for Enrich
+  useEffect(() => {
+    if (enrichLoading) {
+      setEnrichLoadingMsgIdx(0);
+      const interval = setInterval(() => {
+        setEnrichLoadingMsgIdx(idx => (idx + 1) % enrichLoadingMessages.length);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [enrichLoading]);
+
   return (
     <div className="w-full">
       <h2 className="text-xl font-semibold mb-4">Step 2: Data Prep</h2>
-      {loading && <p className="text-docs-muted mb-4">Analyzing required data...</p>}
-
       <div className="border-b border-docs-section-border mb-4">
         <nav className="-mb-px flex space-x-4" aria-label="Tabs">
           {tabs.map(tab => (
@@ -211,7 +337,7 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
                   </table>
                 </div>
               </div>
-              ) : (
+            ) : (
               <p className="text-docs-muted">No model definition available.</p>
             )}
             {/* External Data Augmentation */}
@@ -243,27 +369,81 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
         {activeTab === 'Mapping' && (
           <div>
             <h3 className="text-lg font-medium text-docs-text mb-2">Data Requirements</h3>
-            {/* Connector Selection UI */}
-            <div className="mt-4">
-              <h4 className="font-medium mb-2">Select Data Connectors</h4>
-              {connectors.map(c => (
-                <div key={c.id} className="flex items-center mb-1">
-                  <input
-                    type="checkbox"
-                    id={c.id}
-                    className="mr-2"
-                    checked={selectedConnectors.includes(c.id)}
-                    onChange={() => {
-                      setSelectedConnectors(prev =>
-                        prev.includes(c.id) ? prev.filter(x => x !== c.id) : [...prev, c.id]
-                      );
-                    }}
-                  />
-                  <label htmlFor={c.id}>{c.name}</label>
-                </div>
-              ))}
+            {/* Data Source Toggle only in Mapping tab */}
+            <div className="mb-4 flex gap-6 items-center">
+              <span className="font-medium">Data Source:</span>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  checked={dataMode === 'demo'}
+                  onChange={() => setDataMode('demo')}
+                />
+                Demo Data
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  checked={dataMode === 'customer'}
+                  onChange={() => setDataMode('customer')}
+                />
+                Customer Data
+              </label>
+              
+              {dataMode === 'customer' && <span className="text-docs-muted ml-4">(Integration coming soon)</span>}
             </div>
-            {mappingResult ? (
+            {/* Animated loading for sample data */}
+            {dataMode === 'demo' && sampleLoading && (
+              <div className="flex items-center gap-2 text-docs-muted animate-pulse mb-4">
+                <svg className="animate-spin h-5 w-5 text-blue-400" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+                <span>{mappingLoadingMessages[mappingLoadingMsgIdx]}</span>
+              </div>
+            )}
+            {/* Render sample data tables for Demo Data */}
+            {dataMode === 'demo' && sampleData && (
+              <div className="mb-4">
+                <h4 className="font-medium mb-2">Sample Data</h4>
+                {/* If sampleData is an object with arrays, render each as a table */}
+                {typeof sampleData === 'object' && !Array.isArray(sampleData) ? (
+                  Object.entries(sampleData).map(([key, value]) =>
+                    Array.isArray(value) ? (
+                      <SampleDataTable key={key} data={value} title={key.charAt(0).toUpperCase() + key.slice(1)} />
+                    ) : null
+                  )
+                ) : Array.isArray(sampleData) ? (
+                  <SampleDataTable data={sampleData} />
+                ) : typeof sampleData === 'object' ? (
+                  <pre className="bg-docs-section p-2 rounded text-xs overflow-x-auto">{JSON.stringify(sampleData, null, 2)}</pre>
+                ) : (
+                  <pre className="bg-docs-section p-2 rounded text-xs overflow-x-auto">{String(sampleData)}</pre>
+                )}
+              </div>
+            )}
+            {/* Connector Selection UI only for Customer Data */}
+            {dataMode === 'customer' ? (
+              <div className="mt-4">
+                <h4 className="font-medium mb-2">Select Data Connectors</h4>
+                {connectors.map(c => (
+                  <div key={c.id} className="flex items-center mb-1">
+                    <input
+                      type="checkbox"
+                      id={c.id}
+                      className="mr-2"
+                      checked={selectedConnectors.includes(c.id)}
+                      onChange={() => {
+                        setSelectedConnectors(prev =>
+                          prev.includes(c.id) ? prev.filter(x => x !== c.id) : [...prev, c.id]
+                        );
+                      }}
+                    />
+                    <label htmlFor={c.id}>{c.name}</label>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {dataMode === 'customer' &&mappingResult ? (
               <div className="space-y-4 text-docs-text text-sm">
                 {mappingResult.required_fields && (
                   <div>
@@ -290,17 +470,61 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
                     </ul>
                   </div>
                 )}
+                {mappingResult.error && (
+                  <div className="text-red-500">{mappingResult.error}</div>
+                )}
               </div>
-            ) : (
+            ) : dataMode === 'customer'?(
               <p className="text-docs-muted">No data requirements available.</p>
-            )}
+            ):  <p className="text-docs-muted">Sample data.</p>}
           </div>
         )}
         {activeTab === 'Enrich' && (
-          <p className="text-docs-muted text-sm">Enrich tab content coming soon.</p>
-        )}
-        {activeTab === 'Validate' && (
-          <p className="text-docs-muted text-sm">Validate tab content coming soon.</p>
+          <div>
+            <h3 className="text-lg font-medium text-docs-text mb-2">Data Enrichment</h3>
+            {/* Animated loading for enrichment */}
+            {enrichLoading && (
+              <div className="flex items-center gap-2 text-docs-muted animate-pulse mb-4">
+                <svg className="animate-spin h-5 w-5 text-blue-400" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+                <span>{enrichLoadingMessages[enrichLoadingMsgIdx]}</span>
+              </div>
+            )}
+            {enrichError && <p className="text-red-500">{enrichError}</p>}
+            {enrichSources && (
+              <div className="mb-4">
+                <h4 className="font-medium mb-2">Enrichment Sources</h4>
+                <ul className="list-disc list-inside text-docs-muted">
+                  {Array.isArray(enrichSources)
+                    ? enrichSources.map((src: any, i: number) => (
+                        <li key={i}>{src.source || JSON.stringify(src)}</li>
+                      ))
+                    : <li>{JSON.stringify(enrichSources)}</li>}
+                </ul>
+              </div>
+            )}
+            {enrichedData && (
+              <div className="mb-4">
+                <h4 className="font-medium mb-2">Enriched Sample Data</h4>
+                {typeof enrichedData === 'object' && !Array.isArray(enrichedData) ? (
+                  Object.entries(enrichedData).map(([key, value]) =>
+                    Array.isArray(value) ? (
+                      <SampleDataTable key={key} data={value} title={key.charAt(0).toUpperCase() + key.slice(1)} />
+                    ) : null
+                  )
+                ) : Array.isArray(enrichedData) ? (
+                  <SampleDataTable data={enrichedData} />
+                ) : typeof enrichedData === 'object' ? (
+                  <pre className="bg-docs-section p-2 rounded text-xs overflow-x-auto">{JSON.stringify(enrichedData, null, 2)}</pre>
+                ) : (
+                  <pre className="bg-docs-section p-2 rounded text-xs overflow-x-auto">{String(enrichedData)}</pre>
+                )}
+              </div>
+            )}
+            {!enrichLoading && !enrichedData && <p className="text-docs-muted">No enrichment performed yet.</p>}
+          </div>
         )}
       </div>
     </div>
