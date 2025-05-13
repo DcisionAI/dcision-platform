@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Step5Explainability from '../Step5Explainability';
+import Step5Explainability from './Step5Explainability';
 
 const Step5SolveExplain: React.FC = () => {
   const [solving, setSolving] = useState(false);
