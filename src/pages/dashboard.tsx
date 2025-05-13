@@ -1,5 +1,6 @@
 import Layout from '@/components/Layout';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
+import React, { useEffect, useState } from 'react';
 
 // Mock data for the usage charts - separate for each function
 const gpt4Usage = {
@@ -74,12 +75,121 @@ const systemStatus = {
   }
 };
 
+const cloudRunServices = [
+  { name: 'llm-service', label: 'LLM Server', icon: (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-7 h-7 text-green-400">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" />
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" fill="none" />
+    </svg>
+  ) },
+  { name: 'mcp-service', label: 'MCP Server', icon: (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-7 h-7 text-green-400">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z" />
+    </svg>
+  ) },
+  { name: 'solver-service', label: 'Decision Engine', icon: (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-7 h-7 text-green-400">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25z" />
+    </svg>
+  ) },
+];
+
+function CloudRunMetricsCard({ service, label, icon }: { service: string; label: string; icon: React.ReactNode }) {
+  const [metrics, setMetrics] = useState<{ requestCount?: any; latencyP95?: any } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchMetrics = () => {
+      setLoading(true);
+      setError(null);
+      fetch(`/api/metrics/cloudrun?service=${service}`)
+        .then(async (res) => {
+          if (!res.ok) throw new Error('Failed to fetch metrics');
+          return res.json();
+        })
+        .then((data) => {
+          if (isMounted) {
+            setMetrics(data);
+            setLoading(false);
+          }
+        })
+        .catch((err) => {
+          if (isMounted) {
+            setError(err.message);
+            setLoading(false);
+          }
+        });
+    };
+    fetchMetrics();
+    const interval = setInterval(fetchMetrics, 60000); // 60s
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [service]);
+
+  return (
+    <div className="bg-docs-section rounded-xl p-6 flex flex-col items-start shadow border border-docs-section-border min-h-[120px]">
+      <span className="mb-2">{icon}</span>
+      <span className="text-docs-muted text-sm mb-1">{label} Metrics</span>
+      {loading ? (
+        <span className="text-docs-muted text-xs">Loading...</span>
+      ) : error ? (
+        <span className="text-red-400 text-xs">{error}</span>
+      ) : metrics ? (
+        <div className="flex flex-col gap-1">
+          <span className="text-2xl font-bold text-docs-text">
+            {Array.isArray(metrics.requestCount) && metrics.requestCount.length > 0
+              ? metrics.requestCount[metrics.requestCount.length - 1].points?.[0]?.value?.int64Value * 100 || '—'
+              : '—'}
+            <span className="text-xs text-docs-muted font-normal ml-1">req/hr</span>
+          </span>
+          <span className="text-sm text-docs-muted">
+            Latency p95:{' '}
+            {Array.isArray(metrics.latencyP95) && metrics.latencyP95.length > 0
+              ? `${metrics.latencyP95[metrics.latencyP95.length - 1].points?.[0]?.value?.doubleValue?.toFixed(1) || '—'} ms`
+              : '—'}
+          </span>
+        </div>
+      ) : (
+        <span className="text-docs-muted text-xs">No data</span>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard() {
+  // MCP Metrics state
+  const [mcpMetrics, setMcpMetrics] = useState<{ requestCount?: any; latencyP95?: any } | null>(null);
+  const [mcpLoading, setMcpLoading] = useState(false);
+  const [mcpError, setMcpError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMcpLoading(true);
+    setMcpError(null);
+    fetch('/api/metrics/mcp')
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Failed to fetch MCP metrics');
+        return res.json();
+      })
+      .then((data) => {
+        setMcpMetrics(data);
+        setMcpLoading(false);
+      })
+      .catch((err) => {
+        setMcpError(err.message);
+        setMcpLoading(false);
+      });
+  }, []);
+
   return (
     <Layout>
       <div className="max-w-7xl mx-auto p-8">
         {/* Mini Cards Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-12">
           {/* Total Decisions */}
           <div className="bg-docs-section rounded-xl p-6 flex flex-col items-start shadow border border-docs-section-border">
             <span className="mb-2 text-green-400">
@@ -91,9 +201,8 @@ export default function Dashboard() {
             <span className="text-docs-muted text-sm mb-1">Total Decisions</span>
             <span className="text-3xl font-bold text-docs-text">135</span>
           </div>
-
-          {/* MCP Server Status */}
-          <div className="bg-docs-section rounded-xl p-6 flex flex-col items-start shadow border border-docs-section-border">
+           {/* MCP Server Status */}
+           <div className="bg-docs-section rounded-xl p-6 flex flex-col items-start shadow border border-docs-section-border">
             <span className="mb-2 text-green-400">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-7 h-7">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z" />
@@ -107,17 +216,12 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+          {/* Cloud Run Metrics Cards */}
+          {cloudRunServices.map((svc) => (
+            <CloudRunMetricsCard key={svc.name} service={svc.name} label={svc.label} icon={svc.icon} />
+          ))}
 
-          {/* Data Agents */}
-          <div className="bg-docs-section rounded-xl p-6 flex flex-col items-start shadow border border-docs-section-border">
-            <span className="mb-2 text-green-400">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-7 h-7">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M14.25 6.087c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.036-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959v0a.64.64 0 01-.657.643 48.39 48.39 0 01-4.163-.3c.186 1.613.293 3.25.315 4.907a.656.656 0 01-.658.663v0c-.355 0-.676-.186-.959-.401a1.647 1.647 0 00-1.003-.349c-1.036 0-1.875 1.007-1.875 2.25s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401v0c.31 0 .555.26.532.57a48.039 48.039 0 01-.642 5.056c1.518.19 3.058.309 4.616.354a.64.64 0 00.657-.643v0c0-.355-.186-.676-.401-.959a1.647 1.647 0 01-.349-1.003c0-1.035 1.008-1.875 2.25-1.875 1.243 0 2.25.84 2.25 1.875 0 .369-.128.713-.349 1.003-.215.283-.4.604-.4.959v0c0 .333.277.599.61.58a48.1 48.1 0 005.427-.63 48.05 48.05 0 00.582-4.717.532.532 0 00-.533-.57v0c-.355 0-.676.186-.959.401-.29.221-.634.349-1.003.349-1.035 0-1.875-1.007-1.875-2.25s.84-2.25 1.875-2.25c.37 0 .713.128 1.003.349.283.215.604.401.96.401v0a.656.656 0 00.658-.663 48.422 48.422 0 00-.37-5.36c-1.886.342-3.81.574-5.766.689a.578.578 0 01-.61-.58v0z" />
-              </svg>
-            </span>
-            <span className="text-docs-muted text-sm mb-1">Data Agents</span>
-            <span className="text-3xl font-bold text-green-400">3 Active</span>
-          </div>
+         
           {/* Human-in-the-Loop */}
           <div className="bg-docs-section rounded-xl p-6 flex flex-col items-start shadow border border-docs-section-border">
             <span className="mb-2 text-green-400">

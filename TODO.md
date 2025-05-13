@@ -461,4 +461,59 @@ API Endpoints	submit-problem.ts	❌	No LLM
 }
 ```
 
+## Integration Points for Steps 2-6 (DcisionAI Platform)
+
+### Step 2: Data Prep
+- Integrate with GCP Data Service:
+  - List available GCP data sources (BigQuery tables, GCS buckets, etc.)
+  - Preview/sample data
+  - Validate schema/fields against LLM-suggested requirements
+  - Map user data to model variables
+- **API Examples:**
+  - `GET /data/tables` (list BigQuery tables)
+  - `POST /data/validate` (validate user data against modelDef)
+  - `POST /data/map` (map user data fields to model variables)
+
+### Step 3: Model & Constraints
+- Integrate with LLM Service:
+  - Allow user to "regenerate" or "refine" constraints/variables using LLM
+- Integrate with Solver Service:
+  - Optionally, validate the model structure before proceeding
+- **API Examples:**
+  - `POST /llm/refine-model` (send current model, get LLM suggestions)
+  - `POST /solver/validate` (check if model is solvable)
+
+### Step 4: Preview MCP
+- Integrate with MCP Service:
+  - Validate, format, or "dry run" the MCP config
+- **API Examples:**
+  - `POST /mcp/validate` (check MCP config for completeness)
+  - `POST /mcp/preview` (get a summary or explanation of the MCP)
+
+### Step 5: Solve & Explain
+- Integrate with Solver Service:
+  - Submit the MCP to the solver service for execution
+  - Stream or poll for results
+- Integrate with LLM Service:
+  - Use LLM to explain the solution in business terms
+- **API Examples:**
+  - `POST /solver/solve` (run the optimization)
+  - `POST /llm/explain-solution` (explain the results)
+
+### Step 6: Deploy
+- Integrate with MCP Service:
+  - Register the MCP as a deployable endpoint
+  - Optionally, integrate with GCP Cloud Run or API Gateway for production deployment
+- **API Examples:**
+  - `POST /mcp/deploy` (register and expose the MCP as an API)
+  - `GET /mcp/endpoints` (list deployed endpoints)
+
+---
+
+## Next Steps
+- Design/implement the API endpoints in each service if not already present
+- Update the frontend to call these endpoints at the right step
+- Add UI for selecting GCP data sources, mapping fields, and deploying endpoints
+- Update documentation and architecture diagrams to reflect new integrations
+
 ---
