@@ -101,7 +101,7 @@ export class LLMServiceImpl implements LLMService {
         messages.push({ role: 'user', content: prompt });
 
         const response = await this.openai.chat.completions.create({
-          model: 'gpt-4-turbo-preview',
+          model: 'gpt-4.1-nano',
           messages
         });
 

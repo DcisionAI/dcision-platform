@@ -63,7 +63,7 @@ class IntegrationLLMService implements LLMService {
 
   async call(prompt: string, config?: any): Promise<LLMResponse> {
     const response = await this.llmProvider.call(prompt, {
-      model: this.providerType === 'anthropic' ? 'claude-3-opus-20240229' : 'gpt-4-turbo-preview',
+      model: this.providerType === 'anthropic' ? 'claude-3-opus-20240229' : 'gpt-4.1-nano',
       temperature: 0.2,
       ...config
     });

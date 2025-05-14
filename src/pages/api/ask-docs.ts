@@ -71,7 +71,7 @@ ${c.content}`).join('\n---\n');
 
   // 4. Call OpenAI LLM as before
   const completion = await openai.chat.completions.create({
-    model: 'gpt-3.5-turbo',
+    model: 'gpt-4.1-nano',
     messages: [
       {
         role: 'system',
