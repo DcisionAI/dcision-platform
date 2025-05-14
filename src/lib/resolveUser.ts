@@ -28,6 +28,6 @@ export async function resolveUser(req: any) {
     if (data?.user_id) return { userId: data.user_id, method: 'api_key' };
   }
 
-  // 3. Fallback to demo user
-  return { userId: DEMO_USER_ID, method: 'demo' };
+  // 3. No valid user found
+  throw new Error('No valid user found');
 } 

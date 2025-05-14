@@ -1,6 +1,7 @@
 import Layout from '@/components/Layout';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 import React, { useEffect, useState, useMemo } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 
 // Mock data for the usage charts - separate for each function
 const gpt4Usage = {
@@ -194,19 +195,32 @@ export default function Dashboard() {
   useEffect(() => {
     setAnalyticsLoading(true);
     setAnalyticsError(null);
-    fetch('/api/analytics')
-      .then(async (res) => {
-        if (!res.ok) throw new Error('Failed to fetch analytics');
-        return res.json();
-      })
-      .then((data) => {
-        setAnalytics(data);
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setAnalyticsError('No auth token');
         setAnalyticsLoading(false);
+        return;
+      }
+      fetch('/api/analytics', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       })
-      .catch((err) => {
-        setAnalyticsError(err.message);
-        setAnalyticsLoading(false);
-      });
+        .then(async (res) => {
+          if (!res.ok) throw new Error('Failed to fetch analytics');
+          return res.json();
+        })
+        .then((data) => {
+          setAnalytics(data);
+          setAnalyticsLoading(false);
+        })
+        .catch((err) => {
+          setAnalyticsError(err.message);
+          setAnalyticsLoading(false);
+        });
+    })();
   }, []);
 
   return (
