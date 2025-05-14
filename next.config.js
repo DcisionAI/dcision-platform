@@ -22,11 +22,7 @@ const nextConfig = {
   // Add redirect configuration
   async redirects() {
     return [
-      {
-        source: '/',
-        destination: '/',
-        permanent: true,
-      },
+      // Removed the '/' to '/' redirect to prevent infinite loop
     ]
   },
 }
