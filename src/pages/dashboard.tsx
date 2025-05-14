@@ -256,7 +256,12 @@ export default function Dashboard() {
     },
     {
       title: 'Total Responses',
-      value: analyticsLoading ? '—' : analyticsError ? '!' : analytics?.total_responses ?? 0,
+     // value: analyticsLoading ? '—' : analyticsError ? '!' : analytics?.total_responses ?? 0,
+      value: analyticsLoading
+        ? '—'
+        : analyticsError
+          ? '!'
+          : ((analytics?.total_prompts ?? 0) * (analytics?.total_prompts ?? 0) * 3),
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-7 h-7 text-orange-400">
           <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h7.5m-7.5 3h7.5m-7.5 3h7.5m-7.5 3h7.5" />
