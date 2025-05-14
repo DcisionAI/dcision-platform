@@ -1,15 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
+
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
   throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable');
 }
 
 if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
   throw new Error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable');
-}
-
-if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable');
 }
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -23,7 +20,8 @@ export const supabase = createClient(
 );
 
 // Server-side Supabase client with admin privileges
-export const getServerSupabase = () => createClient(
-  supabaseUrl,
-  supabaseServiceKey
-); 
+export const getServerSupabase = () => {
+  console.log("Hi there ", process.env.SUPABASE_SERVICE_ROLE_KEY);
+  var supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  return createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+}; 

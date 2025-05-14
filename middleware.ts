@@ -10,31 +10,31 @@ export async function middleware(req: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession()
 
-  // Always redirect auth routes (except callback) to home
-  if (req.nextUrl.pathname.startsWith('/auth') && !req.nextUrl.pathname.startsWith('/auth/callback')) {
-    const redirectUrl = new URL('/', req.url)
-    // Add a query parameter to trigger the auth modal
-    redirectUrl.searchParams.set('auth', req.nextUrl.pathname === '/auth/signup' ? 'signup' : 'signin')
-    return NextResponse.redirect(redirectUrl)
+  // Allow public routes
+  const publicPaths = ['/', '/auth', '/favicon.ico'];
+  const isPublic = publicPaths.some(path => req.nextUrl.pathname === path || req.nextUrl.pathname.startsWith(path + '/'));
+  const isStatic = req.nextUrl.pathname.startsWith('/_next') || req.nextUrl.pathname.startsWith('/static') || req.nextUrl.pathname.startsWith('/public');
+
+  if (isPublic || isStatic) {
+    return res;
   }
 
-  // If there's no session and the user is trying to access a protected route
+  // If not authenticated, redirect to same URL with ?auth=signin
   if (!session) {
-    const isProtectedRoute = req.nextUrl.pathname !== '/' && 
-      !req.nextUrl.pathname.startsWith('/_next') &&
-      !req.nextUrl.pathname.startsWith('/api') &&
-      !req.nextUrl.pathname.startsWith('/auth/callback')
-
-    if (isProtectedRoute) {
-      const redirectUrl = new URL('/', req.url)
-      return NextResponse.redirect(redirectUrl)
+    const url = new URL(req.url);
+    // Only redirect if not already on ?auth=signin
+    if (url.searchParams.get('auth') !== 'signin') {
+      url.searchParams.set('auth', 'signin');
+      return NextResponse.redirect(url);
     }
+    // If already on ?auth=signin, just return the response (let the frontend handle login)
+    return res;
   }
 
-  return res
+  return res;
 }
 
-// Specify which routes should be protected
+// Protect all routes except static assets and public paths
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 } 

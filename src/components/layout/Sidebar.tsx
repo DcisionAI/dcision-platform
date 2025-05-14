@@ -14,6 +14,7 @@ import {
   CodeBracketIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  KeyIcon,
 } from '@heroicons/react/24/outline';
 
 interface NavItem {
@@ -36,6 +37,8 @@ const platformConcepts: NavItem[] = [
   { name: 'Explainability', href: '/explainability', icon: LightBulbIcon },
   { name: 'Sessions & Results', href: '/sessions', icon: ChartBarIcon },
   { name: 'API Reference', href: '/api', icon: CodeBracketIcon },
+  { name: 'API Usage', href: '/settings/usage', icon: ChartBarIcon },
+  { name: 'API Keys', href: '/settings/api-keys', icon: KeyIcon },
 ];
 
 export default function Sidebar() {

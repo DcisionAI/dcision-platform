@@ -14,7 +14,8 @@ import {
   ChevronRightIcon,
   RectangleGroupIcon,
   ChartBarIcon,
-  CodeBracketIcon
+  CodeBracketIcon,
+  KeyIcon
 } from '@heroicons/react/24/outline';
 
 const menu = [
@@ -27,6 +28,8 @@ const menu = [
       { href: '/explainability', label: 'Explainability', icon: LightBulbIcon },
       { href: '/endpoints', label: 'Endpoints', icon: CloudArrowUpIcon },
       { href: '/integrations', label: 'Data Plugins', icon: ArrowsPointingInIcon },
+      { href: '/settings/usage', label: 'API Usage', icon: ChartBarIcon },
+      { href: '/settings/api-keys', label: 'API Keys', icon: KeyIcon },
     ],
   },
   {

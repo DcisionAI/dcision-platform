@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowUpIcon } from '@heroicons/react/24/outline';
+import { authFetch } from '@/lib/authFetch';
 
 export interface Step1IntentProps {
   value: string;
@@ -44,7 +45,7 @@ const Step1Intent: React.FC<Step1IntentProps> = ({ value, onChange, onInterpret,
     if (!value.trim()) return;
     setInterpreting(true);
     try {
-      const resp = await fetch('/api/mcp/intent', {
+      const resp = await authFetch('/api/mcp/intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userInput: value })

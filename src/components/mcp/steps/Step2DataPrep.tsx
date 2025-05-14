@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { authFetch } from '@/lib/authFetch';
 const tabs = ['Analysis', 'Mapping', 'Enrich'];
 
 const loadingMessages = [
@@ -105,7 +106,7 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
   useEffect(() => {
     if (config.intentInterpretation) {
       setModelLoading(true);
-      fetch('/api/mcp/define', {
+      authFetch('/api/mcp/define', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userInput: config.intentInterpretation })
@@ -121,7 +122,7 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
   useEffect(() => {
     if (activeTab === 'Mapping' && dataMode === 'demo' && config.intentInterpretation) {
       setSampleLoading(true);
-      fetch('/api/mcp/sample-data', {
+      authFetch('/api/mcp/sample-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ intentInterpretation: config.intentInterpretation })
@@ -144,7 +145,7 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
     ) {
       setLoading(true);
       if (dataMode != 'demo') {
-        fetch('/api/mcp/map', {
+        authFetch('/api/mcp/map', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -171,7 +172,7 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
   // Only fetch connectors if Mapping tab is active AND Customer Data is selected
   useEffect(() => {
     if (activeTab === 'Mapping' && dataMode === 'customer') {
-      fetch('/api/connectors')
+      authFetch('/api/connectors')
         .then(res => res.json())
         .then((data) => setConnectors(data))
         .catch(console.error)
@@ -194,7 +195,7 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
       setEnrichLoading(true);
       setEnrichError(null);
       console.log('Enriching with:', { sampleData, enrichmentSuggestions: modelDef.externalDataSources });
-      fetch('/api/mcp/enrich', {
+      authFetch('/api/mcp/enrich', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sampleData, enrichmentSuggestions: modelDef.externalDataSources })

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { authFetch } from '@/lib/authFetch';
 
 export interface Step3ModelConstraintsProps {
   enrichedData: any;
@@ -14,7 +15,7 @@ const Step3ModelConstraints: React.FC<Step3ModelConstraintsProps> = ({ enrichedD
     if (enrichedData && intentInterpretation) {
       setLoading(true);
       setError(null);
-      fetch('/api/mcp/model-define', {
+      authFetch('/api/mcp/model-define', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enrichedData, intentInterpretation })

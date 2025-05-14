@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import Stepper from '@/components/mcp/Stepper';
 import StepCards from '@/components/mcp/StepCards';
@@ -10,6 +10,10 @@ import Step3ModelConstraints from '@/components/mcp/steps/Step3ModelConstraints'
 import Step4PreviewMCP from '@/components/mcp/steps/Step4PreviewMCP';
 import Step5SolveExplain from '@/components/mcp/steps/Step5SolveExplain';
 import Step6Deploy from '@/components/mcp/steps/Step6Deploy';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { authFetch } from '@/lib/authFetch';
+import { useAuthContext } from '@/components/auth/AuthProvider';
+import Navbar from '@/components/Navbar';
 
 const stepLabels = [
   'Intent',
@@ -55,15 +59,57 @@ const stepCardsData: { title: string; description: string }[][] = [
 ];
 
 export default function ModelBuilderPage() {
+  const { user, loading, accessToken } = useAuthContext();
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [mcpConfigState, setMcpConfigState] = useState<any>({});
   const [intentText, setIntentText] = useState<string>('');
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [promptId, setPromptId] = useState<string | null>(null);
+  const [forceLoginModal, setForceLoginModal] = useState(false);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      setForceLoginModal(true);
+    } else {
+      setForceLoginModal(false);
+    }
+  }, [user, loading]);
+
+  // Create a session on mount
+  useEffect(() => {
+    if (!user || !accessToken) return; // Only run if user is authenticated and token is present
+    const createSession = async () => {
+      const res = await authFetch('/api/modelbuilder/session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+        },
+        body: JSON.stringify({ description: 'Modelbuilder session', problem_type: '', status: 'active' })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSessionId(data.id);
+      }
+    };
+    createSession();
+  }, [user, accessToken]);
 
   // Memoize mcpConfig so its reference only changes when its contents change
   const mcpConfig = useMemo(() => mcpConfigState, [JSON.stringify(mcpConfigState)]);
 
-  // Advance to the next step
-  const handleNext = () => {
+  // Advance to the next step and log step
+  const handleNext = async () => {
+    if (sessionId && accessToken) {
+      await authFetch('/api/modelbuilder/step', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({ session_id: sessionId, step_type: stepLabels[currentStep], step_data: mcpConfig })
+      });
+    }
     if (currentStep < stepLabels.length - 1) {
       setCurrentStep(currentStep + 1);
     }
@@ -74,6 +120,28 @@ export default function ModelBuilderPage() {
     }
   };
 
+  // Log prompt on intent interpretation
+  const handleInterpret = async (result: any) => {
+    setMcpConfigState((prev: any) => {
+      const next = { ...prev, ...result.output, thoughtProcess: result.thoughtProcess };
+      return JSON.stringify(next) === JSON.stringify(prev) ? prev : next;
+    });
+    if (sessionId && intentText && accessToken) {
+      const res = await authFetch('/api/modelbuilder/prompt', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({ session_id: sessionId, prompt_text: intentText })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPromptId(data.id);
+      }
+    }
+  };
+
   const renderStep = () => {
     switch (currentStep) {
       case 0:
@@ -81,11 +149,7 @@ export default function ModelBuilderPage() {
           <Step1Intent
             value={intentText}
             onChange={setIntentText}
-            // Interpret intent via LLM and update MCP config
-            onInterpret={result => setMcpConfigState((prev: any) => {
-              const next = { ...prev, ...result.output, thoughtProcess: result.thoughtProcess };
-              return JSON.stringify(next) === JSON.stringify(prev) ? prev : next;
-            })}
+            onInterpret={handleInterpret}
             onNext={handleNext}
           />
         );
@@ -141,35 +205,43 @@ export default function ModelBuilderPage() {
   const isNextDisabled = currentStep === 0
     ? confidence <= 0
     : currentStep === stepLabels.length - 1;
+
+  if (loading) return <div>Loading...</div>;
   return (
-    <Layout>
-      <div className="p-6">
-        <Stepper
-          steps={stepLabels}
-          currentStep={currentStep}
-          onStepClick={setCurrentStep}
-        />
-        <StepCards cards={stepCardsData[currentStep] || []} />
-        <div className="mb-6 w-full">
-          {renderStep()}
+    <Layout forceLoginModal={forceLoginModal}>
+      {user ? (
+        <div className="p-6">
+          <Stepper
+            steps={stepLabels}
+            currentStep={currentStep}
+            onStepClick={setCurrentStep}
+          />
+          <StepCards cards={stepCardsData[currentStep] || []} />
+          <div className="mb-6 w-full">
+            {renderStep()}
+          </div>
+          <div className="flex justify-between">
+            <button
+              onClick={handlePrev}
+              disabled={currentStep === 0}
+              className="px-4 py-2 bg-gray-300 text-gray-700 rounded disabled:opacity-50"
+            >
+              Prev
+            </button>
+            <button
+              onClick={handleNext}
+              disabled={isNextDisabled}
+              className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
+            >
+              {currentStep === stepLabels.length - 1 ? 'Finish' : 'Next'}
+            </button>
+          </div>
         </div>
-        <div className="flex justify-between">
-          <button
-            onClick={handlePrev}
-            disabled={currentStep === 0}
-            className="px-4 py-2 bg-gray-300 text-gray-700 rounded disabled:opacity-50"
-          >
-            Prev
-          </button>
-          <button
-            onClick={handleNext}
-            disabled={isNextDisabled}
-            className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
-          >
-            {currentStep === stepLabels.length - 1 ? 'Finish' : 'Next'}
-          </button>
+      ) : (
+        <div className="flex flex-col items-center justify-center h-96 text-docs-muted">
+          Please sign in to access the Model Builder.
         </div>
-      </div>
+      )}
     </Layout>
   );
 }

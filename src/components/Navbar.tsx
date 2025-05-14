@@ -1,20 +1,40 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Fragment } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import { Menu, Transition } from '@headlessui/react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import { Cog8ToothIcon } from '@heroicons/react/24/outline';
 import { useAuthContext } from './auth/AuthProvider';
+import LoginModal from './auth/LoginModal';
 
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(' ');
 }
 
-export default function Navbar() {
+export default function Navbar({ forceLoginModal }: { forceLoginModal?: boolean }) {
   const router = useRouter();
   const supabase = createClientComponentClient();
   const { user, loading } = useAuthContext();
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
+  useEffect(() => {
+    if (user && showLoginModal) {
+      setShowLoginModal(false);
+    }
+    // Show login modal if ?auth=signin is present
+    if (router.query.auth === 'signin' && !user) {
+      setShowLoginModal(true);
+      // Remove the query param for a clean state
+      const { auth, ...rest } = router.query;
+      router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
+    }
+    // Show login modal if forced and not authenticated
+    if (forceLoginModal && !user) {
+      setShowLoginModal(true);
+    }
+    console.log('Navbar user:', user);
+  }, [user, showLoginModal, router.query.auth, forceLoginModal]);
 
   const handleSignOut = async () => {
     try {
@@ -33,6 +53,7 @@ export default function Navbar() {
 
   return (
     <header className="flex items-center justify-between px-8 h-16 bg-docs-sidebar border-b border-docs-section-border sticky top-0 z-20">
+      <LoginModal open={showLoginModal} onClose={() => setShowLoginModal(false)} />
       <div className="flex items-center gap-2">
         <Link href="/dashboard" legacyBehavior>
           <a className="font-bold text-lg text-docs-text">DcisionAI</a>
@@ -108,9 +129,12 @@ export default function Navbar() {
           </Menu>
         ) : (
           <div className="flex items-center gap-4">
-            <Link href="/auth/signin" legacyBehavior>
-              <a className="text-docs-muted hover:text-docs-accent">Sign in</a>
-            </Link>
+            <button
+              onClick={() => setShowLoginModal(true)}
+              className="text-docs-muted hover:text-docs-accent"
+            >
+              Sign in
+            </button>
             <Link href="/auth/signup" legacyBehavior>
               <a className="px-4 py-2 rounded-md bg-docs-accent text-white hover:bg-docs-accent/90">
                 Sign up

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { authFetch } from '@/lib/authFetch';
 
 interface Connector {
   /** Unique connector identifier */
@@ -92,7 +93,7 @@ export default function DataPluginsPage() {
   // Fetch available connectors
   useEffect(() => {
     // Disable caching to ensure fresh connector list (avoid 304 Not Modified)
-    fetch('/api/connectors', { cache: 'no-store' })
+    authFetch('/api/connectors', { cache: 'no-store' })
       .then(async (res) => {
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
@@ -117,7 +118,7 @@ export default function DataPluginsPage() {
 
   // Fetch saved configs
   const loadConfigs = () => {
-    fetch('/api/connectors/config')
+    authFetch('/api/connectors/config')
       .then(async (res) => {
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
@@ -162,7 +163,7 @@ export default function DataPluginsPage() {
       const cfg = JSON.parse(editConfig);
       const creds = JSON.parse(editCredentials);
       // Call our unified plugin configure endpoint
-      const res = await fetch(`/api/plugins/${id}/configure`, {
+      const res = await authFetch(`/api/plugins/${id}/configure`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ configParams: cfg, credentials: creds }),
@@ -180,13 +181,13 @@ export default function DataPluginsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    await fetch(`/api/connectors/config?id=${id}`, { method: 'DELETE' });
+    await authFetch(`/api/connectors/config?id=${id}`, { method: 'DELETE' });
     loadConfigs();
   };
 
   const handleTest = async (id: string, cfg: any) => {
     setTestingId(id);
-    const res = await fetch('/api/connectors/test', {
+    const res = await authFetch('/api/connectors/test', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, config: cfg })
     });
