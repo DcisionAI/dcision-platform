@@ -43,13 +43,48 @@ const Step4PreviewMCP: React.FC<Step4PreviewMCPProps> = ({
     status,
   });
 
-  const mcpJson = JSON.stringify(mcp, null, 2);
+  const sampleMcp = {
+    "sessionId": "simple-lp-session-001",
+    "version": "1.0",
+    "created": "2025-05-10T12:00:00Z",
+    "lastModified": "2025-05-10T12:00:00Z",
+    "status": "pending",
+    "model": {
+      "variables": [
+        { "name": "x", "type": "continuous", "lower_bound": 0, "upper_bound": 10 },
+        { "name": "y", "type": "continuous", "lower_bound": 0, "upper_bound": 10 }
+      ],
+      "constraints": [
+        { "expression": "x + y", "operator": "<=", "rhs": 10 },
+        { "expression": "x + -1*y", "operator": ">=", "rhs": 3 }
+      ],
+      "objective": {
+        "expression": "2*x + 3*y",
+        "type": "maximize"
+      }
+    },
+    "context": {
+      "problemType": "linear_programming",
+      "industry": "test",
+      "environment": { "region": "local", "timezone": "UTC" },
+      "dataset": { "internalSources": [] }
+    },
+    "protocol": {
+      "steps": [
+        { "action": "solve_model", "required": true }
+      ],
+      "allowPartialSolutions": false,
+      "explainabilityEnabled": false,
+      "humanInTheLoop": { "required": false }
+    }
+  }
+  const mcpJson = JSON.stringify(sampleMcp, null, 2);
 
   const handleSubmit = async () => {
     setSubmitting(true);
     setResponse(null);
     try {
-      const res = await fetch('https://mcp-service-219323644585.us-central1.run.app/mcp/submit', {
+      const res = await fetch('https://mcp.dcisionai.com/mcp/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: mcpJson

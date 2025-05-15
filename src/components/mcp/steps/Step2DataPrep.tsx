@@ -83,6 +83,11 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
   const [mappingLoadingMsgIdx, setMappingLoadingMsgIdx] = useState(0);
   const [enrichLoadingMsgIdx, setEnrichLoadingMsgIdx] = useState(0);
 
+  // Tab completion states
+  const [isAnalysisComplete, setIsAnalysisComplete] = useState(false);
+  const [isMappingComplete, setIsMappingComplete] = useState(false);
+  const [isEnrichComplete, setIsEnrichComplete] = useState(false);
+
   // Reset modelDef and mappingResult only if intent actually changes
   const prevIntent = React.useRef(config.intentInterpretation);
   useEffect(() => {
@@ -240,6 +245,31 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
     }
   }, [enrichedData, onUpdate]);
 
+  // Set completion when LLM/API response is received
+  useEffect(() => {
+    setIsAnalysisComplete(!!modelDef);
+  }, [modelDef]);
+  useEffect(() => {
+    setIsMappingComplete(!!mappingResult);
+  }, [mappingResult]);
+  useEffect(() => {
+    setIsEnrichComplete(!!enrichedData);
+  }, [enrichedData]);
+
+  // Pass isEnrichComplete up to parent on change
+  useEffect(() => {
+    if (typeof onUpdate === 'function') {
+      onUpdate({ isEnrichComplete });
+    }
+  }, [isEnrichComplete, onUpdate]);
+
+  // Tab navigation handler
+  const handleTabClick = (tab: string) => {
+    if (tab === 'Mapping' && !isAnalysisComplete) return;
+    if (tab === 'Enrich' && (!isAnalysisComplete || !isMappingComplete)) return;
+    setActiveTab(tab);
+  };
+
   return (
     <div className="w-full">
       <h2 className="text-xl font-semibold mb-4">Step 2: Data Prep</h2>
@@ -248,12 +278,12 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
           {tabs.map(tab => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-3 py-2 font-medium text-sm focus:outline-none ${
-                activeTab === tab
-                  ? 'border-b-2 border-blue-600 text-blue-600'
-                  : 'text-docs-muted hover:text-docs-text'
-              }`}
+              onClick={() => handleTabClick(tab)}
+              disabled={
+                (tab === 'Mapping' && !isAnalysisComplete) ||
+                (tab === 'Enrich' && (!isAnalysisComplete || !isMappingComplete))
+              }
+              className={`px-4 py-2 rounded ${activeTab === tab ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'} ${((tab === 'Mapping' && !isAnalysisComplete) || (tab === 'Enrich' && (!isAnalysisComplete || !isMappingComplete))) ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {tab}
             </button>
