@@ -36,7 +36,8 @@ export class IntentInterpreterAgent implements MCPAgent {
           confidenceLevel,
           alternatives,
           explanation,
-          useCases
+          useCases,
+          problemType
         } = llmResult;
         thoughtProcess.push('Intent interpretation: ' + intentInterpretation);
         thoughtProcess.push('Confidence level: ' + confidenceLevel + '%');
@@ -50,9 +51,16 @@ export class IntentInterpreterAgent implements MCPAgent {
         if (Array.isArray(useCases)) {
           useCases.forEach(u => thoughtProcess.push('- ' + u));
         }
+        // Fallback to keyword-based detection if problemType is missing or unsupported
+        let canonicalProblemType = problemType;
+        if (!canonicalProblemType || canonicalProblemType === 'unsupported') {
+          canonicalProblemType = this.determineProblemType(problemDescription);
+          thoughtProcess.push('LLM did not provide a valid problemType, fallback to keyword-based detection: ' + canonicalProblemType);
+        }
         return {
           output: {
             ...llmResult,
+            problemType: canonicalProblemType,
             domain: DomainType.FLEETOPS
           },
           thoughtProcess: thoughtProcess.join('\n')

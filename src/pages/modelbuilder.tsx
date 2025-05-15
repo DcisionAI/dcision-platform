@@ -66,6 +66,7 @@ export default function ModelBuilderPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [promptId, setPromptId] = useState<string | null>(null);
   const [forceLoginModal, setForceLoginModal] = useState(false);
+  const [solverResponse, setSolverResponse] = useState<any>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -170,6 +171,22 @@ export default function ModelBuilderPage() {
           <Step3ModelConstraints
             enrichedData={mcpConfig.enrichedData}
             intentInterpretation={mcpConfig.intentInterpretation}
+            onModelDef={(modelDef: any) =>
+              setMcpConfigState((prev: any) => ({
+                ...prev,
+                modelDef,
+                protocolSteps: [
+                  {
+                    id: 'solve_step',
+                    action: 'solve_model',
+                    description: 'Solve the optimization model',
+                    required: true
+                  }
+                ],
+                dataset: modelDef.dataset || prev.dataset
+              }))
+            }
+            dataset={mcpConfig.dataset}
           />
         );
       case 3:
@@ -178,21 +195,21 @@ export default function ModelBuilderPage() {
             sessionId={mcpConfig.sessionId || 'session-' + Date.now()}
             intent={mcpConfig}
             enrichedData={mcpConfig.enrichedData}
-            modelDef={mcpConfig.modelDef || {
-              variables: mcpConfig.variables || [],
-              constraints: mcpConfig.constraints || [],
-              objective: mcpConfig.objective || { type: 'minimize', field: '', description: '', weight: 1 }
-            }}
+            modelDef={mcpConfig.modelDef}
             environment={mcpConfig.environment || { region: 'us-east-1', timezone: 'UTC' }}
             dataset={mcpConfig.dataset || { internalSources: [] }}
             protocolSteps={mcpConfig.protocolSteps || []}
             industry={mcpConfig.industry || 'logistics'}
             version={mcpConfig.version || '1.0.0'}
             status={mcpConfig.status || 'pending'}
+            onSubmitSuccess={(solverResp: any) => {
+              setSolverResponse(solverResp);
+              setCurrentStep(4); // Move to Step 5
+            }}
           />
         );
       case 4:
-        return <Step5SolveExplain />;
+        return <Step5SolveExplain solverResponse={solverResponse} />;
       case 5:
         return <Step6Deploy />;
       default:

@@ -33,6 +33,7 @@ export interface LLMService {
     alternatives: string[];
     explanation: string;
     useCases: string[];
+    problemType: string;
   }>;
   enrichData(data: any, context: any): Promise<{ enrichedData: any, reasoning: string }>;
   explainSolution(solution: any, problemType: string): Promise<{ explanation: string, insights: string[] }>;
@@ -48,6 +49,8 @@ export interface LLMService {
     constraints: Array<{ name?: string; description: string; expression?: string; businessContext?: string }>;
     objective: { type: string; expression?: string; description?: string; businessContext?: string };
     externalDataSources: Array<{ source: string; description: string; valueAdd: string }>;
+    protocolSteps: Array<{ id: string; action: string; description: string; required: boolean }>;
+    dataset: any;
   }>;
 }
 
@@ -151,6 +154,7 @@ export class LLMServiceImpl implements LLMService {
     alternatives: string[];
     explanation: string;
     useCases: string[];
+    problemType: string;
   }> {
     // Expert decision maker interpretation: a multi-part structured analysis
     const systemPrompt = `You are a seasoned operations research (OR) specialist with deep business domain expertise. When reviewing a business problem statement, apply rigorous decision-modeling principles to identify the core objective, constraints, and key opportunities. Explain your analysis in clear, business-friendly language without jargon. Include a concise, plain-language description of the underlying model (e.g., "minimize the sum of ... subject to ... constraints") but keep it understandable for business users.
@@ -160,7 +164,8 @@ Important: You only support two domains: Fleet Operations (e.g., vehicle routing
   "confidenceLevel": 0,
   "alternatives": [],
   "explanation": "",
-  "useCases": []
+  "useCases": [],
+  "problemType": "unsupported"
 }
 Provide exactly these fields in JSON:
 1) intentInterpretation: how you understand the request.
@@ -168,6 +173,7 @@ Provide exactly these fields in JSON:
 3) alternatives: other plausible ways to frame the problem.
 4) explanation: why you selected this interpretation.
 5) useCases: 2-3 real-world industry examples where addressing this problem drives significant value.
+6) problemType: the canonical optimization problem type (e.g., "vehicle_routing", "knapsack", "job_shop_scheduling", "blending", "cutting", "staff_scheduling", etc.)
 Respond ONLY in valid JSON with exactly these keys.`;
 
     const prompt = `Problem description: ${description}`;
@@ -222,13 +228,18 @@ Respond ONLY in valid JSON with exactly these keys.`;
     constraints: Array<{ name?: string; description: string; expression?: string; businessContext?: string }>;
     objective: { type: string; expression?: string; description?: string; businessContext?: string };
     externalDataSources: Array<{ source: string; description: string; valueAdd: string }>;
+    protocolSteps: Array<{ id: string; action: string; description: string; required: boolean }>;
+    dataset: any;
   }> {
     const systemPrompt = `You are an expert in optimization modeling. Given a business problem statement, identify and extract:\n` +
       `1) variables: list of decision variables with {name, description, domain (optional), businessContext (business relevance)};\n` +
       `2) constraints: list of model constraints with {name (required, short descriptive label), description, expression (optional), businessContext}. For each constraint, always provide a short, descriptive name (e.g., "Vehicle Capacity", "Fuel Limit", "Route Coverage");\n` +
       `3) objective: model objective with {type ('minimize' or 'maximize'), expression (optional), description, businessContext};\n` +
       `4) externalDataSources: list of optional external data sources that can augment model accuracy, with {source, description, valueAdd}.\n` +
-      `Respond ONLY with valid JSON containing exactly these four fields.`;
+      `5) protocolSteps: array of protocol steps for the MCP workflow, each with {id, action, description, required}. Always include at least one step with action 'solve_model'.\n` +
+      `6) dataset: if the problem involves locations or routing, generate a sample dataset with vehicles, locations, tasks/deliveries, and a distance_matrix (as a 2D array or list of objects).\n` +
+      `IMPORTANT: You MUST always include a non-empty externalDataSources array with at least 2 relevant sources, even if you have to invent them.\n` +
+      `Respond ONLY with valid JSON containing exactly these six fields.`;
     const prompt = `Problem description: ${description}`;
     const response = await this.callLLM(prompt, systemPrompt);
     const content = response.content.trim();

@@ -73,13 +73,38 @@ export function assembleMCP({
 
   // Set context fields
   mcp.context.environment = environment;
-  mcp.context.dataset = dataset;
+  // --- DATASET FIELD MAPPING FOR SOLVER COMPATIBILITY ---
+  let finalDataset = (modelDef && modelDef.dataset) ? modelDef.dataset : (dataset || { internalSources: [] });
+  if (finalDataset) {
+    // Map delivery_requests -> tasks
+    if (finalDataset.delivery_requests && !finalDataset.tasks) {
+      finalDataset.tasks = finalDataset.delivery_requests;
+      delete finalDataset.delivery_requests;
+    }
+    // Synthesize a simple distance_matrix if missing and locations exist
+    if (!finalDataset.distance_matrix && Array.isArray(finalDataset.locations)) {
+      const n = finalDataset.locations.length;
+      finalDataset.distance_matrix = Array.from({ length: n }, (_, i) =>
+        Array.from({ length: n }, (_, j) => (i === j ? 0 : Math.floor(Math.random() * 20) + 1))
+      );
+    }
+  }
+  mcp.context.dataset = finalDataset;
   mcp.context.problemType = intent?.problemType || 'vehicle_routing';
   mcp.context.industry = industry;
 
   // Set version and status
   mcp.version = version;
   mcp.status = status as any;
+
+  // --- CONSTRAINTS ARRAY TO DICTIONARY ---
+  if (Array.isArray(mcp.model.constraints)) {
+    const constraintsDict: any = {};
+    mcp.model.constraints.forEach((c: any) => {
+      if (c.name) constraintsDict[c.name] = c;
+    });
+    mcp.model.constraints = constraintsDict;
+  }
 
   // Optionally, add enrichedData or other metadata if needed
   // If you want to store enrichedData, you could serialize it under an allowed key, or omit for now to avoid type errors.

@@ -117,7 +117,7 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
         body: JSON.stringify({ userInput: config.intentInterpretation })
       })
         .then(res => res.json())
-        .then(data => setModelDef(data.output))
+        .then(data => setModelDef(data.output.model))
         .catch(console.error)
         .finally(() => setModelLoading(false));
     }
@@ -196,14 +196,18 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
 
   // Fetch enriched data when Enrich tab is active
   useEffect(() => {
-    if (activeTab === 'Enrich' && sampleData && modelDef && modelDef.externalDataSources) {
+    if (activeTab === 'Enrich' && sampleData) {
       setEnrichLoading(true);
       setEnrichError(null);
-      console.log('Enriching with:', { sampleData, enrichmentSuggestions: modelDef.externalDataSources });
+      let enrichmentSuggestions = undefined;
+      if (modelDef && Array.isArray(modelDef.externalDataSources) && modelDef.externalDataSources.length > 0) {
+        enrichmentSuggestions = modelDef.externalDataSources;
+      }
+      console.log('Enriching with:', { sampleData, enrichmentSuggestions });
       authFetch('/api/mcp/enrich', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sampleData, enrichmentSuggestions: modelDef.externalDataSources })
+        body: JSON.stringify({ sampleData, ...(enrichmentSuggestions ? { enrichmentSuggestions } : {}) })
       })
         .then(res => res.json())
         .then(data => {
@@ -238,12 +242,19 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
     }
   }, [enrichLoading]);
 
-  // After enrichment completes, update parent with enrichedData
+  // After enrichment completes, update parent with enrichedData as dataset
   useEffect(() => {
     if (enrichedData && typeof onUpdate === 'function') {
-      onUpdate({ enrichedData });
+      onUpdate({ enrichedData, dataset: enrichedData });
     }
   }, [enrichedData, onUpdate]);
+
+  // When sampleData changes and no enrichedData, update parent with sampleData as dataset
+  useEffect(() => {
+    if (sampleData && !enrichedData && typeof onUpdate === 'function') {
+      onUpdate({ dataset: sampleData });
+    }
+  }, [sampleData, enrichedData, onUpdate]);
 
   // Set completion when LLM/API response is received
   useEffect(() => {
@@ -318,14 +329,18 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
                       </tr>
                     </thead>
                     <tbody>
-                      {modelDef.variables.map((v: any, i: number) => (
-                        <tr key={i} className={i % 2 === 0 ? '' : 'bg-docs-section'}>
-                          <td className="border p-2">{v.name}</td>
-                          <td className="border p-2">{v.description}</td>
-                          <td className="border p-2">{v.domain || '-'}</td>
-                          <td className="border p-2">{v.businessContext || '-'}</td>
-                        </tr>
-                      ))}
+                      {Array.isArray(modelDef?.variables) && modelDef.variables.length > 0 ? (
+                        modelDef.variables.map((v: any, i: number) => (
+                          <tr key={i} className={i % 2 === 0 ? '' : 'bg-docs-section'}>
+                            <td className="border p-2">{v.name}</td>
+                            <td className="border p-2">{v.description}</td>
+                            <td className="border p-2">{v.domain || '-'}</td>
+                            <td className="border p-2">{v.businessContext || '-'}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr><td colSpan={4} className="text-center text-docs-muted">No variables defined in the model.</td></tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -342,14 +357,18 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
                       </tr>
                     </thead>
                     <tbody>
-                      {modelDef.constraints.map((c: any, i: number) => (
-                        <tr key={i} className={i % 2 === 0 ? '' : 'bg-docs-section'}>
-                          <td className="border p-2">{c.name || '-'}</td>
-                          <td className="border p-2">{c.description}</td>
-                          <td className="border p-2">{c.expression || '-'}</td>
-                          <td className="border p-2">{c.businessContext || '-'}</td>
-                        </tr>
-                      ))}
+                      {Array.isArray(modelDef?.constraints) && modelDef.constraints.length > 0 ? (
+                        modelDef.constraints.map((c: any, i: number) => (
+                          <tr key={i} className={i % 2 === 0 ? '' : 'bg-docs-section'}>
+                            <td className="border p-2">{c.name || '-'}</td>
+                            <td className="border p-2">{c.description}</td>
+                            <td className="border p-2">{c.expression || '-'}</td>
+                            <td className="border p-2">{c.businessContext || '-'}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr><td colSpan={4} className="text-center text-docs-muted">No constraints defined in the model.</td></tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -366,12 +385,16 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="bg-docs-section">
-                        <td className="border p-2">{modelDef.objective.type}</td>
-                        <td className="border p-2">{modelDef.objective.description || '-'}</td>
-                        <td className="border p-2">{modelDef.objective.expression || '-'}</td>
-                        <td className="border p-2">{modelDef.objective.businessContext || '-'}</td>
-                      </tr>
+                      {modelDef?.objective ? (
+                        <tr className="bg-docs-section">
+                          <td className="border p-2">{modelDef.objective.type}</td>
+                          <td className="border p-2">{modelDef.objective.description || '-'}</td>
+                          <td className="border p-2">{modelDef.objective.expression || '-'}</td>
+                          <td className="border p-2">{modelDef.objective.businessContext || '-'}</td>
+                        </tr>
+                      ) : (
+                        <tr><td colSpan={4} className="text-center text-docs-muted">No objective defined in the model.</td></tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -441,25 +464,34 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
               </div>
             )}
             {/* Render sample data tables for Demo Data */}
-            {dataMode === 'demo' && sampleData && (
-              <div className="mb-4">
-                <h4 className="font-medium mb-2">Sample Data</h4>
-                {/* If sampleData is an object with arrays, render each as a table */}
-                {typeof sampleData === 'object' && !Array.isArray(sampleData) ? (
-                  Object.entries(sampleData).map(([key, value]) =>
-                    Array.isArray(value) ? (
-                      <SampleDataTable key={key} data={value} title={key.charAt(0).toUpperCase() + key.slice(1)} />
-                    ) : null
-                  )
-                ) : Array.isArray(sampleData) ? (
-                  <SampleDataTable data={sampleData} />
-                ) : typeof sampleData === 'object' ? (
-                  <pre className="bg-docs-section p-2 rounded text-xs overflow-x-auto">{JSON.stringify(sampleData, null, 2)}</pre>
-                ) : (
-                  <pre className="bg-docs-section p-2 rounded text-xs overflow-x-auto">{String(sampleData)}</pre>
-                )}
-              </div>
-            )}
+            {dataMode === 'demo' && sampleData && (() => {
+              // Normalize: if sampleData is an array of single-key objects, flatten to an object
+              let normalizedSampleData = sampleData;
+              if (Array.isArray(sampleData) && sampleData.every(item => typeof item === 'object' && !Array.isArray(item) && Object.keys(item).length === 1)) {
+                normalizedSampleData = Object.assign({}, ...sampleData);
+              }
+              return (
+                <div className="mb-4">
+                  <h4 className="font-medium mb-2">Sample Data</h4>
+                  {/* If normalizedSampleData is an object with arrays, render each as a table */}
+                  {typeof normalizedSampleData === 'object' && !Array.isArray(normalizedSampleData) ? (
+                    Object.entries(normalizedSampleData).map(([key, value]) =>
+                      Array.isArray(value) ? (
+                        <SampleDataTable key={key} data={value} title={key.charAt(0).toUpperCase() + key.slice(1)} />
+                      ) : typeof value === 'object' ? (
+                        <pre key={key} className="bg-docs-section p-2 rounded text-xs overflow-x-auto">{JSON.stringify(value, null, 2)}</pre>
+                      ) : null
+                    )
+                  ) : Array.isArray(normalizedSampleData) ? (
+                    <SampleDataTable data={normalizedSampleData} />
+                  ) : typeof normalizedSampleData === 'object' ? (
+                    <pre className="bg-docs-section p-2 rounded text-xs overflow-x-auto">{JSON.stringify(normalizedSampleData, null, 2)}</pre>
+                  ) : (
+                    <pre className="bg-docs-section p-2 rounded text-xs overflow-x-auto">{String(normalizedSampleData)}</pre>
+                  )}
+                </div>
+              );
+            })()}
             {/* Connector Selection UI only for Customer Data */}
             {dataMode === 'customer' ? (
               <div className="mt-4">

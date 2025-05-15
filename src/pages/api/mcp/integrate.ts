@@ -34,6 +34,7 @@ class IntegrationLLMService implements LLMService {
     alternatives: string[];
     explanation: string;
     useCases: string[];
+    problemType: string;
   }> {
     // Fallback: echo back description
     return {
@@ -41,7 +42,8 @@ class IntegrationLLMService implements LLMService {
       confidenceLevel: 100,
       alternatives: [],
       explanation: '',
-      useCases: []
+      useCases: [],
+      problemType: 'custom'
     };
   }
 

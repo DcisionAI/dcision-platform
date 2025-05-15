@@ -1,14 +1,11 @@
-import UnderDevelopment from '@/components/UnderDevelopment';
 import Layout from '@/components/Layout';
 import React, { useRef, useState } from 'react';
 
-export default function Settings() {
-  // Upload state
+export default function ModelUploadSettings() {
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle file upload
   const handleUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setUploadResult(null);
@@ -40,11 +37,12 @@ export default function Settings() {
   return (
     <Layout>
       <div className="max-w-2xl mx-auto py-8">
-        <h1 className="text-2xl font-bold mb-6">Platform Settings</h1>
-        {/* Model Upload Section */}
+        <h1 className="text-2xl font-bold mb-6">Model Upload</h1>
         <section className="mb-10 p-6 bg-white rounded shadow border">
           <h2 className="text-lg font-semibold mb-2">Upload Optimization Model Files</h2>
-          <p className="mb-4 text-gray-600">Upload your own optimization models (Python, Jupyter, JSON, Markdown, or text). These will be indexed for RAG and available for model building.</p>
+          <p className="mb-4 text-gray-600">
+            Upload your own optimization models (Python, Jupyter, JSON, Markdown, or text). These will be indexed for RAG and available for model building.
+          </p>
           <form onSubmit={handleUpload} className="flex flex-col gap-4">
             <input
               type="file"
@@ -64,8 +62,6 @@ export default function Settings() {
             {uploadResult && <div className="text-green-600 font-medium">{uploadResult}</div>}
           </form>
         </section>
-        {/* Other settings or under development notice */}
-        <UnderDevelopment pageName="Platform Settings" />
       </div>
     </Layout>
   );

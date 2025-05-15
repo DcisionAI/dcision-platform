@@ -82,7 +82,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       provider: {
         type: providerType,
         model: providerType === 'anthropic' ? 'claude-3-opus-20240229' : 'gpt-4.1-nano'
-      }
+      },
+      problemType: result.output.problemType
     };
 
     return res.status(200).json(responseWithProvider);

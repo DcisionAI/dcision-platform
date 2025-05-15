@@ -13,6 +13,7 @@ export interface Step4PreviewMCPProps {
   industry?: string;
   version?: string;
   status?: string;
+  onSubmitSuccess?: (solverResponse: any) => void;
 }
 
 const Step4PreviewMCP: React.FC<Step4PreviewMCPProps> = ({
@@ -26,9 +27,11 @@ const Step4PreviewMCP: React.FC<Step4PreviewMCPProps> = ({
   industry = 'logistics',
   version = '1.0.0',
   status = 'pending',
+  onSubmitSuccess,
 }) => {
   const [response, setResponse] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<string | null>(null);
 
   const mcp: MCP = assembleMCP({
     sessionId,
@@ -78,11 +81,12 @@ const Step4PreviewMCP: React.FC<Step4PreviewMCPProps> = ({
       "humanInTheLoop": { "required": false }
     }
   }
-  const mcpJson = JSON.stringify(sampleMcp, null, 2);
+  const mcpJson = JSON.stringify(mcp, null, 2);
 
   const handleSubmit = async () => {
     setSubmitting(true);
     setResponse(null);
+    setSubmitStatus(null);
     try {
       const res = await fetch('https://mcp.dcisionai.com/mcp/submit', {
         method: 'POST',
@@ -91,8 +95,11 @@ const Step4PreviewMCP: React.FC<Step4PreviewMCPProps> = ({
       });
       const data = await res.json();
       setResponse(data);
+      setSubmitStatus('success');
+      if (onSubmitSuccess) onSubmitSuccess(data);
     } catch (e) {
       setResponse({ error: 'Failed to submit MCP to server.' });
+      setSubmitStatus('error');
     } finally {
       setSubmitting(false);
     }
@@ -105,6 +112,8 @@ const Step4PreviewMCP: React.FC<Step4PreviewMCPProps> = ({
         <button onClick={handleSubmit} disabled={submitting} className="px-4 py-2 bg-blue-600 text-white rounded">
           {submitting ? 'Submitting...' : 'Submit to MCP Server'}
         </button>
+        {submitStatus === 'success' && <span className="text-green-600">Submitted successfully!</span>}
+        {submitStatus === 'error' && <span className="text-red-600">Submission failed.</span>}
       </div>
       <pre
         className="w-full bg-docs-section border border-docs-section-border p-4 rounded-lg shadow mb-4 text-docs-text text-sm whitespace-pre-wrap break-words overflow-auto"
