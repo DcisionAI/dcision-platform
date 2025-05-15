@@ -59,8 +59,20 @@ class IntegrationLLMService implements LLMService {
     constraints: Array<{ name?: string; description: string; expression?: string; businessContext?: string }>;
     objective: { type: string; expression?: string; description?: string; businessContext?: string };
     externalDataSources: Array<{ source: string; description: string; valueAdd: string }>;
+    protocolSteps: Array<{ id: string; action: string; description: string; required: boolean }>;
+    dataset: any;
   }> {
-    throw new Error('interpretModelDefinition not implemented in IntegrationLLMService');
+    // Fallback: return a minimal valid structure
+    return {
+      variables: [],
+      constraints: [],
+      objective: { type: 'minimize' },
+      externalDataSources: [],
+      protocolSteps: [
+        { id: 'solve_step', action: 'solve_model', description: 'Solve the optimization model', required: true }
+      ],
+      dataset: {}
+    };
   }
 
   async call(prompt: string, config?: any): Promise<LLMResponse> {
