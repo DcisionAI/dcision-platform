@@ -67,6 +67,7 @@ export default function ModelBuilderPage() {
   const [promptId, setPromptId] = useState<string | null>(null);
   const [forceLoginModal, setForceLoginModal] = useState(false);
   const [solverResponse, setSolverResponse] = useState<any>(null);
+  const [ragExamples, setRagExamples] = useState<any[]>([]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -171,22 +172,37 @@ export default function ModelBuilderPage() {
           <Step3ModelConstraints
             enrichedData={mcpConfig.enrichedData}
             intentInterpretation={mcpConfig.intentInterpretation}
-            onModelDef={(modelDef: any) =>
-              setMcpConfigState((prev: any) => ({
-                ...prev,
-                modelDef,
-                protocolSteps: [
-                  {
-                    id: 'solve_step',
-                    action: 'solve_model',
-                    description: 'Solve the optimization model',
-                    required: true
-                  }
-                ],
-                dataset: modelDef.dataset || prev.dataset
-              }))
-            }
+            onModelDef={(modelDef: any) => {
+              // If modelDef contains RAG retrieval results, store them in state
+              if (Array.isArray(modelDef.ragExamples)) {
+                setRagExamples(modelDef.ragExamples);
+              } else if (Array.isArray(modelDef.retrievedExamples)) {
+                setRagExamples(modelDef.retrievedExamples);
+              }
+              setMcpConfigState((prev: any) => {
+                // Always ensure modelDef gets a dataset
+                const dataset = modelDef.dataset
+                  || prev.enrichedData
+                  || prev.dataset
+                  || prev.sampleData
+                  || {};
+                return {
+                  ...prev,
+                  modelDef: { ...modelDef, dataset },
+                  protocolSteps: [
+                    {
+                      id: 'solve_step',
+                      action: 'solve_model',
+                      description: 'Solve the optimization model',
+                      required: true
+                    }
+                  ],
+                  dataset
+                };
+              });
+            }}
             dataset={mcpConfig.dataset}
+            ragExamples={ragExamples}
           />
         );
       case 3:
@@ -219,9 +235,13 @@ export default function ModelBuilderPage() {
 
   // Disable Next button on step 0 until LLM returns a positive confidence
   const confidence = Number(mcpConfig.confidenceLevel ?? 0);
-  const isNextDisabled = currentStep === 0
-    ? confidence <= 0
-    : currentStep === stepLabels.length - 1;
+  const isNextDisabled =
+    (currentStep === 0 && confidence <= 0) ||
+    (currentStep === 1 && !(
+      mcpConfig.isEnrichComplete ||
+      (mcpConfig.dataset && Object.keys(mcpConfig.dataset).length > 0)
+    )) ||
+    (currentStep === stepLabels.length - 1);
 
   if (loading) return <div>Loading...</div>;
   return (

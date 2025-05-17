@@ -21,7 +21,6 @@ export const supabase = createClient(
 
 // Server-side Supabase client with admin privileges
 export const getServerSupabase = () => {
-  console.log("Hi there ", process.env.SUPABASE_SERVICE_ROLE_KEY);
   var supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   return createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }; 

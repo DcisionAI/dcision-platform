@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { authFetch } from '@/lib/authFetch';
-const tabs = ['Analysis', 'Mapping', 'Enrich'];
+const tabs = ['Mapping', 'Enrich'];
 
 const loadingMessages = [
   'analyzing your business problem...',
@@ -106,22 +106,6 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
       onUpdate({ connectors: selectedConnectors });
     }
   }, [selectedConnectors, onUpdate]);
-
-  // Fetch model definition via LLM-based agent
-  useEffect(() => {
-    if (config.intentInterpretation) {
-      setModelLoading(true);
-      authFetch('/api/mcp/define', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userInput: config.intentInterpretation })
-      })
-        .then(res => res.json())
-        .then(data => setModelDef(data.output.model))
-        .catch(console.error)
-        .finally(() => setModelLoading(false));
-    }
-  }, [config.intentInterpretation]);
 
   // Only fetch sample data when Mapping tab is active, in demo mode, and intentInterpretation is available
   useEffect(() => {
@@ -256,13 +240,13 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
     }
   }, [sampleData, enrichedData, onUpdate]);
 
-  // Set completion when LLM/API response is received
+  // Set completion when intent and problemType are available
   useEffect(() => {
-    setIsAnalysisComplete(!!modelDef);
-  }, [modelDef]);
+    setIsAnalysisComplete(!!config.intentInterpretation && !!config.problemType);
+  }, [config.intentInterpretation, config.problemType]);
   useEffect(() => {
-    setIsMappingComplete(!!mappingResult);
-  }, [mappingResult]);
+    setIsMappingComplete(!!sampleData);
+  }, [sampleData]);
   useEffect(() => {
     setIsEnrichComplete(!!enrichedData);
   }, [enrichedData]);
@@ -303,131 +287,6 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
       </div>
       <div className="w-full p-4 bg-docs-section border border-docs-section-border rounded-lg shadow">
         {/* Tab Panels */}
-        {activeTab === 'Analysis' && (
-          <div>
-            <h3 className="text-lg font-medium text-docs-text mb-2">Model Definition</h3>
-            {modelLoading ? (
-              <div className="flex items-center gap-2 text-docs-muted animate-pulse">
-                <svg className="animate-spin h-5 w-5 text-blue-400" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                </svg>
-                <span>DcisionAI is {loadingMessages[loadingMsgIdx]}</span>
-              </div>
-            ) : modelDef ? (
-              <div className="space-y-6">
-                {/* Variables Table */}
-                <div>
-                  <h4 className="font-medium">Variables</h4>
-                  <table className="w-full text-sm border-collapse">
-                    <thead>
-                      <tr className="bg-docs-section-border">
-                        <th className="border p-2 text-left">Name</th>
-                        <th className="border p-2 text-left">Description</th>
-                        <th className="border p-2 text-left">Domain</th>
-                        <th className="border p-2 text-left">Business Context</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Array.isArray(modelDef?.variables) && modelDef.variables.length > 0 ? (
-                        modelDef.variables.map((v: any, i: number) => (
-                          <tr key={i} className={i % 2 === 0 ? '' : 'bg-docs-section'}>
-                            <td className="border p-2">{v.name}</td>
-                            <td className="border p-2">{v.description}</td>
-                            <td className="border p-2">{v.domain || '-'}</td>
-                            <td className="border p-2">{v.businessContext || '-'}</td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr><td colSpan={4} className="text-center text-docs-muted">No variables defined in the model.</td></tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-                {/* Constraints Table */}
-                <div>
-                  <h4 className="font-medium">Constraints</h4>
-                  <table className="w-full text-sm border-collapse">
-                    <thead>
-                      <tr className="bg-docs-section-border">
-                        <th className="border p-2 text-left">Name</th>
-                        <th className="border p-2 text-left">Description</th>
-                        <th className="border p-2 text-left">Expression</th>
-                        <th className="border p-2 text-left">Business Context</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Array.isArray(modelDef?.constraints) && modelDef.constraints.length > 0 ? (
-                        modelDef.constraints.map((c: any, i: number) => (
-                          <tr key={i} className={i % 2 === 0 ? '' : 'bg-docs-section'}>
-                            <td className="border p-2">{c.name || '-'}</td>
-                            <td className="border p-2">{c.description}</td>
-                            <td className="border p-2">{c.expression || '-'}</td>
-                            <td className="border p-2">{c.businessContext || '-'}</td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr><td colSpan={4} className="text-center text-docs-muted">No constraints defined in the model.</td></tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-                {/* Objective */}
-                <div>
-                  <h4 className="font-medium">Objective</h4>
-                  <table className="w-full text-sm border-collapse mb-4">
-                    <thead>
-                      <tr className="bg-docs-section-border">
-                        <th className="border p-2 text-left">Type</th>
-                        <th className="border p-2 text-left">Description</th>
-                        <th className="border p-2 text-left">Expression</th>
-                        <th className="border p-2 text-left">Business Context</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {modelDef?.objective ? (
-                        <tr className="bg-docs-section">
-                          <td className="border p-2">{modelDef.objective.type}</td>
-                          <td className="border p-2">{modelDef.objective.description || '-'}</td>
-                          <td className="border p-2">{modelDef.objective.expression || '-'}</td>
-                          <td className="border p-2">{modelDef.objective.businessContext || '-'}</td>
-                        </tr>
-                      ) : (
-                        <tr><td colSpan={4} className="text-center text-docs-muted">No objective defined in the model.</td></tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : (
-              <p className="text-docs-muted">No model definition available.</p>
-            )}
-            {/* External Data Augmentation */}
-            {modelDef && modelDef.externalDataSources && (
-              <div className="mt-6">
-                <h4 className="font-medium mb-2">External Data Augmentation</h4>
-                <table className="w-full text-sm border-collapse">
-                  <thead>
-                    <tr className="bg-docs-section-border">
-                      <th className="border p-2 text-left">Source</th>
-                      <th className="border p-2 text-left">Description</th>
-                      <th className="border p-2 text-left">Value Add</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {modelDef.externalDataSources.map((e: any, i: number) => (
-                      <tr key={i} className={i % 2 === 0 ? '' : 'bg-docs-section'}>
-                        <td className="border p-2">{e.source}</td>
-                        <td className="border p-2">{e.description}</td>
-                        <td className="border p-2">{e.valueAdd}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
         {activeTab === 'Mapping' && (
           <div>
             <h3 className="text-lg font-medium text-docs-text mb-2">Data Requirements</h3>

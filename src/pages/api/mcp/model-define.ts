@@ -1,75 +1,63 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { AgentRegistry } from '../../../../server/mcp/agents';
 import { LLMServiceFactory } from '../../../../server/mcp/services/llm/LLMServiceFactory';
-
-function buildModelDefinePrompt(enrichedData: any, intentInterpretation: string) {
-  return `You are a world-class operations research scientist. Given the following business scenario and enriched dataset, design an optimization model by defining variables, constraints, and the objective.
-
-For each variable, include:
-- name
-- description
-- domain (e.g., binary, integer, continuous, set)
-- business context
-
-For each constraint, include:
-- name
-- description
-- mathematical expression (in pseudo-math or code)
-- business context
-
-For the objective, include:
-- type (minimize/maximize)
-- description
-- mathematical expression
-- business context
-
-Example:
-{
-  "variables": [
-    { "name": "x_vd", "description": "1 if vehicle v is assigned to delivery d, 0 otherwise.", "domain": "binary", "businessContext": "Tracks which vehicle is responsible for each delivery." }
-  ],
-  "constraints": [
-    { "name": "capacity_constraint", "description": "Total demand assigned to a vehicle cannot exceed its capacity.", "expression": "sum_demand(x_vd) <= capacity_v", "businessContext": "Ensures no vehicle is overloaded." }
-  ],
-  "objective": {
-    "type": "minimize",
-    "description": "Minimize total cost.",
-    "expression": "sum(cost_vd * x_vd)",
-    "businessContext": "Reduce operational expenses."
-  }
-}
-
-Business Scenario:
-${intentInterpretation}
-
-Enriched Dataset:
-${JSON.stringify(enrichedData, null, 2)}
-
-Output only the JSON.`;
-}
+import type { MCP } from '../../../../server/mcp/types/core';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
-  const { enrichedData, intentInterpretation } = req.body;
+  const { enrichedData, intentInterpretation, problemType, dataMapping } = req.body;
   if (!enrichedData || !intentInterpretation) {
     return res.status(400).json({ error: 'Missing enrichedData or intentInterpretation' });
   }
   try {
-    const llm = LLMServiceFactory.getInstance();
-    const prompt = buildModelDefinePrompt(enrichedData, intentInterpretation);
-    const response = await (llm as any).callLLM(prompt);
-    let output = response.content;
-    try {
-      output = JSON.parse(response.content);
-    } catch (e) {
-      // Try to extract JSON from markdown/code block
-      const match = response.content.match(/\{[\s\S]*\}/);
-      if (match) {
-        output = JSON.parse(match[0]);
-      }
+    const agentRegistry = AgentRegistry.getInstance();
+    // Get the ModelDefinitionAgent by type
+    const modelDefAgent = agentRegistry.getAgentsByType('model_definition')[0];
+    if (!modelDefAgent) {
+      return res.status(500).json({ error: 'ModelDefinitionAgent not found' });
     }
-    return res.status(200).json({ output });
+    const llm = LLMServiceFactory.getInstance();
+    const now = new Date().toISOString();
+    // Attach dataMapping to dataset metadata if present
+    let datasetWithMapping = { ...enrichedData };
+    if (dataMapping) {
+      datasetWithMapping.metadata = { ...(enrichedData.metadata || {}), ...dataMapping };
+    }
+    const mcp: MCP = {
+      sessionId: 'api-model-define',
+      version: '1.0',
+      status: 'pending',
+      created: now,
+      lastModified: now,
+      model: {
+        variables: [],
+        constraints: [],
+        objective: { type: 'minimize', field: '', description: '', weight: 1 },
+      },
+      context: {
+        environment: {},
+        dataset: datasetWithMapping,
+        problemType: problemType || enrichedData?.metadata?.problemType || 'vehicle_routing',
+      },
+      protocol: {
+        steps: [],
+        allowPartialSolutions: false,
+        explainabilityEnabled: false,
+        humanInTheLoop: { required: false, approvalSteps: [] },
+      },
+    };
+    const step = {
+      id: 'define_model',
+      action: 'define_model',
+      description: 'Define the optimization model',
+      required: true
+    };
+    const context = { llm };
+    const result = await modelDefAgent.run(step, mcp, context);
+    console.log('[ModelDefinitionAgent] LLM prompt:', result.prompt);
+    return res.status(200).json({ output: result.output, thoughtProcess: result.thoughtProcess, prompt: result.prompt });
   } catch (e) {
     return res.status(500).json({ error: 'Failed to generate model definition' });
   }

@@ -51,6 +51,7 @@ export interface LLMService {
     externalDataSources: Array<{ source: string; description: string; valueAdd: string }>;
     protocolSteps: Array<{ id: string; action: string; description: string; required: boolean }>;
     dataset: any;
+    ragExamples?: any[];
   }>;
 }
 
@@ -230,6 +231,7 @@ Respond ONLY in valid JSON with exactly these keys.`;
     externalDataSources: Array<{ source: string; description: string; valueAdd: string }>;
     protocolSteps: Array<{ id: string; action: string; description: string; required: boolean }>;
     dataset: any;
+    ragExamples?: any[];
   }> {
     const systemPrompt = `You are an expert in optimization modeling. Given a business problem statement, identify and extract:\n` +
       `1) variables: list of decision variables with {name, description, domain (optional), businessContext (business relevance)};\n` +

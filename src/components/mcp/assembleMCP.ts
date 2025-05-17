@@ -26,92 +26,101 @@ export function assembleMCP({
   version = '1.0.0',
   status = 'pending',
 }: AssembleMCPParams): MCP {
-  const builder = MCPBuilder.create(sessionId);
+  // --- FLAT MODEL ARRAYS ---
+  const variables = Array.isArray(modelDef?.variables) ? modelDef.variables : [];
+  const constraints = Array.isArray(modelDef?.constraints) ? modelDef.constraints : [];
+  const objective = modelDef?.objective || { type: 'minimize', field: '', description: '', weight: 1 };
 
-  // Add variables
-  if (modelDef?.variables) {
-    modelDef.variables.forEach((v: Variable) => {
-      builder.addVariable(v.name, v.type || 'number', {
-        description: v.description,
-        default: v.default,
-        required: v.required,
-      });
-    });
-  }
-
-  // Ensure at least one protocol step is present
-  const stepsToUse = protocolSteps && protocolSteps.length > 0
-    ? protocolSteps
-    : [
-        {
-          id: 'default_step',
-          action: 'collect_data' as StepAction,
-          description: 'Default protocol step',
-          required: true,
-        }
-      ];
-
-  // Add protocol steps
-  stepsToUse.forEach((step: Step) => {
-    builder.addStep(step.id, step.action, {
-      description: step.description,
-      required: step.required,
-      config: step.config,
-    });
-  });
-
-  // Build the MCP object
-  const mcp = builder.build();
-
-  // Set constraints and objective directly (MCPBuilder does not have addConstraint/addObjective)
-  if (modelDef?.constraints) {
-    mcp.model.constraints = modelDef.constraints as Constraint[];
-  }
-  if (modelDef?.objective) {
-    mcp.model.objective = modelDef.objective as Objective;
-  }
-
-  // Set context fields
-  mcp.context.environment = environment;
-  // --- DATASET FIELD MAPPING FOR SOLVER COMPATIBILITY ---
+  // --- MINIMAL CONTEXT ---
   let finalDataset = (modelDef && modelDef.dataset) ? modelDef.dataset : (dataset || { internalSources: [] });
   if (finalDataset) {
-    // Map delivery_requests -> tasks
     if (finalDataset.delivery_requests && !finalDataset.tasks) {
       finalDataset.tasks = finalDataset.delivery_requests;
       delete finalDataset.delivery_requests;
     }
-    // Synthesize a simple distance_matrix if missing and locations exist
     if (!finalDataset.distance_matrix && Array.isArray(finalDataset.locations)) {
       const n = finalDataset.locations.length;
       finalDataset.distance_matrix = Array.from({ length: n }, (_, i) =>
         Array.from({ length: n }, (_, j) => (i === j ? 0 : Math.floor(Math.random() * 20) + 1))
       );
     }
+    if (!finalDataset.vehicles) {
+      finalDataset.vehicles = [
+        { id: 1, capacity: 100, start_location: 0, end_location: 0, max_route_time_hours: 8 }
+      ];
+    }
+    if (!finalDataset.locations) {
+      finalDataset.locations = [
+        { id: 0, name: 'Depot', lat: 0, lon: 0 },
+        { id: 1, name: 'Customer', lat: 1, lon: 1 }
+      ];
+    }
+    if (!finalDataset.tasks) {
+      finalDataset.tasks = [
+        { id: 'task_1', location_id: 1, demand: 10, time_window_start: 0, time_window_end: 24 }
+      ];
+    }
+    if (!finalDataset.distance_matrix) {
+      finalDataset.distance_matrix = [ [0, 1], [1, 0] ];
+    }
   }
-  mcp.context.dataset = finalDataset;
-  mcp.context.problemType = intent?.problemType || 'vehicle_routing';
-  mcp.context.industry = industry;
 
-  // Set version and status
-  mcp.version = version;
-  mcp.status = status as any;
+  // --- MINIMAL PROTOCOL ---
+  const stepsToUse = protocolSteps && protocolSteps.length > 0
+    ? protocolSteps
+    : [
+        {
+          id: 'solve_step',
+          action: 'solve_model' as StepAction,
+          description: 'Solve the optimization model',
+          required: true,
+        }
+      ];
 
-  // --- CONSTRAINTS ARRAY TO DICTIONARY ---
-  if (Array.isArray(mcp.model.constraints)) {
-    const constraintsDict: any = {};
-    mcp.model.constraints.forEach((c: any) => {
-      if (c.name) constraintsDict[c.name] = c;
-    });
-    mcp.model.constraints = constraintsDict;
+  // --- ASSEMBLE MCP ---
+  let model: any;
+  if ((intent?.problemType || '').toLowerCase() === 'vehicle_routing') {
+    // For vehicle routing, build a domain-specific model object
+    model = {
+      vehicles: finalDataset.vehicles || [],
+      locations: finalDataset.locations || [],
+      tasks: finalDataset.tasks || [],
+      distance_matrix: finalDataset.distance_matrix || [],
+      constraints: finalDataset.constraints || {}
+    };
+  } else {
+    // For other problems, use the generic structure
+    model = {
+      variables,
+      constraints,
+      objective,
+    };
   }
 
-  // Optionally, add enrichedData or other metadata if needed
-  // If you want to store enrichedData, you could serialize it under an allowed key, or omit for now to avoid type errors.
-  // Example (uncomment if needed):
-  // if (enrichedData) {
-  //   mcp.metadata = { ...mcp.metadata, solver: JSON.stringify(enrichedData) };
-  // }
+  const mcp: MCP = {
+    id: sessionId,
+    sessionId,
+    version,
+    created: new Date().toISOString(),
+    lastModified: new Date().toISOString(),
+    status: status as any,
+    model,
+    context: {
+      problemType: intent?.problemType || 'vehicle_routing',
+      industry,
+      environment: environment || { region: 'local', timezone: 'UTC' },
+      dataset: finalDataset,
+    },
+    protocol: {
+      steps: stepsToUse.map((step, idx) => ({
+        id: step.id || `step_${idx}`,
+        action: step.action,
+        description: step.description || 'Protocol step',
+        required: step.required,
+        config: step.config
+      })),
+    },
+  };
 
   return mcp;
 } 

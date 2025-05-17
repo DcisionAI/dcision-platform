@@ -101,14 +101,18 @@ export class ModelRunnerAgent implements MCPAgent {
 
   private async solveModel(mcp: MCP, thoughtProcess: string[], context?: AgentRunContext): Promise<AgentRunResult> {
     thoughtProcess.push('Solving optimization model...');
-    
     try {
+      // Bind data to the model template and send both to the solver backend
+      const payload = {
+        model: mcp.model,
+        data: mcp.context.dataset
+      };
+      console.log('[ModelRunnerAgent] Solver payload:', JSON.stringify(payload, null, 2));
       // Use the actual solver service
-      const solution = await this.solver.solve(mcp);
+      const solution = await this.solver.solve(payload);
       thoughtProcess.push(`Model solved successfully in ${solution.statistics.solveTime}ms`);
       thoughtProcess.push(`Objective value: ${solution.objective.value}`);
       thoughtProcess.push(`Solution status: ${solution.statistics.status}`);
-
       // Use LLM to explain the solution if available
       if (context?.llm) {
         try {
@@ -129,7 +133,6 @@ export class ModelRunnerAgent implements MCPAgent {
           thoughtProcess.push('Failed to generate solution explanation using LLM');
         }
       }
-
       return {
         output: {
           success: true,
@@ -141,7 +144,6 @@ export class ModelRunnerAgent implements MCPAgent {
     } catch (error: any) {
       const errorMessage = error?.message || 'Unknown error occurred';
       thoughtProcess.push(`Error solving model: ${errorMessage}`);
-      
       return {
         output: {
           success: false,

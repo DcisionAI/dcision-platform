@@ -88,10 +88,21 @@ const Step4PreviewMCP: React.FC<Step4PreviewMCPProps> = ({
     setResponse(null);
     setSubmitStatus(null);
     try {
+      // Flatten context.dataset into the top-level payload for solver compatibility
+      const payload = {
+        ...mcp,
+        ...(mcp.context && mcp.context.dataset ? mcp.context.dataset : {})
+      };
+      // Convert constraints array to dictionary if needed
+      if (Array.isArray(payload.model.constraints)) {
+        payload.model.constraints = Object.fromEntries(
+          payload.model.constraints.map((c: any) => [c.name, c])
+        );
+      }
       const res = await fetch('https://mcp.dcisionai.com/mcp/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: mcpJson
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       setResponse(data);

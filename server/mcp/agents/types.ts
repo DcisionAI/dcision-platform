@@ -78,6 +78,7 @@ export interface AgentRunContext {
 export interface AgentRunResult {
   output: any;
   thoughtProcess: string;
+  prompt?: string;
 }
 
 export type StepAction = 

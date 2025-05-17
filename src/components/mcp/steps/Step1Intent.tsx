@@ -107,11 +107,15 @@ const Step1Intent: React.FC<Step1IntentProps> = ({ value, onChange, onInterpret,
             </div>
             <div>
               <strong className="text-docs-text">Alternatives Considered:</strong>
-              <ul className="list-disc list-inside text-docs-muted text-sm mt-1">
-                {llmData.alternatives.map((alt, idx) => (
-                  <li key={idx}>{alt}</li>
-                ))}
-              </ul>
+              {Array.isArray(llmData.alternatives) && llmData.alternatives.length > 0 ? (
+                <ul className="list-disc list-inside text-docs-muted text-sm mt-1">
+                  {llmData.alternatives.map((alt, idx) => (
+                    <li key={idx}>{alt}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-docs-muted text-sm mt-1">None</p>
+              )}
             </div>
             <div>
               <strong className="text-docs-text">Explanation:</strong>
