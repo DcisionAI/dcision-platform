@@ -47,7 +47,7 @@ export default function Step5Explainability() {
       {/* Sidebar */}
       <div className="w-64 border-r border-docs-border bg-docs-section overflow-y-auto">
         <div className="p-4">
-          <h2 className="text-lg font-semibold text-docs-heading mb-4">Explanation Types</h2>
+          <h2 className="text-base font-semibold text-docs-heading mb-2">Explanation Types</h2>
           <nav className="space-y-2">
             {explanationSections.map(section => {
               const Icon = section.icon;
@@ -78,7 +78,7 @@ export default function Step5Explainability() {
       <div className="flex-1 p-6 overflow-y-auto">
         {/* Header */}
         <div className="mb-6">
-          <h3 className="text-xl font-bold text-docs-heading">{currentSection.name}</h3>
+          <h3 className="text-xl font-bold text-docs-heading mb-2">{currentSection.name}</h3>
           <p className="mt-1 text-docs-muted text-sm">{currentSection.description}</p>
         </div>
 

@@ -203,6 +203,8 @@
   letter-spacing: 0.08em;
 }
 
+/* Enforce OpenAI Docs Dark Theme by default */
 html, body {
+  @apply openai-docs-dark;
   font-family: 'OpenAI Sans', Inter, ui-sans-serif, system-ui, sans-serif;
 } 

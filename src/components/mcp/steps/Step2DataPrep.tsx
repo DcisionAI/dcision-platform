@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { authFetch } from '@/lib/authFetch';
+import Tabs from '@/components/ui/Tabs';
+import Button from '@/components/ui/Button';
+
 const tabs = ['Mapping', 'Enrich'];
 
 const loadingMessages = [
@@ -258,38 +261,21 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
     }
   }, [isEnrichComplete, onUpdate]);
 
-  // Tab navigation handler
-  const handleTabClick = (tab: string) => {
-    if (tab === 'Mapping' && !isAnalysisComplete) return;
-    if (tab === 'Enrich' && (!isAnalysisComplete || !isMappingComplete)) return;
-    setActiveTab(tab);
-  };
-
   return (
     <div className="w-full">
-      <h2 className="text-xl font-semibold mb-4">Step 2: Data Prep</h2>
+      <h2 className="text-xl font-bold text-docs-heading mb-2">Step 2: Data Prep</h2>
       <div className="border-b border-docs-section-border mb-4">
-        <nav className="-mb-px flex space-x-4" aria-label="Tabs">
-          {tabs.map(tab => (
-            <button
-              key={tab}
-              onClick={() => handleTabClick(tab)}
-              disabled={
-                (tab === 'Mapping' && !isAnalysisComplete) ||
-                (tab === 'Enrich' && (!isAnalysisComplete || !isMappingComplete))
-              }
-              className={`px-4 py-2 rounded ${activeTab === tab ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'} ${((tab === 'Mapping' && !isAnalysisComplete) || (tab === 'Enrich' && (!isAnalysisComplete || !isMappingComplete))) ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              {tab}
-            </button>
-          ))}
-        </nav>
+        <Tabs
+          tabs={tabs.map(tab => ({ label: tab, value: tab }))}
+          value={activeTab}
+          onChange={setActiveTab}
+        />
       </div>
       <div className="w-full p-4 bg-docs-section border border-docs-section-border rounded-lg shadow">
         {/* Tab Panels */}
         {activeTab === 'Mapping' && (
           <div>
-            <h3 className="text-lg font-medium text-docs-text mb-2">Data Requirements</h3>
+            <h3 className="text-base font-semibold text-docs-text mb-1">Data Requirements</h3>
             {/* Data Source Toggle only in Mapping tab */}
             <div className="mb-4 flex gap-6 items-center">
               <span className="font-medium">Data Source:</span>
@@ -331,7 +317,7 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
               }
               return (
                 <div className="mb-4">
-                  <h4 className="font-medium mb-2">Sample Data</h4>
+                  <h4 className="text-sm font-semibold mb-1">Sample Data</h4>
                   {/* If normalizedSampleData is an object with arrays, render each as a table */}
                   {typeof normalizedSampleData === 'object' && !Array.isArray(normalizedSampleData) ? (
                     Object.entries(normalizedSampleData).map(([key, value]) =>
@@ -354,7 +340,7 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
             {/* Connector Selection UI only for Customer Data */}
             {dataMode === 'customer' ? (
               <div className="mt-4">
-                <h4 className="font-medium mb-2">Select Data Connectors</h4>
+                <h4 className="text-sm font-semibold mb-1">Select Data Connectors</h4>
                 {connectors.map(c => (
                   <div key={c.id} className="flex items-center mb-1">
                     <input
@@ -411,7 +397,7 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
         )}
         {activeTab === 'Enrich' && (
           <div>
-            <h3 className="text-lg font-medium text-docs-text mb-2">Data Enrichment</h3>
+            <h3 className="text-base font-semibold text-docs-text mb-1">Data Enrichment</h3>
             {/* Animated loading for enrichment */}
             {enrichLoading && (
               <div className="flex items-center gap-2 text-docs-muted animate-pulse mb-4">
@@ -425,7 +411,7 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
             {enrichError && <p className="text-red-500">{enrichError}</p>}
             {enrichSources && (
               <div className="mb-4">
-                <h4 className="font-medium mb-2">Enrichment Sources</h4>
+                <h4 className="text-sm font-semibold mb-1">Enrichment Sources</h4>
                 <ul className="list-disc list-inside text-docs-muted">
                   {Array.isArray(enrichSources)
                     ? enrichSources.map((src: any, i: number) => (
@@ -437,7 +423,7 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
             )}
             {enrichedData && (
               <div className="mb-4">
-                <h4 className="font-medium mb-2">Enriched Sample Data</h4>
+                <h4 className="text-sm font-semibold mb-1">Enriched Sample Data</h4>
                 {typeof enrichedData === 'object' && !Array.isArray(enrichedData) ? (
                   Object.entries(enrichedData).map(([key, value]) =>
                     Array.isArray(value) ? (

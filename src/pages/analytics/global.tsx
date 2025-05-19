@@ -50,7 +50,7 @@ export default function GlobalAnalytics() {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto p-8">
-        <h1 className="text-2xl font-semibold text-docs-heading mb-8">API Usage (Global Analytics)</h1>
+        <h1 className="text-xl font-bold text-docs-heading mb-6">API Usage (Global Analytics)</h1>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-12">
           <div className="bg-docs-section rounded-xl p-6 flex flex-col items-start shadow border border-docs-section-border min-h-[120px]">
             <span className="mb-2 text-blue-400">
@@ -59,8 +59,8 @@ export default function GlobalAnalytics() {
                 <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" fill="none" />
               </svg>
             </span>
-            <span className="text-docs-muted text-sm mb-1">Total Sessions</span>
-            <span className="text-2xl font-bold text-docs-text">
+            <span className="text-xs text-docs-muted mb-1">Total Sessions</span>
+            <span className="text-xl font-bold text-docs-text">
               {loading ? '—' : error ? '!' : totals?.total_sessions ?? 0}
             </span>
           </div>
@@ -70,8 +70,8 @@ export default function GlobalAnalytics() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 8.25V6.75A2.25 2.25 0 0014.25 4.5h-4.5A2.25 2.25 0 007.5 6.75v1.5m9 0v1.5m0-1.5h-9m9 0a2.25 2.25 0 012.25 2.25v6.75A2.25 2.25 0 0116.5 19.5h-9A2.25 2.25 0 015.25 17.25V10.5A2.25 2.25 0 017.5 8.25m9 0h-9" />
               </svg>
             </span>
-            <span className="text-docs-muted text-sm mb-1">Total Prompts</span>
-            <span className="text-2xl font-bold text-docs-text">
+            <span className="text-xs text-docs-muted mb-1">Total Prompts</span>
+            <span className="text-xl font-bold text-docs-text">
               {loading ? '—' : error ? '!' : totals?.total_prompts ?? 0}
             </span>
           </div>
@@ -81,8 +81,8 @@ export default function GlobalAnalytics() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h7.5m-7.5 3h7.5m-7.5 3h7.5m-7.5 3h7.5" />
               </svg>
             </span>
-            <span className="text-docs-muted text-sm mb-1">Total Responses</span>
-            <span className="text-2xl font-bold text-docs-text">
+            <span className="text-xs text-docs-muted mb-1">Total Responses</span>
+            <span className="text-xl font-bold text-docs-text">
               {loading ? '—' : error ? '!' : totals?.total_responses ?? 0}
             </span>
           </div>
@@ -93,8 +93,8 @@ export default function GlobalAnalytics() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25z" />
               </svg>
             </span>
-            <span className="text-docs-muted text-sm mb-1">Total Decisions</span>
-            <span className="text-2xl font-bold text-docs-text">
+            <span className="text-xs text-docs-muted mb-1">Total Decisions</span>
+            <span className="text-xl font-bold text-docs-text">
               {loading ? '—' : error ? '!' : totals?.total_decisions ?? 0}
             </span>
           </div>

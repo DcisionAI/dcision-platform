@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowUpIcon } from '@heroicons/react/24/outline';
 import { authFetch } from '@/lib/authFetch';
+import Button from '@/components/ui/Button';
 
 export interface Step1IntentProps {
   value: string;
@@ -62,8 +63,8 @@ const Step1Intent: React.FC<Step1IntentProps> = ({ value, onChange, onInterpret,
 
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-4">Step 1: Intent</h2>
-      <h3 className="text-lg font-medium mb-2">
+      <h2 className="text-xl font-bold text-docs-heading mb-2">Step 1: Intent</h2>
+      <h3 className="text-base font-semibold text-docs-heading mb-1">
         What would you like DcisionAI agents to do?
       </h3>
     <div className="relative mb-4">
@@ -74,15 +75,16 @@ const Step1Intent: React.FC<Step1IntentProps> = ({ value, onChange, onInterpret,
         className="w-full bg-docs-section border border-docs-section-border rounded-lg p-4 text-base text-docs-text placeholder-docs-muted focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
         placeholder="E.g., Optimize delivery routes for my fleet to minimize total driving time"
       />
-        <button
+        <Button
           type="button"
           onClick={handleInterpret}
           disabled={!value.trim() || interpreting}
-          className="absolute bottom-3 right-3 text-blue-600 hover:text-blue-500 focus:outline-none disabled:opacity-50"
-        aria-label="Interpret Intent"
+          variant="primary"
+          size="sm"
+          className="absolute bottom-3 right-3"
         >
           {interpreting ? '⏳' : <ArrowUpIcon className="w-6 h-6" />}
-        </button>
+        </Button>
       </div>
       {interpreting && (
         <div className="flex items-center gap-2 text-docs-muted animate-pulse mb-4">

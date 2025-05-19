@@ -41,8 +41,8 @@ export default function FlowShop() {
                 </div>
               </div>
 
-              <h1 className="text-3xl font-bold text-docs-text">Flow Shop Scheduling</h1>
-              <p className="text-docs-muted text-center max-w-md">
+              <h1 className="text-xl font-bold text-docs-text">Flow Shop Scheduling</h1>
+              <p className="text-sm text-docs-muted text-center max-w-md">
                 Our flow shop scheduling solution is under development. We're building intelligent algorithms to optimize your production line efficiency and throughput.
               </p>
 
@@ -67,14 +67,14 @@ export default function FlowShop() {
                     <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    <span className="text-sm text-docs-muted">{feature}</span>
+                    <span className="text-xs text-docs-muted">{feature}</span>
                   </div>
                 ))}
               </div>
 
               {/* Additional Info */}
               <div className="mt-8 p-4 bg-blue-200/10 rounded-lg">
-                <p className="text-sm text-docs-muted text-center">
+                <p className="text-xs text-docs-muted text-center">
                   Want early access? Contact our team at support@dcision.ai
                 </p>
               </div>

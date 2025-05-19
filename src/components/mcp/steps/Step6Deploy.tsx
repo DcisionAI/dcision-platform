@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { mockEndpoints, Endpoint } from '@/pages/endpoints';
+import Button from '@/components/ui/Button';
 
 const Step6Deploy: React.FC = () => {
   const [deploying, setDeploying] = useState(false);
@@ -69,14 +70,16 @@ const Step6Deploy: React.FC = () => {
 
       {/* Main content: details of selected endpoint */}
       <div className="flex-1 p-6 overflow-y-auto bg-gray-50 dark:bg-gray-900">
-        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Step 6: Deploy</h2>
-        <button
+        <h2 className="text-xl font-bold text-docs-heading mb-2">Step 6: Deploy</h2>
+        <Button
           onClick={handleDeploy}
           disabled={deploying}
-          className="mb-4 px-4 py-2 bg-green-600 text-white rounded disabled:opacity-50"
+          variant="primary"
+          size="sm"
+          className="mb-4"
         >
           {deploying ? 'Deploying...' : 'Deploy Endpoint'}
-        </button>
+        </Button>
         {endpointUrl && (
           <p className="text-blue-600 mb-4">
             Your endpoint is live at:{' '}
@@ -90,15 +93,15 @@ const Step6Deploy: React.FC = () => {
             const ep = endpoints.find(e => e.id === selectedId)!;
             return (
               <div>
-                <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-gray-100">{ep.name}</h3>
-                <p className="text-gray-700 dark:text-gray-300 mb-2">{ep.description}</p>
-                <p className="text-blue-600 mb-4">
+                <h3 className="text-base font-semibold mb-1 text-docs-heading">{ep.name}</h3>
+                <p className="text-sm text-docs-text mb-1">{ep.description}</p>
+                <p className="text-blue-600 text-sm mb-2">
                   URL:{' '}
                   <a href={ep.url} target="_blank" rel="noopener noreferrer" className="underline">
                     {ep.url}
                   </a>
                 </p>
-                <h4 className="font-medium mb-1 text-gray-900 dark:text-gray-100">MCP Config Preview</h4>
+                <h4 className="text-sm font-semibold mb-1 text-docs-heading">MCP Config Preview</h4>
                 <pre className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">
                   {JSON.stringify(ep.mcpConfig, null, 2)}
                 </pre>

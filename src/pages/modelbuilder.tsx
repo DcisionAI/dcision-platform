@@ -14,6 +14,8 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { authFetch } from '@/lib/authFetch';
 import { useAuthContext } from '@/components/auth/AuthProvider';
 import Navbar from '@/components/Navbar';
+import Button from '@/components/ui/Button';
+import Tabs from '@/components/ui/Tabs';
 
 const stepLabels = [
   'Intent',
@@ -248,6 +250,7 @@ export default function ModelBuilderPage() {
     <Layout forceLoginModal={forceLoginModal}>
       {user ? (
         <div className="p-6">
+          <h1 className="text-xl font-bold text-docs-text mb-4">Model Builder</h1>
           <Stepper
             steps={stepLabels}
             currentStep={currentStep}
@@ -258,20 +261,22 @@ export default function ModelBuilderPage() {
             {renderStep()}
           </div>
           <div className="flex justify-between">
-            <button
+            <Button
               onClick={handlePrev}
               disabled={currentStep === 0}
-              className="px-4 py-2 bg-gray-300 text-gray-700 rounded disabled:opacity-50"
+              variant="secondary"
+              size="sm"
             >
               Prev
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleNext}
               disabled={isNextDisabled}
-              className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
+              variant="primary"
+              size="sm"
             >
               {currentStep === stepLabels.length - 1 ? 'Finish' : 'Next'}
-            </button>
+            </Button>
           </div>
         </div>
       ) : (

@@ -61,7 +61,7 @@ export default function Sidebar() {
         {menu.map((group, idx) => (
           <div className="mb-8" key={group.section + idx}>
             {isExpanded && group.section && (
-              <div className="uppercase text-xs text-docs-muted font-bold mb-3 tracking-wider pl-4">
+              <div className="uppercase text-xs text-docs-muted font-bold mb-2 tracking-wider pl-4">
                 {group.section}
               </div>
             )}
@@ -72,15 +72,15 @@ export default function Sidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`rounded-lg flex items-center gap-4 ${
-                      isExpanded ? 'px-4 py-2.5' : 'p-2 justify-center'
+                    className={`rounded-lg flex items-center gap-3 ${
+                      isExpanded ? 'px-3 py-2' : 'p-2 justify-center'
                     } text-docs-text hover:bg-docs-sidebar-active hover:text-docs-accent transition font-medium group ${
                       isActive(item.href) ? 'bg-docs-sidebar-active text-docs-accent font-semibold' : ''
                     }`}
                     title={!isExpanded ? item.label : undefined}
                   >
                     <Icon className={`${isExpanded ? 'w-5 h-5' : 'w-5 h-5'} flex-shrink-0`} />
-                    {isExpanded && <span className="text-sm">{item.label}</span>}
+                    {isExpanded && <span className="text-xs">{item.label}</span>}
                   </Link>
                 );
               })}

@@ -16,6 +16,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
+import Button from '@/components/ui/Button';
 
 interface MCPConfig {
   context: {
@@ -518,37 +519,41 @@ function NewEndpointModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                   </div>
 
                   <div className="flex justify-between">
-                    <button
+                    <Button
                       type="button"
                       onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
-                      className="px-4 py-2 text-sm font-medium text-docs-text bg-docs-bg rounded-lg border border-docs-border hover:bg-docs-hover"
+                      variant="secondary"
+                      size="sm"
                       disabled={currentStep === 1}
                     >
                       Previous
-                    </button>
+                    </Button>
                     <div className="space-x-3">
-                      <button
+                      <Button
                         type="button"
                         onClick={onClose}
-                        className="px-4 py-2 text-sm font-medium text-docs-text bg-docs-bg rounded-lg border border-docs-border hover:bg-docs-hover"
+                        variant="secondary"
+                        size="sm"
                       >
                         Cancel
-                      </button>
+                      </Button>
                       {currentStep < totalSteps ? (
-                        <button
+                        <Button
                           type="button"
                           onClick={() => setCurrentStep(prev => Math.min(totalSteps, prev + 1))}
-                          className="px-4 py-2 text-sm font-medium text-white bg-docs-accent rounded-lg hover:bg-docs-accent/90"
+                          variant="primary"
+                          size="sm"
                         >
                           Next
-                        </button>
+                        </Button>
                       ) : (
-                        <button
+                        <Button
                           type="submit"
-                          className="px-4 py-2 text-sm font-medium text-white bg-docs-accent rounded-lg hover:bg-docs-accent/90"
+                          variant="primary"
+                          size="sm"
                         >
                           Create Endpoint
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -644,20 +649,16 @@ export default function EndpointsPage() {
                 <div className="mb-8">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h1 className="text-3xl font-bold text-docs-heading">
+                      <h1 className="text-xl font-bold text-docs-heading">
                         {mockEndpoints.find(e => e.id === selectedEndpoint)?.name}
                       </h1>
-                      <p className="mt-2 text-docs-muted">
+                      <p className="mt-1 text-xs text-docs-muted">
                         Domain: {mockEndpoints.find(e => e.id === selectedEndpoint)?.mcpConfig.context.domain.replace('_', ' ')}
                       </p>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <button className="px-4 py-2 text-sm font-medium text-docs-text bg-docs-section rounded-lg border border-docs-border hover:bg-docs-hover">
-                        Test
-                      </button>
-                      <button className="px-4 py-2 text-sm font-medium text-white bg-docs-accent rounded-lg hover:bg-docs-accent/90">
-                        Deploy
-                      </button>
+                      <Button variant="secondary" size="sm">Test</Button>
+                      <Button variant="primary" size="sm">Deploy</Button>
                     </div>
                   </div>
                 </div>
@@ -666,7 +667,7 @@ export default function EndpointsPage() {
                 <div className="grid grid-cols-2 gap-6">
                   {/* Context & Model */}
                   <div className="bg-docs-section rounded-xl p-6 shadow-lg border border-docs-section-border">
-                    <h3 className="text-lg font-medium text-docs-heading mb-4 flex items-center">
+                    <h3 className="text-base font-semibold text-docs-heading mb-4 flex items-center">
                       <ChatBubbleBottomCenterTextIcon className="h-5 w-5 mr-2" />
                       Context & Model
                     </h3>
@@ -713,7 +714,7 @@ export default function EndpointsPage() {
 
                   {/* Protocol */}
                   <div className="bg-docs-section rounded-xl p-6 shadow-lg border border-docs-section-border">
-                    <h3 className="text-lg font-medium text-docs-heading mb-4 flex items-center">
+                    <h3 className="text-base font-semibold text-docs-heading mb-4 flex items-center">
                       <DocumentTextIcon className="h-5 w-5 mr-2" />
                       Protocol
                     </h3>
@@ -780,7 +781,7 @@ export default function EndpointsPage() {
 
                   {/* Prompts */}
                   <div className="bg-docs-section rounded-xl p-6 shadow-lg border border-docs-section-border col-span-2">
-                    <h3 className="text-lg font-medium text-docs-heading mb-4 flex items-center">
+                    <h3 className="text-base font-semibold text-docs-heading mb-4 flex items-center">
                       <ChatBubbleBottomCenterTextIcon className="h-5 w-5 mr-2" />
                       Prompts
                     </h3>
@@ -831,7 +832,7 @@ export default function EndpointsPage() {
 
                   {/* API Configuration */}
                   <div className="bg-docs-section rounded-xl p-6 shadow-lg border border-docs-section-border">
-                    <h3 className="text-lg font-medium text-docs-heading mb-4 flex items-center">
+                    <h3 className="text-base font-semibold text-docs-heading mb-4 flex items-center">
                       <CodeBracketIcon className="h-5 w-5 mr-2" />
                       API Configuration
                     </h3>
@@ -861,7 +862,7 @@ export default function EndpointsPage() {
 
                   {/* Authentication */}
                   <div className="bg-docs-section rounded-xl p-6 shadow-lg border border-docs-section-border">
-                    <h3 className="text-lg font-medium text-docs-heading mb-4 flex items-center">
+                    <h3 className="text-base font-semibold text-docs-heading mb-4 flex items-center">
                       <KeyIcon className="h-5 w-5 mr-2" />
                       Authentication
                     </h3>
@@ -897,7 +898,7 @@ export default function EndpointsPage() {
 
                   {/* Performance */}
                   <div className="bg-docs-section rounded-xl p-6 shadow-lg border border-docs-section-border">
-                    <h3 className="text-lg font-medium text-docs-heading mb-4 flex items-center">
+                    <h3 className="text-base font-semibold text-docs-heading mb-4 flex items-center">
                       <BoltIcon className="h-5 w-5 mr-2" />
                       Performance
                     </h3>
@@ -927,7 +928,7 @@ export default function EndpointsPage() {
 
                   {/* Monitoring */}
                   <div className="bg-docs-section rounded-xl p-6 shadow-lg border border-docs-section-border">
-                    <h3 className="text-lg font-medium text-docs-heading mb-4 flex items-center">
+                    <h3 className="text-base font-semibold text-docs-heading mb-4 flex items-center">
                       <CircleStackIcon className="h-5 w-5 mr-2" />
                       Monitoring
                     </h3>
