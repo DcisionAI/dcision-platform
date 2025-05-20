@@ -29,34 +29,28 @@ const stepLabels = [
 // Three cards for each step: What, Why, How
 const stepCardsData: { title: string; description: string }[][] = [
   [
-    { title: 'What', description: 'Provide a natural language intent for LLM-powered agents to interpret.' },
-    { title: 'Why', description: 'LLM agents translate your business needs into structured optimization problems.' },
-    { title: 'How', description: 'Describe your problem in plain English; the LLM will parse and extract variables, constraints, and objectives.' }
+    { title: 'What', description: 'Empower your business with DcisionAI: translate your goals into actionable, AI-driven decisions. DcisionAI understands your objectives and turns them into intelligent, automated workflows.' },
+    { title: 'How', description: 'Enter a natural language description; DcisionAI leverages LLMs and the MCP framework to parse and return a structured intent, confidence, alternatives, and use cases.' }
   ],
   [
-    { title: 'What', description: 'Feed data to agents and let LLM auto-map and enrich your datasets.' },
-    { title: 'Why', description: 'High-quality inputs ensure accurate optimization by the LLM agents.' },
-    { title: 'How', description: 'Use the mapping, enrichment, and validation tabs to refine and validate your data.' }
+    { title: 'What', description: 'DcisionAI ensures your business data is ready for intelligent decision-making. Seamlessly connect, map, and enrich your data to unlock deeper insights and better outcomes.' },
+    { title: 'How', description: 'Use mapping to generate or connect data, and enrichment to augment with external sources. DcisionAI suggests mappings and enrichments using LLMs and MCP.' }
   ],
   [
-    { title: 'What', description: 'Let agents generate or adjust variables and constraints via LLM suggestions.' },
-    { title: 'Why', description: 'LLM-driven modeling accelerates defining the math behind your decisions.' },
-    { title: 'How', description: 'Expand each section to review or refine LLM-generated model components.' }
+    { title: 'What', description: 'DcisionAI automatically builds a decision model tailored to your business—defining the right variables, constraints, and objectives for optimal results.' },
+    { title: 'How', description: 'Review and refine the auto-generated model structure, variables, and constraints. RAG (retrieval-augmented generation) may provide relevant examples.' }
   ],
   [
-    { title: 'What', description: 'Review the LLM-generated MCP JSON before execution.' },
-    { title: 'Why', description: "Ensure the LLM's interpretation aligns with your business context." },
-    { title: 'How', description: 'Copy, download, or edit the config directly in the preview.' }
+    { title: 'What', description: 'Gain full transparency: review the entire DcisionAI configuration before execution, ensuring alignment with your business needs and compliance requirements.' },
+    { title: 'How', description: 'Inspect, copy, or edit the MCP config. Submit to the Dcision agent for execution.' }
   ],
   [
-    { title: 'What', description: 'Invoke LLM-based agents to solve and explain your optimization.' },
-    { title: 'Why', description: 'Agents leverage LLMs to orchestrate complex solve flows with real-time insights.' },
-    { title: 'How', description: "Click Solve and watch the agent's step-by-step explanation stream in." }
+    { title: 'What', description: 'DcisionAI delivers actionable results and clear explanations, empowering you to make confident, data-driven decisions at scale.' },
+    { title: 'How', description: 'Click Solve to run the agent. View solution details, explanations, and explore feature importance, decision paths, and more.' }
   ],
   [
-    { title: 'What', description: 'Deploy your decision agent endpoint powered by LLM and optimization.' },
-    { title: 'Why', description: 'Integrate the agent into your apps for on-demand decision intelligence.' },
-    { title: 'How', description: 'Generate and share the API URL to execute your MCP in production.' }
+    { title: 'What', description: 'Deploy your DcisionAI-powered solution as a secure, scalable API—integrate decision intelligence directly into your business workflows.' },
+    { title: 'How', description: 'Deploy, get the endpoint URL, and manage or test your deployed agent.' }
   ]
 ];
 
