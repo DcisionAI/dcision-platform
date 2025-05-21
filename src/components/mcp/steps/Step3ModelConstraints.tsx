@@ -123,7 +123,7 @@ const Step3ModelConstraints: React.FC<Step3ModelConstraintsProps> = ({ enrichedD
 
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-4">Step 3: Model & Constraints</h2>
+      <h2 className="text-xl font-bold text-docs-heading mb-2">Step 3: Model & Constraints</h2>
       {/* RAG Retrieval Results */}
       {Array.isArray(ragExamples) && ragExamples.length > 0 && (
         <details open className="bg-docs-section border border-docs-section-border rounded-lg p-4 mb-4">

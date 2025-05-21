@@ -279,7 +279,7 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
             {/* Data Source Toggle only in Mapping tab */}
             <div className="mb-4 flex gap-6 items-center">
               <span className="font-medium">Data Source:</span>
-              <label className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-sm">
                 <input
                   type="radio"
                   checked={dataMode === 'demo'}
@@ -287,7 +287,7 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
                 />
                 Demo Data
               </label>
-              <label className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-sm">
                 <input
                   type="radio"
                   checked={dataMode === 'customer'}
@@ -354,7 +354,7 @@ const Step2DataPrep: React.FC<Step2DataPrepProps> = ({ config, onUpdate }) => {
                         );
                       }}
                     />
-                    <label htmlFor={c.id}>{c.name}</label>
+                    <label htmlFor={c.id} className="text-sm">{c.name}</label>
                   </div>
                 ))}
               </div>

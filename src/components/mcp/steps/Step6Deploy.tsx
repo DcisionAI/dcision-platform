@@ -45,11 +45,11 @@ const Step6Deploy: React.FC = () => {
       {/* Sidebar: list of endpoints */}
       <div className="w-64 border-r border-gray-200 bg-white dark:bg-gray-800 overflow-y-auto">
         <div className="p-4">
-          <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Endpoints</h2>
+          <h2 className="text-lg font-bold text-docs-heading mb-4">Endpoints</h2>
           <button
             onClick={() => endpointUrl && onDeployed(endpointUrl)}
             disabled={!endpointUrl}
-            className="mb-4 w-full px-3 py-2 bg-green-600 text-white rounded disabled:opacity-50"
+            className="mb-4 w-full px-3 py-2 text-sm font-medium bg-green-500 hover:bg-green-600 text-white rounded-md disabled:opacity-50 transition-colors"
           >
             Add Deployed Endpoint
           </button>

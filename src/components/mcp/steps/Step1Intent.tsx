@@ -72,7 +72,7 @@ const Step1Intent: React.FC<Step1IntentProps> = ({ value, onChange, onInterpret,
         value={value}
         onChange={e => onChange(e.target.value)}
         rows={4}
-        className="w-full bg-docs-section border border-docs-section-border rounded-lg p-4 text-base text-docs-text placeholder-docs-muted focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
+        className="w-full bg-docs-section border border-docs-section-border rounded-lg p-4 text-sm text-docs-text placeholder-docs-muted focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
         placeholder="E.g., Optimize delivery routes for my fleet to minimize total driving time"
       />
         <Button
@@ -83,7 +83,7 @@ const Step1Intent: React.FC<Step1IntentProps> = ({ value, onChange, onInterpret,
           size="sm"
           className="absolute bottom-3 right-3"
         >
-          {interpreting ? '⏳' : <ArrowUpIcon className="w-6 h-6" />}
+          {interpreting ? '⏳' : <ArrowUpIcon className="w-4 h-4" />}
         </Button>
       </div>
       {interpreting && (

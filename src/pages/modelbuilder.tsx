@@ -244,7 +244,7 @@ export default function ModelBuilderPage() {
     <Layout forceLoginModal={forceLoginModal}>
       {user ? (
         <div className="p-6">
-          <h1 className="text-xl font-bold text-docs-text mb-4">Model Builder</h1>
+          <h1 className="text-xl font-bold text-docs-text mb-4">Dcision Builder</h1>
           <Stepper
             steps={stepLabels}
             currentStep={currentStep}
