@@ -25,10 +25,10 @@ interface NavItem {
 
 const decisionWorkflows: NavItem[] = [
   { name: 'Fleet & Routing', href: '/fleet-routing', icon: TruckIcon },
-  { name: 'Workforce Scheduling', href: '/workforce', icon: UsersIcon },
-  { name: 'Project Scheduling', href: '/project', icon: CalendarIcon },
-  { name: 'Resource Allocation', href: '/resource', icon: CubeIcon },
-  { name: 'Custom Templates', href: '/templates', icon: DocumentDuplicateIcon },
+  { name: 'Workforce Scheduling', href: '/workforce-scheduling', icon: UsersIcon },
+  { name: 'Project Scheduling', href: '/project-scheduling', icon: CalendarIcon },
+  { name: 'Resource Allocation', href: '/resource-allocation', icon: CubeIcon },
+  { name: 'Custom Templates', href: '/custom-templates', icon: DocumentDuplicateIcon },
 ];
 
 const platformConcepts: NavItem[] = [

@@ -37,6 +37,7 @@ const menu = [
       { href: '/workforce-scheduling', label: 'Workforce Scheduling', icon: UserGroupIcon },
       { href: '/project-scheduling', label: 'Project Scheduling', icon: CalendarIcon },
       { href: '/resource-allocation', label: 'Resource Allocation', icon: CubeIcon },
+      { href: '/custom-templates', label: 'Custom Templates', icon: RectangleGroupIcon },
     ],
   }
   
