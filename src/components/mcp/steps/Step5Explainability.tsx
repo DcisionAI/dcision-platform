@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ChartBarIcon,
   TableCellsIcon,
@@ -36,14 +36,40 @@ function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(' ');
 }
 
-export default function Step5Explainability() {
+export default function Step5Explainability({ solverResponse }: { solverResponse?: any }) {
   const [selectedSection, setSelectedSection] = useState(explanationSections[0].id);
   const [selectedVisualization, setSelectedVisualization] = useState(visualizationTypes[0].id);
 
   const currentSection = explanationSections.find(s => s.id === selectedSection)!;
+  const [explanationData, setExplanationData] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  // Fetch tailored explanation for selected section using LLM
+  useEffect(() => {
+    if (selectedSection !== 'local-explanations' && solverResponse) {
+      setLoading(true);
+      setExplanationData(null);
+      setError(null);
+      fetch('/api/mcp/explain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ solverResponse, type: selectedSection })
+      })
+        .then(async res => {
+          const json = await res.json();
+          if (res.ok && json.explanation) {
+            setExplanationData(json.explanation);
+          } else {
+            setError(json.error || 'Failed to fetch explanation');
+          }
+        })
+        .catch(err => setError(err.message))
+        .finally(() => setLoading(false));
+    }
+  }, [selectedSection, solverResponse]);
 
   return (
-    <div className="flex w-full bg-docs-body overflow-hidden rounded-lg shadow">
+    <div className="flex w-full max-w-full bg-docs-body overflow-x-hidden rounded-lg shadow">
       {/* Sidebar */}
       <div className="w-64 border-r border-docs-border bg-docs-section overflow-y-auto">
         <div className="p-4">
@@ -108,11 +134,64 @@ export default function Step5Explainability() {
         </div>
 
         {/* Content Area */}
-        <div className="bg-docs-section rounded-lg p-6 shadow-lg border border-docs-section-border h-64 flex items-center justify-center">
-          <div className="text-docs-muted text-center">
-            <LightBulbIcon className="h-10 w-10 mx-auto mb-2 text-docs-accent/20" />
-            <p>Select data and run solve to view explanations</p>
-          </div>
+        <div className="bg-docs-section rounded-lg p-6 shadow-lg border border-docs-section-border min-h-[200px] overflow-x-auto max-w-full">
+          {selectedSection === 'local-explanations' ? (
+            solverResponse ? (
+              (() => {
+                const step = solverResponse.results?.find((r: any) => r.step.action === 'solve_model');
+                const process = step?.thoughtProcess || '';
+                const sol = step?.result?.solution || step?.result;
+                const stats = sol?.statistics || {};
+                const obj = sol?.objective?.value ?? sol?.total_distance;
+                return (
+                  <table className="w-full text-sm table-auto">
+                    <thead>
+                      <tr className="bg-docs-section-border">
+                        <th className="border p-2 text-left break-all max-w-xs">Metric</th>
+                        <th className="border p-2 text-left break-all max-w-xs">Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {obj !== undefined && (
+                        <tr>
+                          <td className="border p-2 break-all max-w-xs">Objective Value</td>
+                          <td className="border p-2 break-all max-w-xs">{obj}</td>
+                        </tr>
+                      )}
+                      {stats.solveTime !== undefined && (
+                        <tr>
+                          <td className="border p-2 break-all max-w-xs">Solve Time (ms)</td>
+                          <td className="border p-2 break-all max-w-xs">{stats.solveTime}</td>
+                        </tr>
+                      )}
+                      <tr>
+                        <td className="border p-2 break-all max-w-xs align-top">Explanation</td>
+                        <td className="border p-2 break-all max-w-xs whitespace-pre-wrap">{process}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                );
+              })()
+            ) : (
+              <div className="text-docs-muted text-center">
+                <LightBulbIcon className="h-10 w-10 mx-auto mb-2 text-docs-accent/20" />
+                <p>Select data and run solve to view explanations</p>
+              </div>
+            )
+          ) : (
+            // Other explanation types: fetch from LLM endpoint
+            <>  {
+              loading ? (
+                <p>Loading explanation...</p>
+              ) : error ? (
+                <p className="text-red-600">{error}</p>
+              ) : explanationData ? (
+                <pre className="text-sm whitespace-pre-wrap break-all overflow-x-auto max-w-full">{explanationData}</pre>
+              ) : (
+                <p>Click on this tab to generate explanation.</p>
+              )
+            } </>
+          )}
         </div>
       </div>
     </div>

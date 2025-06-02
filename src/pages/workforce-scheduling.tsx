@@ -1,65 +1,100 @@
 import Layout from '@/components/Layout';
+import { useState } from 'react';
 
-const features = [
-  'Shift Pattern Optimization',
-  'Break Scheduling',
-  'Skills Matching',
-  'Workload Balancing'
-];
+const samplePayload = {
+  employees: [
+    { id: 1, name: 'Alice', skills: ['driver'], max_hours: 40, hourly_rate: 20, availability: [] },
+    { id: 2, name: 'Bob', skills: ['loader'], max_hours: 40, hourly_rate: 18, availability: [] }
+  ],
+  shifts: [
+    { id: 1, name: 'Morning' },
+    { id: 2, name: 'Evening' }
+  ],
+  time_horizon: 7,
+  constraints: {
+    min_rest_hours: 8,
+    max_consecutive_hours: 8,
+    coverage_requirements: { '1': 1, '2': 1 },
+    skill_requirements: { '1': ['driver'], '2': ['loader'] }
+  },
+  objective: 'minimize_cost'
+};
 
 export default function WorkforceScheduling() {
+  const [input, setInput] = useState(JSON.stringify(samplePayload, null, 2));
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<any>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      // Build MCP config to match Postman payload exactly
+      const model = JSON.parse(input);
+      const mcpConfig = {
+        sessionId: 'labor-scheduling-session-001',
+        protocol: {
+          steps: [
+            {
+              id: 'solve_step',
+              action: 'solve_model',
+              description: 'Solve the labor scheduling problem',
+              required: true
+            }
+          ]
+        },
+        context: { problemType: 'labor_scheduling' },
+        model: {
+          problemType: 'labor_scheduling',
+          ...model
+        }
+      };
+      const res = await fetch('https://mcp.dcisionai.com/mcp/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(mcpConfig)
+      });
+      const data = await res.json();
+      setResult(data);
+    } catch (err: any) {
+      setError(err.message || 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Layout>
       <div className="h-[calc(100vh-4rem)] bg-docs-body">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-          <div className="bg-docs-section rounded-xl p-8 shadow-lg border border-docs-section-border">
-            <div className="flex flex-col items-center justify-center space-y-6">
-              {/* Calendar Icon */}
-              <div className="relative w-48 h-48 flex items-center justify-center">
-                <svg className="w-40 h-40 text-blue-200/20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" className="animate-pulse" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 12h.01M16 12h.01M8 12h.01M12 16h.01M16 16h.01M8 16h.01" className="animate-pulse" />
-                </svg>
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+          <div className="bg-docs-section-dark rounded-xl p-8 shadow-lg border border-docs-section-border-dark text-docs-text">
+            <h1 className="text-2xl font-bold mb-4 text-docs-text">Workforce Scheduling Optimization</h1>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <label className="block text-docs-muted font-medium mb-1">Labor Scheduling Payload (JSON):</label>
+              <textarea
+                className="w-full h-48 p-2 border rounded font-mono text-sm bg-gray-900 text-gray-100 border-gray-700 placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500"
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                disabled={loading}
+              />
+              <button
+                type="submit"
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+                disabled={loading}
+              >
+                {loading ? 'Solving...' : 'Solve Workforce Schedule'}
+              </button>
+            </form>
+            {error && <div className="mt-4 text-red-600">Error: {error}</div>}
+            {result && (
+              <div className="mt-6">
+                <h2 className="text-lg font-semibold mb-2">Solution:</h2>
+                <pre className="bg-gray-900 text-gray-100 p-4 rounded text-xs overflow-x-auto border border-gray-700">{JSON.stringify(result, null, 2)}</pre>
               </div>
-
-              <h1 className="text-xl font-bold text-docs-text">Workforce Scheduling Optimization</h1>
-              <p className="text-sm text-docs-muted text-center max-w-md">
-                Our advanced workforce scheduling solution is under development. We're building powerful algorithms to optimize your staff schedules while respecting constraints and preferences.
-              </p>
-
-              {/* Development Progress */}
-              <div className="w-full max-w-md">
-                <div className="flex justify-between text-sm text-docs-muted mb-2">
-                  <span>Development Progress</span>
-                  <span>Coming Soon</span>
-                </div>
-                <div className="h-2 bg-docs-section-border rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-blue-200 rounded-full animate-pulse"
-                    style={{ width: '75%' }}
-                  />
-                </div>
-              </div>
-
-              {/* Features Coming */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-md mt-8">
-                {features.map((feature, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="text-xs text-docs-muted">{feature}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Additional Info */}
-              <div className="mt-8 p-4 bg-blue-200/10 rounded-lg">
-                <p className="text-xs text-docs-muted text-center">
-                  Want early access? Contact our team at support@dcision.ai
-                </p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

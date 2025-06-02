@@ -49,8 +49,25 @@ export class ModelRunnerAgent implements MCPAgent {
     // Build model components
     const modelComponents = await this.buildModelComponents(mcp);
     thoughtProcess.push('Built model components:');
-    thoughtProcess.push(`- Variables: ${Object.keys(modelComponents.variables).length}`);
-    thoughtProcess.push(`- Constraints: ${modelComponents.constraints.length}`);
+    // Summary differs by problem type
+    if (mcp.context.problemType === 'vehicle_routing' && modelComponents.fleet) {
+      const { vehicles, customers } = modelComponents.fleet;
+      const distCount = Array.isArray(modelComponents.data?.distances)
+        ? modelComponents.data.distances.length
+        : 0;
+      thoughtProcess.push(`- Vehicles: ${vehicles?.length ?? 0}`);
+      thoughtProcess.push(`- Customers: ${customers?.length ?? 0}`);
+      thoughtProcess.push(`- Distances entries: ${distCount}`);
+    } else {
+      const varCount = modelComponents.variables
+        ? Object.keys(modelComponents.variables).length
+        : 0;
+      const consCount = Array.isArray(modelComponents.constraints)
+        ? modelComponents.constraints.length
+        : 0;
+      thoughtProcess.push(`- Variables: ${varCount}`);
+      thoughtProcess.push(`- Constraints: ${consCount}`);
+    }
     thoughtProcess.push(`- Objective function defined`);
 
     // Use LLM for enhanced functionality if available
@@ -100,19 +117,40 @@ export class ModelRunnerAgent implements MCPAgent {
   }
 
   private async solveModel(mcp: MCP, thoughtProcess: string[], context?: AgentRunContext): Promise<AgentRunResult> {
-    thoughtProcess.push('Solving optimization model...');
+    thoughtProcess.push('Building model components for solver...');
+    // Build dynamic model components based on MCP and potential LLM enhancements
+    const modelComponents = await this.buildModelComponents(mcp);
+    // Summarize built components
+    if (mcp.context.problemType === 'vehicle_routing' && modelComponents.fleet) {
+      const { vehicles, customers } = modelComponents.fleet;
+      const distCount = Array.isArray(modelComponents.data?.distances)
+        ? modelComponents.data.distances.length
+        : 0;
+      thoughtProcess.push(`Built model components: Vehicles(${vehicles?.length}), Customers(${customers?.length}), Distances entries(${distCount}), Objective defined`);
+    } else {
+      const varCount = modelComponents.variables
+        ? Object.keys(modelComponents.variables).length
+        : 0;
+      const consCount = Array.isArray(modelComponents.constraints)
+        ? modelComponents.constraints.length
+        : 0;
+      thoughtProcess.push(`Built model components: Variables(${varCount}), Constraints(${consCount}), Objective defined`);
+    }
+    thoughtProcess.push('Formatting solver request payload based on problem type...');
+    // Leverage solver backend to format the request for its API
+    const payload = this.solver.formatRequestData(modelComponents, mcp);
+    thoughtProcess.push('Sending request to solver backend');
+    console.log('[ModelRunnerAgent] Formatted solver payload:', JSON.stringify(payload, null, 2));
     try {
-      // Bind data to the model template and send both to the solver backend
-      const payload = {
-        model: mcp.model,
-        data: mcp.context.dataset
-      };
-      console.log('[ModelRunnerAgent] Solver payload:', JSON.stringify(payload, null, 2));
-      // Use the actual solver service
       const solution = await this.solver.solve(payload);
-      thoughtProcess.push(`Model solved successfully in ${solution.statistics.solveTime}ms`);
-      thoughtProcess.push(`Objective value: ${solution.objective.value}`);
-      thoughtProcess.push(`Solution status: ${solution.statistics.status}`);
+      // Log stats if provided
+      if (solution.statistics) {
+        thoughtProcess.push(`Model solved successfully in ${solution.statistics.solveTime ?? 'N/A'}ms`);
+        thoughtProcess.push(`Objective value: ${solution.objective?.value ?? solution.statistics.objective ?? 'N/A'}`);
+        thoughtProcess.push(`Solution status: ${solution.statistics.status ?? 'N/A'}`);
+      } else {
+        thoughtProcess.push('Model solved, but no statistics returned by solver');
+      }
       // Use LLM to explain the solution if available
       if (context?.llm) {
         try {
@@ -179,22 +217,56 @@ export class ModelRunnerAgent implements MCPAgent {
   }
 
   private async buildModelComponents(mcp: MCP): Promise<any> {
-    // This would be replaced with actual model building logic
-    // Mock implementation for now
+    // Build model components based on problem type
+    if (mcp.context.problemType === 'vehicle_routing') {
+      // Read domain model from mcp.model
+      const vrpModel: any = (mcp as any).model;
+      const vehicles = Array.isArray(vrpModel.vehicles) ? vrpModel.vehicles : [];
+      const locations = Array.isArray(vrpModel.locations) ? vrpModel.locations : [];
+      const tasks = Array.isArray(vrpModel.tasks) ? vrpModel.tasks : [];
+      const distanceMatrix: number[][] = Array.isArray(vrpModel.distance_matrix)
+        ? vrpModel.distance_matrix
+        : [];
+      // Build depots from vehicle start locations
+      const depotIds = vehicles.map((v: any) => v.start_location);
+      const uniqueDepotIds = Array.from(new Set(depotIds));
+      const depots = uniqueDepotIds.map((id: any) => {
+        const loc = locations.find((l: any) => l.id === id) || {};
+        const veh = vehicles.find((v: any) => v.start_location === id);
+        const end = veh?.max_route_time_hours ? veh.max_route_time_hours * 3600 : 86400;
+        return {
+          ...loc,
+          timeWindows: [ { start: 0, end } ]
+        };
+      });
+      // Build customers from tasks, embedding location info
+      const customers = tasks.map((t: any) => {
+        const loc = locations.find((l: any) => l.id === t.location) || {};
+        return {
+          id: t.id,
+          latitude: loc.latitude ?? loc.lat,
+          longitude: loc.longitude ?? loc.lon,
+          name: String(t.id),
+          timeWindows: Array.isArray(t.time_window)
+            ? t.time_window.map((tw: any) => ({ start: tw[0], end: tw[1] }))
+            : []
+        };
+      });
+      // Format distances array
+      const distances = distanceMatrix.map((row: number[], i: number) => ({
+        from_id: locations[i]?.id,
+        distances: row.map((d: number, j: number) => ({ to_id: locations[j]?.id, distance: d }))
+      }));
+      return {
+        fleet: { vehicles, depots, customers },
+        data: { distances }
+      };
+    }
+    // Fallback for other problem types: use generic model
     return {
-      variables: {
-        // Example variables based on problem type
-        ...(mcp.context.problemType === 'vehicle_routing' && {
-          routes: 'Array of route assignments',
-          times: 'Array of visit times'
-        })
-      },
-      constraints: [
-        // Example constraints
-        'Capacity constraints',
-        'Time window constraints'
-      ],
-      objective: 'Minimize total distance'
+      variables: mcp.model?.variables || [],
+      constraints: mcp.model?.constraints || [],
+      objective: mcp.model?.objective || { type: 'minimize', field: '', description: '', weight: 1 }
     };
   }
 }

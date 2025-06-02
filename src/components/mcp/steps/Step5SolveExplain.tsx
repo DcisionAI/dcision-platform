@@ -42,7 +42,7 @@ const Step5SolveExplain: React.FC<Step5SolveExplainProps> = ({ solverResponse })
       {status && <p className="text-gray-700 mb-2">{status}</p>}
       {/* Integrated Explainability Panel */}
       {(status === 'Completed' || solverResponse) && (
-        <Step5Explainability />
+        <Step5Explainability solverResponse={solverResponse} />
       )}
     </div>
   );

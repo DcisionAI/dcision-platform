@@ -176,7 +176,7 @@ export default function ModelBuilderPage() {
                 setRagExamples(modelDef.retrievedExamples);
               }
               setMcpConfigState((prev: any) => {
-                // Always ensure modelDef gets a dataset
+                // Ensure we have a dataset
                 const dataset = modelDef.dataset
                   || prev.enrichedData
                   || prev.dataset
@@ -185,7 +185,14 @@ export default function ModelBuilderPage() {
                 return {
                   ...prev,
                   modelDef: { ...modelDef, dataset },
+                  // Include both build and solve steps
                   protocolSteps: [
+                    {
+                      id: 'build_step',
+                      action: 'build_model',
+                      description: 'Build the optimization model',
+                      required: true
+                    },
                     {
                       id: 'solve_step',
                       action: 'solve_model',

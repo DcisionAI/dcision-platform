@@ -71,6 +71,12 @@ export class LLMServiceImpl implements LLMService {
       this.openai = new OpenAI({ apiKey });
     }
   }
+  /**
+   * Generic LLM call for ad-hoc prompts.
+   */
+  public async call(prompt: string, systemPrompt?: string): Promise<LLMResponse> {
+    return this.callLLM(prompt, systemPrompt);
+  }
 
   private async callLLM(prompt: string, systemPrompt?: string): Promise<LLMResponse> {
     try {

@@ -7,6 +7,17 @@ export class ORToolsBackend implements SolverBackend {
   private serviceUrl: string;
   private isMock: boolean;
   private config?: SolverConfig;
+  
+  /**
+   * Returns the full solve endpoint URL.
+   * If ORTools_SOLVE_URL is set in env, use that; otherwise default to /solve/vehicle-assignment on serviceUrl.
+   */
+  private getSolveUrl(): string {
+    if (process.env.ORTools_SOLVE_URL) {
+      return process.env.ORTools_SOLVE_URL;
+    }
+    return `${this.serviceUrl}/solve/vehicle-assignment`;
+  }
 
   constructor(serviceUrl: string = 'http://localhost:8080', isMock: boolean = false) {
     this.serviceUrl = serviceUrl;
@@ -59,13 +70,19 @@ export class ORToolsBackend implements SolverBackend {
         };
       }
 
-      console.log('Sending request to:', `${this.serviceUrl}/solve/vehicle-assignment`);
-      console.log('Request data:', JSON.stringify(data, null, 2));
-      
-      const response = await axios.post(`${this.serviceUrl}/solve/vehicle-assignment`, data);
+      // Determine the full solver URL (override ORTools_SOLVE_URL or use default)
+      const solveUrl = this.getSolveUrl();
+      console.log(`[ORToolsBackend] POST → ${solveUrl}`);
+      console.log(`[ORToolsBackend] Payload: ${JSON.stringify(data)}`);
+      const response = await axios.post(solveUrl, data);
       return response.data;
-    } catch (error) {
-      console.error('Failed to solve model:', error);
+    } catch (error: any) {
+      // If this is an HTTP error from the solver service, log and include response details
+      if (axios.isAxiosError(error) && error.response) {
+        console.error('[ORToolsBackend] Solver validation error:', error.response.status, error.response.data);
+        throw new Error(`Solver responded with status ${error.response.status}: ${JSON.stringify(error.response.data)}`);
+      }
+      console.error('[ORToolsBackend] Failed to solve model:', error);
       throw error;
     }
   }
@@ -91,7 +108,8 @@ export class ORToolsBackend implements SolverBackend {
     return endpointMap[problemType] || '/solve/task-assignment';
   }
 
-  private formatRequestData(model: any, mcp: MCP): any {
+  // Public: format raw model components and MCP into solver-specific request payload
+  public formatRequestData(model: any, mcp: MCP): any {
     if (mcp.context.problemType === 'vehicle_routing') {
       // Format for VehicleAssignmentRequest
       const fleet = model.fleet || {};
@@ -117,53 +135,68 @@ export class ORToolsBackend implements SolverBackend {
         }
       });
 
+      // Build solver request payload for Vehicle Assignment Problem (VAP)
       return {
-        type: 'vap',  // Vehicle Assignment Problem
+        type: 'vap',
         vehicles: fleet.vehicles.map((v: any, index: number) => ({
-          id: index + 1,
+          id: typeof v.id === 'number' ? v.id : index + 1,
           type: 'standard',
           capacity: v.capacity,
-          operating_cost: v.costPerKm || 1.0,
-          maintenance_interval: 1000,
-          fuel_efficiency: 1.0,
-          name: `Vehicle ${index + 1}`,
-          skills: [],
-          max_hours: 8.0,
-          hourly_rate: 50.0,
+          operating_cost: v.costPerKm ?? v.operating_cost ?? 1.0,
+          maintenance_interval: v.maintenance_interval ?? 1000,
+          fuel_efficiency: v.fuel_efficiency ?? 1.0,
+          name: v.name || `Vehicle ${index + 1}`,
+          skills: v.required_skills ?? [],
+          max_hours: v.max_route_time_hours ?? v.max_hours ?? 8.0,
+          hourly_rate: v.hourly_rate ?? 0,
           availability: [{
-            start_time: new Date(fleet.depots[0].timeWindows?.[0]?.start || '2024-03-20T08:00:00Z').getTime() / 1000,
-            end_time: new Date(fleet.depots[0].timeWindows?.[0]?.end || '2024-03-20T18:00:00Z').getTime() / 1000
+            start_time: Math.floor((fleet.depots[0]?.timeWindows?.[0]?.start ?? 0)),
+            end_time: Math.floor((fleet.depots[0]?.timeWindows?.[0]?.end ?? 86400))
           }]
         })),
-        tasks: fleet.customers.map((c: any, index: number) => ({
-          id: index + 1,
-          location: {
-            id: locationIdMap.get(c.id),
-            latitude: c.latitude,
-            longitude: c.longitude,
-            name: c.id
-          },
-          duration: 30, // Default service time in minutes
-          required_skills: [],
-          priority: 1,
-          time_window: c.timeWindows?.[0] ? [
-            new Date(c.timeWindows[0].start).getTime() / 1000,
-            new Date(c.timeWindows[0].end).getTime() / 1000
-          ] : []
-        })),
-        locations: allLocations.map((loc: any, index: number) => ({
-          id: index,
-          latitude: loc.latitude,
-          longitude: loc.longitude,
-          name: loc.id
-        })),
+        // Map each customer to a task, using its location index as the task ID
+        tasks: fleet.customers.map((c: any) => {
+          const locIdx = locationIdMap.get(c.id) ?? 0;
+          return {
+            id: locIdx,
+            location: {
+              id: locIdx,
+              latitude: c.latitude,
+              longitude: c.longitude,
+              name: c.name ?? String(c.id)
+            },
+            demand: c.demand ?? 0,
+            duration: c.duration ?? 30,
+            required_skills: c.required_skills ?? [],
+            priority: c.priority ?? 1,
+            time_window: c.timeWindows?.[0]
+              ? [
+                  Math.floor(new Date(c.timeWindows[0].start).getTime() / 1000),
+                  Math.floor(new Date(c.timeWindows[0].end).getTime() / 1000)
+                ]
+              : []
+          };
+        }),
+        locations: allLocations.map((loc: any, index: number) => {
+          const latitude = loc.latitude ?? loc.lat;
+          const longitude = loc.longitude ?? loc.lon;
+          const name = typeof loc.name === 'string'
+            ? loc.name
+            : String(loc.id ?? index);
+          return {
+            id: index,
+            latitude,
+            longitude,
+            name
+          };
+        }),
         distance_matrix: distanceMatrix,
         constraints: {
-          max_distance: Math.max(...fleet.vehicles.map((v: any) => v.maxDistance || 1000)),
-          max_working_hours: 8 * 60, // 8 hours in minutes
+          max_distance: Math.max(...fleet.vehicles.map((v: any) => v.maxDistance ?? 1000)),
+          max_working_hours: 8 * 3600,
           vehicle_availability: fleet.vehicles.map(() => ({
-            start_time: new Date(fleet.depots[0].timeWindows?.[0]?.start || '2024-03-20T08:00:00Z').getTime() / 1000,
-            end_time: new Date(fleet.depots[0].timeWindows?.[0]?.end || '2024-03-20T18:00:00Z').getTime() / 1000
+            start_time: Math.floor((fleet.depots[0]?.timeWindows?.[0]?.start ?? 0)),
+            end_time: Math.floor((fleet.depots[0]?.timeWindows?.[0]?.end ?? 86400))
           }))
         }
       };

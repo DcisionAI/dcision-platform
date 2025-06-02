@@ -1,3 +1,5 @@
+// Ensure core agents are registered
+import '../agents';
 import { MCPAgent } from '../agents/types';
 import { MCP, ProtocolStep } from '../types/core';
 import { AgentRegistry } from '../agents/AgentRegistry';

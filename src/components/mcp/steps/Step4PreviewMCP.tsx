@@ -34,20 +34,82 @@ const Step4PreviewMCP: React.FC<Step4PreviewMCPProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<string | null>(null);
 
-  const mcp: MCP = assembleMCP({
-    sessionId,
-    intent,
-    enrichedData,
-    modelDef,
-    environment,
-    dataset,
-    protocolSteps,
-    industry,
-    version,
-    status,
-  });
+  // For quick testing, use a hardcoded MCP config instead of dynamic assembly
+  // const mcp: MCP = assembleMCP({ sessionId, intent, enrichedData, modelDef, environment, dataset, protocolSteps, industry, version, status });
+  const mcp: MCP = {
+    "id": "vrp-001",
+    "sessionId": "vrp-session-001",
+    "version": "1.0",
+    "created": "2024-06-01T12:00:00Z",
+    "lastModified": "2024-06-01T12:00:00Z",
+    "status": "pending",
+    "model": {
+      "name": "VRP with 5 Vehicles (Expression-Based)",
+      "description": "Minimize travel cost for 5 vehicles covering 1 customer, 1 depot",
+      "variables": [
+        { name: "x_0_0_1", type: "number", description: "" },
+        { name: "x_0_1_0", type: "number", description: "" },
+        { name: "x_1_0_1", type: "number", description: "" },
+        { name: "x_1_1_0", type: "number", description: "" },
+        { name: "x_2_0_1", type: "number", description: "" },
+        { name: "x_2_1_0", type: "number", description: "" },
+        { name: "x_3_0_1", type: "number", description: "" },
+        { name: "x_3_1_0", type: "number", description: "" },
+        { name: "x_4_0_1", type: "number", description: "" },
+        { name: "x_4_1_0", type: "number", description: "" }
+      ],
+      "constraints": [
+        {
+          type: "assignment",
+          description: "",
+          operator: "eq",
+          field: "x_0_0_1 + x_1_0_1 + x_2_0_1 + x_3_0_1 + x_4_0_1",
+          value: 1,
+          priority: "must"
+        },
+        {
+          type: "assignment",
+          description: "",
+          operator: "eq",
+          field: "x_0_1_0 + x_1_1_0 + x_2_1_0 + x_3_1_0 + x_4_1_0",
+          value: 1,
+          priority: "must"
+        }
+      ],
+      "objective": {
+        type: "minimize",
+        field: "5*x_0_0_1 + 5*x_0_1_0 + 5*x_1_0_1 + 5*x_1_1_0 + 5*x_2_0_1 + 5*x_2_1_0 + 5*x_3_0_1 + 5*x_3_1_0 + 5*x_4_0_1 + 5*x_4_1_0",
+        description: "",
+        weight: 1
+      }
+    },
+    "context": {
+      "problemType": "linear_programming",
+      "industry": "fleetops",
+      "environment": {
+        "region": "local",
+        "timezone": "UTC"
+      },
+      "dataset": { internalSources: [] }
+    },
+    "protocol": {
+      "steps": [
+        {
+          "id": "solve_step",
+          "action": "solve_model",
+          "description": "Solve the VRP using expression-based MIP",
+          "required": true
+        }
+      ],
+      "allowPartialSolutions": false,
+      "explainabilityEnabled": false,
+      "humanInTheLoop": {
+        "required": false
+      }
+    }
+  } as MCP;
 
-  const sampleMcp = {
+  /* const sampleMcp = {
     "sessionId": "simple-lp-session-001",
     "version": "1.0",
     "created": "2025-05-10T12:00:00Z",
@@ -81,7 +143,7 @@ const Step4PreviewMCP: React.FC<Step4PreviewMCPProps> = ({
       "explainabilityEnabled": false,
       "humanInTheLoop": { "required": false }
     }
-  }
+  } */
   const mcpJson = JSON.stringify(mcp, null, 2);
 
   const handleSubmit = async () => {
@@ -89,18 +151,34 @@ const Step4PreviewMCP: React.FC<Step4PreviewMCPProps> = ({
     setResponse(null);
     setSubmitStatus(null);
     try {
-      // Flatten context.dataset into the top-level payload for solver compatibility
+      // Map 'field' to 'expression' and 'value' to 'rhs' for constraints and objective for backend compatibility
       const payload = {
         ...mcp,
-        ...(mcp.context && mcp.context.dataset ? mcp.context.dataset : {})
+        model: {
+          ...mcp.model,
+          variables: mcp.model.variables.map((v: any) => ({
+            ...v,
+            lower: v.metadata?.properties?.lower ? Number(v.metadata.properties.lower) : 0,
+            upper: v.metadata?.properties?.upper ? Number(v.metadata.properties.upper) : 1
+          })),
+          constraints: mcp.model.constraints.map((c: any) => {
+            const { field, value, ...rest } = c;
+            return { ...rest, expression: field, rhs: value };
+          }),
+          objective: (() => {
+            const { field, ...rest } = mcp.model.objective;
+            return { ...rest, expression: field };
+          })()
+        }
       };
-      // Convert constraints array to dictionary if needed
-      if (Array.isArray(payload.model.constraints)) {
-        payload.model.constraints = Object.fromEntries(
-          payload.model.constraints.map((c: any) => [c.name, c])
-        );
-      }
-      const res = await fetch('https://mcp.dcisionai.com/mcp/submit', {
+      // Remove normalization for vehicles, tasks, and locations as they do not exist in this MCP
+      // Normalize model.vehicles for external orchestrator
+      
+      // Determine MCP submit endpoint: use external base URL if provided, else local API
+      const submitUrl = process.env.NEXT_PUBLIC_MCP_BASE_URL
+        ? `${process.env.NEXT_PUBLIC_MCP_BASE_URL}/mcp/submit`
+        : '/api/mcp/submit';
+      const res = await fetch(submitUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
