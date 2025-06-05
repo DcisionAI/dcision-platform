@@ -57,7 +57,11 @@
           },
           "404": {
             "description": "Session not found",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GenericError" } } }
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GenericError" }
+              }
+            }
           }
         }
       }
@@ -86,7 +90,11 @@
           },
           "404": {
             "description": "Session not found",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GenericError" } } }
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GenericError" }
+              }
+            }
           }
         }
       }
@@ -119,20 +127,22 @@
           "agent": { "type": "string" },
           "result": { "type": "object" }
         }
-      }
-    },
-    "SessionStatusResponse": {
-      "type": "object",
-      "properties": {
-        "sessionId": { "type": "string" },
-        "status": { "type": "string" }
       },
-      "required": ["sessionId", "status"]
-    },
-    "GenericError": {
-      "type": "object",
-      "properties": { "error": { "type": "string" } },
-      "required": ["error"]
+      "SessionStatusResponse": {
+        "type": "object",
+        "properties": {
+          "sessionId": { "type": "string" },
+          "status": { "type": "string" }
+        },
+        "required": ["sessionId", "status"]
+      },
+      "GenericError": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" }
+        },
+        "required": ["error"]
+      }
     }
   }
 }
