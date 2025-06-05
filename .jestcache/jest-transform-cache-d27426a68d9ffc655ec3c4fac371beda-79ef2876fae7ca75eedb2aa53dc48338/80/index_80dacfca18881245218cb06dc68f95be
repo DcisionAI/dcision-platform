@@ -1,0 +1,18 @@
+1a8570e547731cf49330d01fe75cfb39
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.createClient = createClient;
+const generated_1 = require("./generated");
+/**
+ * Create a DcisionAI client for Decision Workflows.
+ * @param apiKey - Your API key for authentication
+ * @param baseUrl - Base URL for the MCP API (default: https://mcp.dcisionai.com)
+ */
+function createClient(apiKey, baseUrl = 'https://mcp.dcisionai.com') {
+    const config = new generated_1.Configuration({
+        basePath: baseUrl,
+        apiKey: () => apiKey
+    });
+    return new generated_1.DefaultApi(config);
+}
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJmaWxlIjoiL1VzZXJzL2FtZXlkaGF2bGUvRG9jdW1lbnRzL0RjaXNpb25BSS9kY2lzaW9uYWktcGxhdGZvcm0vcGFja2FnZXMvc2RrLWpzL3NyYy9pbmRleC50cyIsIm1hcHBpbmdzIjoiOztBQU9BLG9DQVNDO0FBaEJELDJDQUF3RDtBQUV4RDs7OztHQUlHO0FBQ0gsU0FBZ0IsWUFBWSxDQUMxQixNQUFjLEVBQ2QsVUFBa0IsMkJBQTJCO0lBRTdDLE1BQU0sTUFBTSxHQUFHLElBQUkseUJBQWEsQ0FBQztRQUMvQixRQUFRLEVBQUUsT0FBTztRQUNqQixNQUFNLEVBQUUsR0FBRyxFQUFFLENBQUMsTUFBTTtLQUNyQixDQUFDLENBQUM7SUFDSCxPQUFPLElBQUksc0JBQVUsQ0FBQyxNQUFNLENBQUMsQ0FBQztBQUNoQyxDQUFDIiwibmFtZXMiOltdLCJzb3VyY2VzIjpbIi9Vc2Vycy9hbWV5ZGhhdmxlL0RvY3VtZW50cy9EY2lzaW9uQUkvZGNpc2lvbmFpLXBsYXRmb3JtL3BhY2thZ2VzL3Nkay1qcy9zcmMvaW5kZXgudHMiXSwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IHsgQ29uZmlndXJhdGlvbiwgRGVmYXVsdEFwaSB9IGZyb20gJy4vZ2VuZXJhdGVkJztcblxuLyoqXG4gKiBDcmVhdGUgYSBEY2lzaW9uQUkgY2xpZW50IGZvciBEZWNpc2lvbiBXb3JrZmxvd3MuXG4gKiBAcGFyYW0gYXBpS2V5IC0gWW91ciBBUEkga2V5IGZvciBhdXRoZW50aWNhdGlvblxuICogQHBhcmFtIGJhc2VVcmwgLSBCYXNlIFVSTCBmb3IgdGhlIE1DUCBBUEkgKGRlZmF1bHQ6IGh0dHBzOi8vbWNwLmRjaXNpb25haS5jb20pXG4gKi9cbmV4cG9ydCBmdW5jdGlvbiBjcmVhdGVDbGllbnQoXG4gIGFwaUtleTogc3RyaW5nLFxuICBiYXNlVXJsOiBzdHJpbmcgPSAnaHR0cHM6Ly9tY3AuZGNpc2lvbmFpLmNvbSdcbik6IERlZmF1bHRBcGkge1xuICBjb25zdCBjb25maWcgPSBuZXcgQ29uZmlndXJhdGlvbih7XG4gICAgYmFzZVBhdGg6IGJhc2VVcmwsXG4gICAgYXBpS2V5OiAoKSA9PiBhcGlLZXlcbiAgfSk7XG4gIHJldHVybiBuZXcgRGVmYXVsdEFwaShjb25maWcpO1xufSJdLCJ2ZXJzaW9uIjozfQ==

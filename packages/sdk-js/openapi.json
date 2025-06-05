@@ -1,0 +1,138 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "DcisionAI Decision Workflows API",
+    "version": "0.0.1-alpha",
+    "description": "Auto-generated OpenAPI specification for the DcisionAI Decision Workflows platform."
+  },
+  "servers": [
+    { "url": "https://mcp.dcisionai.com" }
+  ],
+  "paths": {
+    "/mcp/submit": {
+      "post": {
+        "summary": "Submit a decision workflow (MCP) job",
+        "tags": ["MCP"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MCPConfig" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP job submitted successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MCPResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mcp/status/{sessionId}": {
+      "get": {
+        "summary": "Get status of an MCP job",
+        "tags": ["MCP"],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "MCP session identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "MCP job status",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SessionStatusResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "Session not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GenericError" } } }
+          }
+        }
+      }
+    },
+    "/mcp/result/{sessionId}": {
+      "get": {
+        "summary": "Retrieve results of an MCP job",
+        "tags": ["MCP"],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "MCP session identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "MCP job results",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MCPResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "Session not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GenericError" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "MCPConfig": {
+        "type": "object",
+        "properties": {
+          "sessionId": { "type": "string" },
+          "protocol": { "type": "object" },
+          "context": { "type": "object" },
+          "model": { "type": "object" }
+        },
+        "required": ["sessionId", "protocol", "context", "model"]
+      },
+      "MCPResponse": {
+        "type": "object",
+        "properties": {
+          "sessionId": { "type": "string" },
+          "status": { "type": "string" },
+          "results": { "type": "array", "items": { "$ref": "#/components/schemas/MCPResult" } }
+        }
+      },
+      "MCPResult": {
+        "type": "object",
+        "properties": {
+          "step": { "type": "object" },
+          "agent": { "type": "string" },
+          "result": { "type": "object" }
+        }
+      }
+    },
+    "SessionStatusResponse": {
+      "type": "object",
+      "properties": {
+        "sessionId": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["sessionId", "status"]
+    },
+    "GenericError": {
+      "type": "object",
+      "properties": { "error": { "type": "string" } },
+      "required": ["error"]
+    }
+  }
+}

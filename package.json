@@ -10,6 +10,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "create-demo-user": "ts-node scripts/create-demo-user.ts",
+    "generate:openapi": "node scripts/generate-openapi.js",
+    "generate:sdk": "npm run generate:openapi",
     "db:migrate": "supabase db push",
     "build:dev": "NODE_OPTIONS='--max-old-space-size=4096' next build",
     "build:prod": "npm run clean && NODE_OPTIONS='--max-old-space-size=4096' NODE_ENV=production next build",
@@ -70,6 +72,8 @@
   },
   "devDependencies": {
     "@next/bundle-analyzer": "^15.3.1",
+    "ts-node": "^10.9.1",
+    "@openapitools/openapi-generator-cli": "^2.5.0",
     "@types/body-parser": "^1.19.5",
     "@types/express": "^5.0.1",
     "@types/formidable": "^3.4.5",

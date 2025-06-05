@@ -1,0 +1,32 @@
+{
+  "name": "@dcisionai/sdk-js",
+  "version": "0.1.0-alpha",
+  "description": "JavaScript SDK for DcisionAI Decision Workflows",
+  "license": "MIT",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "https://github.com/dcisionai/dcisionai-platform.git" },
+  "keywords": ["dcisionai", "optimization", "sdk", "typescript", "mcp"],
+  "engines": { "node": ">=14" },
+  "private": false,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "generate": "openapi-generator-cli generate -i openapi.json -g typescript-axios -o src/generated",
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint src --ext .ts",
+    "test": "jest"
+  },
+  "dependencies": {
+    "axios": "^1.4.0"
+  },
+  "devDependencies": {
+    "@openapitools/openapi-generator-cli": "^2.5.0",
+    "typescript": "^5.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.5",
+    "@types/jest": "^29.0.0",
+    "eslint": "^8.0.0",
+    "@typescript-eslint/parser": "^5.0.0",
+    "@typescript-eslint/eslint-plugin": "^5.0.0"
+  }
+}

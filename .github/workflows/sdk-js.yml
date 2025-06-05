@@ -1,0 +1,31 @@
+ # GitHub Actions workflow for SDK CI
+ name: SDK JS CI
+
+ on:
+   push:
+     paths:
+       - 'packages/sdk-js/**'
+       - 'scripts/generate-openapi.js'
+   pull_request:
+     paths:
+       - 'packages/sdk-js/**'
+       - 'scripts/generate-openapi.js'
+
+ jobs:
+   build:
+     runs-on: ubuntu-latest
+     steps:
+       - uses: actions/checkout@v3
+       - uses: actions/setup-node@v3
+         with:
+           node-version: '18'
+           cache: 'yarn'
+       - name: Install dependencies
+         run: yarn --frozen-lockfile
+       - name: Generate OpenAPI spec
+         run: npm run generate:openapi
+      # Skip code generation step in CI (stubbed)
+       - name: Build SDK
+         run: cd packages/sdk-js && npm run build
+       - name: Test SDK
+         run: npx jest --config packages/sdk-js/jest.config.js
