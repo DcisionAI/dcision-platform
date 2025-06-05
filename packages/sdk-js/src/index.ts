@@ -46,7 +46,7 @@ export async function solveLaborScheduling(
   model: Record<string, any>,
   options?: { sessionId?: string; baseUrl?: string }
 ): Promise<MCPResponse> {
-  const cfg = {
+  const cfg: MCPConfig = {
     sessionId: options?.sessionId || `labor-scheduling-${Date.now()}`,
     protocol: { steps: [{ id: 'solve_step', action: 'solve_model', description: 'Solve labor scheduling', required: true }] },
     context: { problemType: 'labor_scheduling' },
@@ -64,7 +64,7 @@ export async function solveResourceAllocation(
   model: Record<string, any>,
   options?: { sessionId?: string; baseUrl?: string }
 ): Promise<MCPResponse> {
-  const cfg = {
+  const cfg: MCPConfig = {
     sessionId: options?.sessionId || `equipment-allocation-${Date.now()}`,
     protocol: { steps: [{ id: 'solve_step', action: 'solve_model', description: 'Solve equipment allocation', required: true }] },
     context: { problemType: 'equipment_allocation' },
@@ -82,7 +82,7 @@ export async function solveProjectScheduling(
   model: Record<string, any>,
   options?: { sessionId?: string; baseUrl?: string }
 ): Promise<MCPResponse> {
-  const cfg = {
+  const cfg: MCPConfig = {
     sessionId: options?.sessionId || `project-scheduling-${Date.now()}`,
     protocol: { steps: [{ id: 'solve_step', action: 'solve_model', description: 'Run project risk simulation', required: true }] },
     context: { problemType: 'risk_simulation' },
@@ -100,7 +100,7 @@ export async function solveMaterialDeliveryPlanning(
   model: Record<string, any>,
   options?: { sessionId?: string; baseUrl?: string }
 ): Promise<MCPResponse> {
-  const cfg = {
+  const cfg: MCPConfig = {
     sessionId: options?.sessionId || `material-delivery-${Date.now()}`,
     protocol: { steps: [{ id: 'solve_step', action: 'solve_model', description: 'Solve material delivery planning', required: true }] },
     context: { problemType: 'material_delivery_planning' },
@@ -118,7 +118,7 @@ export async function solveRiskSimulation(
   model: Record<string, any>,
   options?: { sessionId?: string; baseUrl?: string }
 ): Promise<MCPResponse> {
-  const cfg = {
+  const cfg: MCPConfig = {
     sessionId: options?.sessionId || `risk-simulation-${Date.now()}`,
     protocol: { steps: [{ id: 'solve_step', action: 'solve_model', description: 'Run risk simulation', required: true }] },
     context: { problemType: 'risk_simulation' },
