@@ -1,4 +1,4 @@
-import { Configuration, DefaultApi, MCPConfig, MCPResponse } from './generated';
+import { Configuration, MCPApi, MCPConfig, MCPResponse } from './generated';
 
 /**
  * Create a DcisionAI client for Decision Workflows.
@@ -8,12 +8,12 @@ import { Configuration, DefaultApi, MCPConfig, MCPResponse } from './generated';
 export function createClient(
   apiKey: string,
   baseUrl: string = 'https://mcp.dcisionai.com'
-): DefaultApi {
+): MCPApi {
   const config = new Configuration({
     basePath: baseUrl,
     apiKey: () => apiKey
   });
-  return new DefaultApi(config);
+  return new MCPApi(config);
 }
 
 /** Generic function to submit an MCP job */
@@ -28,7 +28,7 @@ async function submitMCP(
 ): Promise<MCPResponse> {
   const client = createClient(apiKey, baseUrl);
   try {
-    const resp = await client.postMcpSubmit(config);
+    const resp = await client.mcpSubmitPost({ mCPConfig: config });
     return resp;
   } catch (err: any) {
     // Wrap and rethrow
