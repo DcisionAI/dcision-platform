@@ -92,38 +92,173 @@ yarn test
 ## Deployment
 The platform is designed to be deployed using Docker containers. Each service has its own Dockerfile and can be built and deployed independently.
 
-## Infrastructure as Code
-We maintain IaC configs under `infra/` for different clouds:
+## Deployment Options
 
-- **GCP (MVP)**: `infra/gcp` contains Terraform to provision:
-  - Cloud SQL (Postgres) for Airbyte config DB
-  - GCS bucket for Airbyte storage
-  - GKE cluster and node pool
-  Use it with:
-  ```bash
-  cd infra/gcp
-  # Place your service account key JSON (the content you pasted) into this folder as 'credentials.json'
-  terraform init
-  terraform apply \
-    -var project_id=YOUR_PROJECT_ID \
-    -var credentials_file="credentials.json"
-  ```
-  Then deploy Airbyte and solver to the cluster:
-  ```bash
-  kubectl create namespace data
-  kubectl create namespace solver
-  # Create secrets (replace paths and names accordingly)
-  kubectl create secret generic cloudsql-instance-credentials \
-    --from-file=credentials.json=PATH_TO_SA_KEY.json -n data
-  kubectl create secret generic airbyte-db-credentials \
-    --from-literal=password=$(terraform output -raw db_password) -n data
-  # Apply Kubernetes manifests
-  kubectl apply -f infra/k8s/data-service-deployment.yaml
-  kubectl apply -f infra/k8s/solver-service-deployment.yaml
-  ```
+### 1. Vercel Deployment (Demo Environment)
 
-- **AWS (Roadmap)**: see `infra/aws/README.md` for RDS, S3, EKS/ECS setup
-- **Azure (Roadmap)**: see `infra/azure/README.md` for Azure Database for PostgreSQL, Blob Storage, AKS
+The platform is configured for deployment on Vercel, which is used primarily for demos and development.
+
+```bash
+# Deploy to Vercel
+vercel
+```
+
+### 2. Docker Deployment (Local/On-Premises)
+
+To run the platform locally or on-premises using Docker:
+
+1. Copy `.env.local` to `.env` and fill in the required environment variables:
+   ```bash
+   cp .env.local .env
+   ```
+
+2. Build and start the containers:
+   ```bash
+   docker-compose up --build
+   ```
+
+3. Access the application at `http://localhost:3000`
+
+### 3. AWS Deployment (Production)
+
+To deploy the platform to AWS using Terraform:
+
+1. Configure AWS credentials:
+   ```bash
+   aws configure
+   ```
+
+2. Create a `terraform.tfvars` file with your configuration:
+   ```hcl
+   aws_region = "us-west-2"
+   vpc_id = "vpc-xxxxxx"
+   public_subnet_ids = ["subnet-xxxxxx", "subnet-yyyyyy"]
+   private_subnet_ids = ["subnet-zzzzzz", "subnet-wwwwww"]
+   ecr_repository_url = "123456789012.dkr.ecr.us-west-2.amazonaws.com/dcisionai-platform"
+   database_url = "postgresql://user:password@host:5432/dbname"
+   supabase_url = "https://your-project.supabase.co"
+   supabase_anon_key = "your-anon-key"
+   supabase_service_role_key = "your-service-role-key"
+   openai_api_key = "your-openai-key"
+   anthropic_api_key = "your-anthropic-key"
+   ```
+
+3. Initialize and apply Terraform:
+   ```bash
+   cd terraform
+   terraform init
+   terraform plan
+   terraform apply
+   ```
+
+4. The application will be available at the ALB DNS name (output after Terraform apply).
+
+## Development
+
+### Prerequisites
+
+- Node.js 18+
+- Yarn
+- Docker and Docker Compose
+- AWS CLI (for AWS deployment)
+- Terraform (for AWS deployment)
+
+### Local Development
+
+1. Install dependencies:
+   ```bash
+   yarn install
+   ```
+
+2. Start the development server:
+   ```bash
+   yarn dev
+   ```
+
+3. Access the application at `http://localhost:3000`
+
+### Building
+
+```bash
+# Build for production
+yarn build:prod
+
+# Build for development
+yarn build:dev
+```
+
+### Testing
+
+```bash
+# Run tests
+yarn test
+
+# Run tests in watch mode
+yarn test:watch
+```
+
+## Environment Variables
+
+Required environment variables (in `.env.local`):
+
+- `DATABASE_URL`: PostgreSQL connection URL
+- `SUPABASE_URL`: Supabase project URL
+- `SUPABASE_ANON_KEY`: Supabase anonymous key
+- `SUPABASE_SERVICE_ROLE_KEY`: Supabase service role key
+- `OPENAI_API_KEY`: OpenAI API key
+- `ANTHROPIC_API_KEY`: Anthropic API key
+
+## Contributing
+
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
 ## License
-[Add your license information here]
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+# DcisionAI Platform - Customer Deployment
+
+## Quick Start (Docker Compose)
+
+1. Pull the image:
+   ```bash
+   docker pull ghcr.io/<your-org>/<your-repo>:latest
+   ```
+2. Create a `.env` file with your configuration:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   POSTGRES_HOST=your_db_host
+   POSTGRES_PORT=5432
+   POSTGRES_DB=your_db_name
+   POSTGRES_USER=your_db_user
+   POSTGRES_PASSWORD=your_db_password
+   ```
+3. Start the app:
+   ```bash
+   docker-compose -f docker-compose.prod.yml up -d
+   ```
+
+## AWS Deployment (Terraform)
+
+1. Clone this repo and set your variables in `terraform.tfvars`.
+2. Run:
+   ```bash
+   terraform init
+   terraform apply
+   ```
+3. Access your app via the Load Balancer URL.
+
+## Onboarding
+
+- On first launch, enter your DcisionAI API key.
+- No database setup required if your DB is pre-initialized.
+
+## Environment Variables
+
+- All configuration is via environment variables (see `.env` example above).
+- No code changes required.
+
+## Support
+
+For help, contact support@dcisionai.com or open an issue on GitHub.

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSupabase } from '@/lib/supabase';
+import { encrypt } from '@/lib/encryption';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const supabase = getServerSupabase();
@@ -19,9 +20,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (!id || !config) {
           return res.status(400).json({ error: 'Connector id and config are required' });
         }
+
+        // Encrypt sensitive credentials before storing
+        const encryptedConfig = {
+          ...config,
+          connection: config.connection ? {
+            ...config.connection,
+            password: config.connection.password ? await encrypt(config.connection.password) : undefined
+          } : undefined,
+          apiKey: config.apiKey ? await encrypt(config.apiKey) : undefined
+        };
+
         const { data, error } = await supabase
           .from('connectors')
-          .upsert({ id, config });
+          .upsert({ id, config: encryptedConfig });
         if (error) throw error;
         return res.status(200).json(data?.[0] || null);
       }
