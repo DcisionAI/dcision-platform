@@ -1,13 +1,21 @@
 
-## DcisionAI Platform – Deployment Guide
+# DcisionAI Platform
 
-Welcome to the DcisionAI Platform!  
-This guide will help you deploy the platform in your own cloud or on-premise environment using Docker.  
-**No vendor lock-in. No cloud-specific dependencies.**
+An AgenticAI platform for AI-powered decision making and optimization.  
+Deployable on any cloud, on-premises, or local infrastructure using Docker and Terraform.
 
 ---
 
-### 🚀 Quick Start (Docker Compose)
+## 🚀 What is DcisionAI?
+
+DcisionAI is a modular, open platform for building, deploying, and managing AI-driven decision and optimization workflows.  
+- **Cloud-agnostic:** Deploy anywhere—AWS, GCP, Azure, DigitalOcean, or your own servers.
+- **Open standards:** Uses Docker and Terraform for easy, reproducible deployments.
+- **Flexible:** Bring your own database, authentication, and infrastructure.
+
+---
+
+## 🏠 On-Premises / Local Deployment
 
 1. **Clone the repository:**
    ```sh
@@ -15,7 +23,7 @@ This guide will help you deploy the platform in your own cloud or on-premise env
    cd dcision-platform
    ```
 
-2. **Copy and edit the environment file:**
+2. **Copy and configure environment variables:**
    ```sh
    cp config.example.env .env
    ```
@@ -26,38 +34,45 @@ This guide will help you deploy the platform in your own cloud or on-premise env
    docker compose -f docker-compose.prod.yml up -d
    ```
 
-4. **Access the platform:**
-   - Open your browser and go to `http://localhost:3000` (or your server’s IP/domain).
+4. **Access the platform:**  
+   Open your browser to `http://localhost:3000` (or your server’s IP/domain).
 
 ---
 
-### 🛠️ Requirements
+## ☁️ Cloud Deployment (Terraform)
 
-- Docker and Docker Compose installed
+DcisionAI provides a cloud-agnostic Terraform module for automated deployment.  
+**Terraform code is located in [`/terraform`](https://github.com/DcisionAI/dcision-platform/tree/main/terraform).**
+
+### Steps:
+
+1. **Configure your infrastructure variables:**  
+   Edit `terraform/variables.tf` and/or create a `terraform.tfvars` file with your settings (Postgres host, Docker host, etc).
+
+2. **Initialize and apply Terraform:**
+   ```sh
+   cd terraform
+   terraform init
+   terraform plan
+   terraform apply
+   ```
+   This will provision infrastructure and deploy DcisionAI using Docker.
+
+3. **Access the platform:**  
+   The output will provide the URL or IP address for your deployment.
+
+---
+
+## 🛠️ Requirements
+
+- Docker and Docker Compose
+- [Terraform](https://www.terraform.io/downloads.html)
 - A PostgreSQL database (self-hosted, managed, or cloud)
 - (Optional) Supabase project for authentication and storage
 
 ---
 
-### ⚙️ Configuration
-
-- All configuration is handled via environment variables in the `.env` file.
-- No hardcoded cloud provider dependencies.
-- You can use any Postgres-compatible database (AWS RDS, GCP Cloud SQL, Azure, DigitalOcean, self-hosted, etc).
-
----
-
-### 🏗️ Advanced: Custom Deployments
-
-- You can use the published Docker image:  
-  ```
-  ghcr.io/dcisionai/dcision-platform:latest
-  ```
-- Integrate with your own CI/CD, Kubernetes, or Terraform as needed.
-
----
-
-### 📦 Updating
+## 📦 Updating
 
 To update, simply pull the latest image and restart:
 ```sh
@@ -67,13 +82,13 @@ docker compose -f docker-compose.prod.yml up -d
 
 ---
 
-### 📚 Documentation
+## 📚 Documentation
 
+- [Terraform deployment code](https://github.com/DcisionAI/dcision-platform/tree/main/terraform)
 - [Full documentation](https://github.com/DcisionAI/dcision-platform)
-- [Deployment examples](docs/docker-deploy.md) (if you have this file)
 
 ---
 
-### 🆘 Support
+## 🆘 Support
 
 For help, open an issue on [GitHub Issues](https://github.com/DcisionAI/dcision-platform/issues).
