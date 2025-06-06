@@ -1,27 +1,24 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-import { NextResponse } from 'next/server';
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { getServerSupabase } from '@/lib/supabase';
 import { encrypt } from '@/lib/encryption';
 
-export async function POST(request: Request) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = getServerSupabase();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { provider, apiKey } = await request.json();
+    const { provider, apiKey } = req.body;
 
     if (!provider || !apiKey) {
-      return NextResponse.json(
-        { error: 'Provider and API key are required' },
-        { status: 400 }
-      );
+      return res.status(400).json({ error: 'Provider and API key are required' });
     }
 
     // Validate the API key based on provider
@@ -57,10 +54,7 @@ export async function POST(request: Request) {
         }
       }
     } catch (error) {
-      return NextResponse.json(
-        { error: 'Invalid API key' },
-        { status: 400 }
-      );
+      return res.status(400).json({ error: 'Invalid API key' });
     }
 
     // Encrypt and store the API key
@@ -79,12 +73,9 @@ export async function POST(request: Request) {
       throw updateError;
     }
 
-    return NextResponse.json({ success: true });
+    return res.status(200).json({ success: true });
   } catch (error) {
     console.error('Error in LLM setup:', error);
-    return NextResponse.json(
-      { error: 'Failed to configure LLM settings' },
-      { status: 500 }
-    );
+    return res.status(500).json({ error: 'Failed to configure LLM settings' });
   }
 } 
