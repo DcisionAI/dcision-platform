@@ -4,6 +4,9 @@ FROM node:20-alpine AS builder
 # Set working directory
 WORKDIR /app
 
+# Install Java for OpenAPI generator
+RUN apk add --no-cache openjdk17-jre
+
 # Copy package files
 COPY package*.json ./
 COPY yarn.lock ./
