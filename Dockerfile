@@ -14,8 +14,9 @@ COPY yarn.lock ./
 # Install dependencies
 RUN yarn install --frozen-lockfile
 
-# Copy source code
+# Copy source code, excluding Supabase functions
 COPY . .
+RUN rm -rf supabase/functions
 
 # Install devDependencies and generate SDK code
 RUN cd packages/sdk-js && yarn install --frozen-lockfile && yarn generate
@@ -68,6 +69,9 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/scripts ./scripts
+
+# Copy Supabase functions separately
+COPY supabase/functions ./supabase/functions
 
 # Make initialization script executable
 RUN chmod +x /app/scripts/init-customer-db.sh
