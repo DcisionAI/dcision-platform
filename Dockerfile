@@ -14,11 +14,11 @@ RUN yarn install --frozen-lockfile
 # Copy source code
 COPY . .
 
-# Set build-time environment variables
+# Set build-time environment variables for public values only
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
-ARG OPENAI_API_KEY
-ARG ANTHROPIC_API_KEY
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 # Build the application
 RUN yarn build:prod
@@ -68,12 +68,7 @@ RUN chmod +x /app/scripts/init-customer-db.sh
 
 # Set runtime environment variables
 ENV NODE_ENV=production
-ENV NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-ENV OPENAI_API_KEY=${OPENAI_API_KEY}
-ENV ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-
-# Expose port
+# All secrets and runtime env vars are set at runtime, not build time
 EXPOSE 3000
 
 # Start the application and initialize database
