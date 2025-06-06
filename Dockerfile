@@ -14,8 +14,8 @@ RUN yarn install --frozen-lockfile
 # Copy source code
 COPY . .
 
-# Generate SDK code before build
-RUN yarn --cwd packages/sdk-js generate
+# Install devDependencies and generate SDK code
+RUN cd packages/sdk-js && yarn install --frozen-lockfile && yarn generate
 
 # Set build-time environment variables for public values only
 ARG NEXT_PUBLIC_SUPABASE_URL
