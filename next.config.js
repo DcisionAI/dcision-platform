@@ -16,6 +16,13 @@ const nextConfig = {
         "crypto": false
       }
     }
+
+    // Exclude Supabase Edge Functions from the build
+    config.module.rules.push({
+      test: /supabase\/functions\/.*\.ts$/,
+      use: 'ignore-loader'
+    })
+
     return config
   },
   swcMinify: true,
