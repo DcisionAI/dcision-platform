@@ -1,3 +1,22 @@
-# Ignore local environment files (these should not override .env.production)
+# Node and build artifacts
+node_modules
+npm-debug.log
+yarn-error.log
+dist
+build
+coverage
+
+# Git and editor files
+.git
+.gitignore
+.DS_Store
+
+# Test and docs
+tests
+test
+docs
+
+# Local env files
 .env
 .env.local
+.env.*

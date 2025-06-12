@@ -3,6 +3,7 @@ import '@/styles/globals.css';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { ThemeProvider } from '@/components/layout/ThemeContext';
+import { SidebarProvider } from '@/components/layout/SidebarContext';
 
 export default function App({ Component, pageProps }: AppProps) {
   const supabase = createClientComponentClient();
@@ -10,7 +11,9 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <Component {...pageProps} />
+        <SidebarProvider>
+          <Component {...pageProps} />
+        </SidebarProvider>
       </AuthProvider>
     </ThemeProvider>
   );
