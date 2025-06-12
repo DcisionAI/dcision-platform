@@ -1,10 +1,15 @@
-import UnderDevelopment from '@/components/UnderDevelopment';
+import React from 'react';
 import Layout from '@/components/Layout';
+import FinanceTabs from '@/components/FinanceTabs';
 
-export default function Finance() {
+const FinancePage: React.FC = () => {
   return (
     <Layout>
-      <UnderDevelopment pageName="Finance" />
+      <div className="h-full">
+        <FinanceTabs />
+      </div>
     </Layout>
   );
-} 
+};
+
+export default FinancePage; 

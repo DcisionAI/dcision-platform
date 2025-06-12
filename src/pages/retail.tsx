@@ -1,10 +1,15 @@
-import UnderDevelopment from '@/components/UnderDevelopment';
+import React from 'react';
 import Layout from '@/components/Layout';
+import RetailTabs from '@/components/RetailTabs';
 
-export default function Retail() {
+const RetailPage: React.FC = () => {
   return (
     <Layout>
-      <UnderDevelopment pageName="Retail" />
+      <div className="h-full">
+        <RetailTabs />
+      </div>
     </Layout>
   );
-} 
+};
+
+export default RetailPage; 

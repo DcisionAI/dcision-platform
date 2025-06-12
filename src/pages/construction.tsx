@@ -1,10 +1,15 @@
-import UnderDevelopment from '@/components/UnderDevelopment';
+import React from 'react';
 import Layout from '@/components/Layout';
+import ConstructionDecisionWorkflows from '@/components/ConstructionDecisionWorkflows';
 
-export default function Construction() {
+const ConstructionPage: React.FC = () => {
   return (
     <Layout>
-      <UnderDevelopment pageName="Construction" />
+      <div className="h-full">
+        <ConstructionDecisionWorkflows />
+      </div>
     </Layout>
   );
-} 
+};
+
+export default ConstructionPage; 
