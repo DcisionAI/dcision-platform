@@ -21,9 +21,9 @@ function FeatureCard({ icon: Icon, title, description }: {
         <div className="p-2 bg-[#1F6FEB]/10 rounded-lg">
           <Icon className="w-5 h-5 text-[#1F6FEB]" />
         </div>
-        <h2 className="text-xl font-semibold text-docs-text">{title}</h2>
+        <h2 className="text-xl font-semibold text-docs-text dark:text-white">{title}</h2>
       </div>
-      <p className="text-docs-muted">{description}</p>
+      <p className="text-docs-muted dark:text-gray-400">{description}</p>
     </div>
   );
 }

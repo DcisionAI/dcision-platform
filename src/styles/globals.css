@@ -207,4 +207,25 @@
 html, body {
   @apply openai-docs-dark;
   font-family: 'OpenAI Sans', Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+/* DcisionAI Brand Sidebar Menu Color Overrides */
+/*
+.sidebar-link {
+  color: #F47A3D !important;
+}
+.sidebar-link:hover, .sidebar-link.active {
+  color: #F47A3D !important;
+}
+
+.dark .sidebar-link {
+  color: #ECEDEE !important;
+}
+.dark .sidebar-link.active {
+  color: #2F81F7 !important;
+}
+*/
+
+.sidebar-link {
+  text-decoration: none !important;
 } 

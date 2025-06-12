@@ -1,104 +1,158 @@
+import React, { useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
-import { useState } from 'react';
-import { 
-  TruckIcon, 
-  UserGroupIcon, 
-  CalendarIcon, 
-  CubeIcon, 
+import { usePathname } from 'next/navigation';
+import {
+  FolderIcon,
   BeakerIcon,
-  ArrowsPointingInIcon,
-  LightBulbIcon,
-  CloudArrowUpIcon,
+  RocketLaunchIcon,
+  ChatBubbleLeftRightIcon,
+  CodeBracketIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  RectangleGroupIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  KeyIcon,
+  DocumentDuplicateIcon,
   ChartBarIcon,
-  CodeBracketIcon,
-  KeyIcon
+  Cog6ToothIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline';
+import { useSidebar } from './layout/SidebarContext';
+import { useTheme } from './layout/ThemeContext';
 
-const menu = [
-  {
-    section: '',
-    items: [
-      { href: '/dashboard', label: 'Dashboard', icon: ChartBarIcon },
-      { href: '/modelbuilder', label: 'Dcision Builder', icon: CodeBracketIcon },
-      { href: '/agents', label: 'Agents', icon: BeakerIcon },
-      { href: '/explainability', label: 'Explainability', icon: LightBulbIcon },
-      { href: '/endpoints', label: 'Endpoints', icon: CloudArrowUpIcon },
-      { href: '/integrations', label: 'Data Plugins', icon: ArrowsPointingInIcon }
-    ],
-  },
-  {
-    section: 'DECISION WORKFLOWS',
-    items: [
-      { href: '/fleet-routing', label: 'Fleet & Routing', icon: TruckIcon },
-      { href: '/workforce-scheduling', label: 'Workforce Scheduling', icon: UserGroupIcon },
-      { href: '/project-scheduling', label: 'Project Scheduling', icon: CalendarIcon },
-      { href: '/resource-allocation', label: 'Resource Allocation', icon: CubeIcon },
-      { href: '/custom-templates', label: 'Custom Templates', icon: RectangleGroupIcon },
-    ],
-  }
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ElementType;
+  badge?: string;
+}
+
+const projectManagement: NavItem[] = [
+  { name: 'Projects', href: '/projects', icon: FolderIcon },
+  { name: 'Create Project', href: '/projects/new', icon: DocumentDuplicateIcon },
+  { name: 'Team', href: '/team', icon: UserGroupIcon },
+];
+
+const modelDevelopment: NavItem[] = [
+  { name: 'Model Builder', href: '/modelbuilder', icon: BeakerIcon },
+  { name: 'Model Library', href: '/models', icon: ChartBarIcon },
+  { name: 'Templates', href: '/templates', icon: DocumentDuplicateIcon },
+];
+
+const workflows: NavItem[] = [
+  { name: 'Construction', href: '/construction', icon: BeakerIcon },
+  { name: 'Retail', href: '/retail', icon: ChartBarIcon },
+  { name: 'Finance', href: '/finance', icon: DocumentDuplicateIcon },
+];
+
+const deployment: NavItem[] = [
   
 ];
 
-export default function Sidebar() {
-  const router = useRouter();
-  const [isExpanded, setIsExpanded] = useState(true);
+const multiModalInterface: NavItem[] = [
+  { name: 'Chat Interface', href: '/chat', icon: ChatBubbleLeftRightIcon },
+  { name: 'API Reference', href: '/api', icon: CodeBracketIcon },
+  { name: 'Usage Analytics', href: '/analytics', icon: ChartBarIcon },
+];
 
-  const isActive = (href: string) => {
-    if (router.pathname === '/') return href === '/playground';
-    return router.pathname === href;
-  };
+const settings: NavItem[] = [
+  { name: 'Deployments', href: '/deployments', icon: RocketLaunchIcon },
+  { name: 'Endpoints', href: '/endpoints', icon: CodeBracketIcon },
+  { name: 'API Keys', href: '/settings/api-keys', icon: KeyIcon },
+  { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
+];
+
+const sections = [
+  { title: 'Dcision Workflows', items: workflows },
+  { title: 'Dcision Canvas', items: modelDevelopment },
+  { title: 'Settings', items: settings },
+];
+
+export default function Sidebar() {
+  const pathname = usePathname();
+  const { isExpanded, toggleSidebar, setIsExpanded } = useSidebar();
+  const { theme } = useTheme();
+
+  const navItemClass = (isActive: boolean) =>
+    `flex items-center rounded-lg transition-colors sidebar-link font-sans text-base font-medium tracking-wide px-2 py-1.5 my-0.5
+    ${isActive
+      ? 'bg-[#ede9dd] text-[#18181b] dark:bg-[#1C2128] dark:text-[#ECEDEE]'
+      : 'text-[#18181b] dark:text-docs-dark-muted dark:hover:bg-[#2D333B]'}
+    `;
 
   return (
     <aside
-      className={`bg-docs-sidebar border-r border-docs-section-border min-h-screen sticky top-16 transition-all duration-300 ease-in-out flex ${
-        isExpanded ? 'w-50' : 'w-16'
-      }`}
+      className={`fixed top-0 left-0 h-screen z-30 border-r transition-all duration-300
+        ${isExpanded ? 'w-64' : 'w-14'}
+        bg-docs-sidebar text-docs-text border-docs-section-border dark:bg-docs-dark-bg dark:text-white dark:border-[#21262D]`
+      }
     >
-      <div className={`flex-1 ${isExpanded ? 'p-2' : 'p-2'}`}>
-        {menu.map((group, idx) => (
-          <div className="mb-8" key={group.section + idx}>
-            {isExpanded && group.section && (
-              <div className="uppercase text-xs text-docs-muted font-bold mb-2 tracking-wider pl-4">
-                {group.section}
+      {/* Branding/Header */}
+      <div className="flex items-center h-16 mb-4 pl-6 justify-start">
+        <Link href="/dashboard" legacyBehavior>
+          <a className="flex items-center focus:outline-none">
+            {isExpanded ? (
+              <span className="font-bold text-xl text-docs-text dark:text-docs-dark-text">DcisionAI</span>
+            ) : (
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="16" cy="16" r="16" fill="#18181b" />
+                <text x="16" y="22" textAnchor="middle" fontSize="16" fill="#fff" fontWeight="bold" fontFamily="Inter, Arial, sans-serif">D</text>
+              </svg>
+            )}
+          </a>
+        </Link>
+      </div>
+
+      {/* Carat button always visible */}
+      <button
+        onClick={toggleSidebar}
+        className={`absolute right-0 top-4 bg-docs-sidebar-active dark:bg-[#1C2128] h-8 w-4 flex items-center justify-center rounded-l-lg hover:bg-[#e0d7c6] dark:hover:bg-[#2D333B] transition-colors z-40`}
+        style={{ right: isExpanded ? 0 : '-1rem' }}
+        aria-label={isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
+      >
+        {isExpanded ? (
+          <ChevronLeftIcon className="w-3 h-3 text-[#8B949E] dark:text-[#ECEDEE]" />
+        ) : (
+          <ChevronRightIcon className="w-3 h-3 text-[#8B949E] dark:text-[#ECEDEE]" />
+        )}
+      </button>
+
+      {/* Sidebar content */}
+      <div className="pt-12 px-2">
+        {sections.map((section) => (
+          <div key={section.title} className="mb-2 pt-6">
+            {isExpanded && (
+              <div className="text-xs font-bold uppercase tracking-wider text-docs-muted dark:text-docs-dark-muted mb-1 pl-2">
+                {section.title}
               </div>
             )}
-            <div className="flex flex-col gap-1.5">
-              {group.items.map((item) => {
+            <nav className="pt-2">
+              {section.items.map((item) => {
                 const Icon = item.icon;
+                const isActive = pathname === item.href;
                 return (
                   <Link
-                    key={item.href}
+                    key={item.name}
                     href={item.href}
-                    className={`rounded-lg flex items-center gap-3 ${
-                      isExpanded ? 'px-3 py-2' : 'p-2 justify-center'
-                    } text-docs-text hover:bg-docs-sidebar-active hover:text-docs-accent transition font-medium group ${
-                      isActive(item.href) ? 'bg-docs-sidebar-active text-docs-accent font-semibold' : ''
-                    }`}
-                    title={!isExpanded ? item.label : undefined}
+                    className={navItemClass(isActive)}
+                    title={item.name}
                   >
-                    <Icon className={`${isExpanded ? 'w-5 h-5' : 'w-5 h-5'} flex-shrink-0`} />
-                    {isExpanded && <span className="text-xs">{item.label}</span>}
+                    <Icon className="w-5 h-5 mr-2 text-docs-muted dark:text-docs-dark-muted" />
+                    {isExpanded && (
+                      <span className="text-sm text-docs-muted dark:text-docs-dark-muted hover:text-docs-accent dark:hover:text-docs-accent">{item.name}</span>
+                    )}
+                    {item.badge && isExpanded && (
+                      <span>
+                        {item.badge}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
-            </div>
+            </nav>
           </div>
         ))}
       </div>
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="h-12 w-6 flex items-center justify-center hover:bg-docs-sidebar-active transition-colors absolute -right-3 top-2 rounded-r"
-      >
-        {isExpanded ? (
-          <ChevronLeftIcon className="h-4 w-4 text-docs-muted" />
-        ) : (
-          <ChevronRightIcon className="h-4 w-4 text-docs-muted" />
-        )}
-      </button>
     </aside>
   );
 } 

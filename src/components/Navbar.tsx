@@ -4,9 +4,10 @@ import { Fragment, useState, useEffect } from 'react';
 import { Menu, Transition } from '@headlessui/react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
-import { Cog8ToothIcon } from '@heroicons/react/24/outline';
+import { Cog8ToothIcon, SunIcon, MoonIcon } from '@heroicons/react/24/outline';
 import { useAuthContext } from './auth/AuthProvider';
 import LoginModal from './auth/LoginModal';
+import { useTheme } from './layout/ThemeContext';
 
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(' ');
@@ -17,6 +18,7 @@ export default function Navbar({ forceLoginModal }: { forceLoginModal?: boolean 
   const supabase = createClientComponentClient();
   const { user, loading } = useAuthContext();
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     if (user && showLoginModal) {
@@ -52,36 +54,63 @@ export default function Navbar({ forceLoginModal }: { forceLoginModal?: boolean 
   };
 
   return (
-    <header className="flex items-center justify-between px-8 h-16 bg-docs-sidebar border-b border-docs-section-border sticky top-0 z-20">
+    <header className="flex items-center justify-between px-8 h-16 \
+      bg-[#F7F3ED] border-b border-[#EFE9DA] text-[#18181b] \
+      dark:bg-[#0D1117] dark:border-[#21262D] dark:text-[#E7E9EB] \
+      sticky top-0 z-20 transition-colors duration-300">
       <LoginModal open={showLoginModal} onClose={() => setShowLoginModal(false)} />
       <div className="flex items-center gap-2">
-        <Link href="/dashboard" legacyBehavior>
-          <a className="font-bold text-lg text-docs-text">DcisionAI</a>
-        </Link>
+        
       </div>
       <nav className="flex items-center gap-8 text-sm">
         {/* Navigation Links */}
-        <Link href="/modelbuilder" legacyBehavior>
-          <a className={router.pathname === '/modelbuilder' ? 'text-docs-accent font-semibold' : 'text-docs-muted hover:text-docs-accent'}>
-            Dcision Builder
-          </a>
-        </Link>
         
         <Link href="/docs" legacyBehavior>
-          <a className={router.pathname === '/docs' ? 'text-docs-accent font-semibold' : 'text-docs-muted hover:text-docs-accent'}>
+          <a
+            className={
+              router.pathname === '/docs'
+                ? 'text-docs-accent dark:text-docs-accent font-semibold'
+                : 'text-docs-muted dark:text-docs-dark-muted hover:text-docs-accent dark:hover:text-docs-accent'
+            }
+          >
             Docs
           </a>
         </Link>
         <Link href="/api-reference" legacyBehavior>
-          <a className={router.pathname.startsWith('/api-reference') ? 'text-docs-accent font-semibold' : 'text-docs-muted hover:text-docs-accent'}>
+          <a
+            className={
+              router.pathname.startsWith('/api-reference')
+                ? 'text-docs-accent dark:text-docs-accent font-semibold'
+                : 'text-docs-muted dark:text-docs-dark-muted hover:text-docs-accent dark:hover:text-docs-accent'
+            }
+          >
             API reference
           </a>
         </Link>
 
+        {/* Theme Toggle Button */}
+        <button
+          onClick={toggleTheme}
+          className="ml-2 p-2 rounded hover:bg-docs-section transition-colors"
+          aria-label="Toggle theme"
+        >
+          {theme === 'dark' ? (
+            <SunIcon className="h-5 w-5 text-yellow-400" />
+          ) : (
+            <MoonIcon className="h-5 w-5 text-gray-600" />
+          )}
+        </button>
+
         {/* Settings Link */}
         {user && (
           <Link href="/settings/organization" legacyBehavior>
-            <a className={`text-docs-muted hover:text-docs-accent ${router.pathname.startsWith('/settings') ? 'text-docs-accent' : ''}`}>
+            <a
+              className={
+                router.pathname.startsWith('/settings')
+                  ? 'text-docs-accent dark:text-docs-accent'
+                  : 'text-docs-muted dark:text-docs-dark-muted hover:text-docs-accent dark:hover:text-docs-accent'
+              }
+            >
               <Cog8ToothIcon className="h-5 w-5" />
             </a>
           </Link>
@@ -89,14 +118,14 @@ export default function Navbar({ forceLoginModal }: { forceLoginModal?: boolean 
         
         {/* Auth/Profile Menu */}
         {loading ? (
-          <div className="w-8 h-8 rounded-full bg-docs-section animate-pulse" />
+          <div className="w-8 h-8 rounded-full bg-docs-section dark:bg-docs-dark-bg animate-pulse" />
         ) : user ? (
           <Menu as="div" className="relative">
             <Menu.Button className="flex items-center gap-1 focus:outline-none">
-              <span className="rounded-full bg-docs-section w-8 h-8 flex items-center justify-center text-docs-text font-bold text-base">
+              <span className="rounded-full bg-docs-section dark:bg-docs-dark-bg w-8 h-8 flex items-center justify-center text-docs-text dark:text-docs-dark-text font-bold text-base">
                 {getUserInitials()}
               </span>
-              <ChevronDownIcon className="h-4 w-4 text-docs-muted" aria-hidden="true" />
+              <ChevronDownIcon className="h-4 w-4 text-docs-muted dark:text-docs-dark-muted" aria-hidden="true" />
             </Menu.Button>
             <Transition
               as={Fragment}
@@ -107,7 +136,7 @@ export default function Navbar({ forceLoginModal }: { forceLoginModal?: boolean 
               leaveFrom="transform opacity-100 scale-100"
               leaveTo="transform opacity-0 scale-95"
             >
-              <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-docs-bg py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+            <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-docs-bg dark:bg-docs-dark-bg py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
                 <div className="px-4 py-2 text-sm text-docs-text border-b border-docs-section-border">
                   {user.email}
                 </div>
@@ -117,7 +146,7 @@ export default function Navbar({ forceLoginModal }: { forceLoginModal?: boolean 
                       onClick={handleSignOut}
                       className={classNames(
                         active ? 'bg-docs-section' : '',
-                        'block w-full px-4 py-2 text-left text-sm text-docs-muted hover:text-docs-accent'
+                        'block w-full px-4 py-2 text-left text-sm text-docs-muted dark:text-docs-dark-muted hover:text-docs-accent dark:hover:text-docs-accent'
                       )}
                     >
                       Sign out
@@ -131,7 +160,7 @@ export default function Navbar({ forceLoginModal }: { forceLoginModal?: boolean 
           <div className="flex items-center gap-4">
             <button
               onClick={() => setShowLoginModal(true)}
-              className="text-docs-muted hover:text-docs-accent"
+              className="text-docs-muted dark:text-docs-dark-muted hover:text-docs-accent dark:hover:text-docs-accent"
             >
               Sign in
             </button>

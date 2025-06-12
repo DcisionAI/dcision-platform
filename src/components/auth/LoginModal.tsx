@@ -6,7 +6,7 @@ export default function LoginModal({ open, onClose }: { open: boolean; onClose: 
   if (!open) return null;
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-[#0D1117] p-6 rounded shadow w-full max-w-sm">
+      <div className="bg-docs-section dark:bg-docs-dark-bg p-6 rounded shadow w-full max-w-sm">
         <Auth
           supabaseClient={supabase}
           appearance={{
@@ -35,7 +35,7 @@ export default function LoginModal({ open, onClose }: { open: boolean; onClose: 
           theme="dark"
           providers={['google']}
         />
-        <button onClick={onClose} className="mt-4 text-sm text-gray-500">Cancel</button>
+        <button onClick={onClose} className="mt-4 text-sm text-docs-muted">Cancel</button>
       </div>
     </div>
   );

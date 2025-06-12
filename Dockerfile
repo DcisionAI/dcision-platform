@@ -70,13 +70,13 @@ COPY --from=builder /app/yarn.lock ./
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/scripts ./scripts
+COPY scripts ./scripts
 
 # Copy Supabase functions separately
 COPY supabase/functions ./supabase/functions
 
 # Make initialization script executable
-RUN chmod +x /app/scripts/init-customer-db.sh
+RUN chmod +x scripts/init-customer-db.sh
 
 # Set runtime environment variables
 ENV NODE_ENV=production
@@ -84,4 +84,4 @@ ENV NODE_ENV=production
 EXPOSE 3000
 
 # Start the application and initialize database
-CMD ["/bin/sh", "-c", "/app/scripts/init-customer-db.sh && yarn start"] 
+CMD ["/bin/sh"] 
