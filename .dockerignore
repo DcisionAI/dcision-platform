@@ -14,7 +14,7 @@ coverage
 # Test and docs
 tests
 test
-docs
+
 
 # Local env files
 .env
