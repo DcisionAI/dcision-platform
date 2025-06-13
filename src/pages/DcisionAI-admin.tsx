@@ -26,13 +26,13 @@ export default function DcisionAIAdmin() {
     const supabase = await getSupabaseClient();
     const { data, error } = await supabase
       .from('customer_api_keys')
-      .select<CustomerKey>('*')
+      .select('*')
       .order('created_at', { ascending: false });
     if (error) {
       setError(error.message);
       setKeys([]);
     } else {
-      setKeys(data ?? []);
+      setKeys((data ?? []) as unknown as CustomerKey[]);
     }
     setLoading(false);
   }
