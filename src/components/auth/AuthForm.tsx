@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getSupabaseClient } from '@/lib/supabaseClient';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 interface AuthFormProps {
   mode: 'signin' | 'signup';
@@ -18,15 +18,24 @@ export function AuthForm({ mode, onSuccess }: AuthFormProps) {
     setLoading(true);
 
     try {
-      const supabase = await getSupabaseClient();
-      const { error } = mode === 'signin'
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password });
-
-      if (error) throw error;
-      
-      if (onSuccess) onSuccess();
+      const supabase = createClientComponentClient();
+      // Perform auth and log the response for debugging
+      let result;
+      if (mode === 'signin') {
+        result = await supabase.auth.signInWithPassword({ email, password });
+      } else {
+        result = await supabase.auth.signUp({ email, password });
+      }
+      console.log('AuthForm:', mode, 'result:', result);
+      const { data, error: authError } = result;
+      if (authError) throw authError;
+      // Success callback
+      if (onSuccess) {
+        console.log('AuthForm: calling onSuccess callback');
+        onSuccess();
+      }
     } catch (err) {
+      console.error('AuthForm: auth error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);

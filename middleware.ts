@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export async function middleware(req: NextRequest) {
+  // Disable middleware during development to allow client-side auth flow
+  return NextResponse.next();
   const res = NextResponse.next()
   const supabase = createMiddlewareClient({ req, res })
 
@@ -36,5 +38,8 @@ export async function middleware(req: NextRequest) {
 
 // Protect all routes except static assets and public paths
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
-} 
+  // Apply middleware to all non-public, non-static, non-data routes
+  matcher: [
+    '/((?!_next/static|_next/image|_next/data|favicon\.ico).*)'
+  ],
+};

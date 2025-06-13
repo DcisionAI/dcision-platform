@@ -8,6 +8,8 @@ import { useEffect } from 'react';
 
 export default function SignIn() {
   console.log('SignIn: Component rendering');
+  // Debug: log the Supabase URL from environment
+  console.log('SignIn: NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
   const router = useRouter();
   
   try {

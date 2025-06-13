@@ -5,6 +5,8 @@ yarn-error.log
 dist
 build
 coverage
+/.next
+/.swc
 
 # Git and editor files
 .git
@@ -20,3 +22,17 @@ test
 .env
 .env.local
 .env.*
+ 
+# Exclude Supabase functions directory (not needed in build context)
+supabase/functions/
+# Exclude Terraform directories
+terraform/
+.terraform/
+# Exclude local scripts (not required in container)
+scripts/
+# Exclude Cloud Build config
+cloudbuild.yaml
+# Ignore Terraform and supabase functions from build context
+supabase/functions/
+terraform/
+.terraform/
