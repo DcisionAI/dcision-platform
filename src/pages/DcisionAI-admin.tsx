@@ -19,18 +19,26 @@ export default function DcisionAIAdmin() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchData() {
-      const supabase = await getSupabaseClient();
-      const { data, error } = await supabase
-        .from('customer_api_keys')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) setError(error.message);
-      else setKeys(data || []);
-      setLoading(false);
+  // Fetch customer API keys from Supabase
+  async function fetchKeys() {
+    setLoading(true);
+    setError(null);
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase
+      .from<CustomerKey>('customer_api_keys')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) {
+      setError(error.message);
+      setKeys([]);
+    } else {
+      setKeys(data ?? []);
     }
-    fetchData();
+    setLoading(false);
+  }
+  
+  useEffect(() => {
+    fetchKeys();
   }, []);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
