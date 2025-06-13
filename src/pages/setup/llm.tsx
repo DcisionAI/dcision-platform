@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import SetupLayout from './layout';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 export default function LLMSetup() {
-  const supabase = createClientComponentClient();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [config, setConfig] = useState({
@@ -14,21 +12,17 @@ export default function LLMSetup() {
   const handleSubmit = async () => {
     setError(null);
     setLoading(true);
-
     try {
-      // Test the API key
+      // Save the API key and provider
       const response = await fetch('/api/setup/llm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config)
       });
-
       const data = await response.json();
-
       if (!response.ok) {
         throw new Error(data.error || 'Failed to validate API key');
       }
-
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to validate API key');
@@ -51,7 +45,6 @@ export default function LLMSetup() {
           Choose your preferred LLM provider and configure API access
         </p>
       </div>
-
       <div className="space-y-6">
         <div>
           <label className="block text-lg font-light text-white mb-4">
@@ -81,7 +74,6 @@ export default function LLMSetup() {
                 </div>
               </div>
             </label>
-
             <label className="relative flex cursor-pointer rounded-xl border border-[#2C2C2E] bg-[#2C2C2E]/50 p-4 hover:bg-[#2C2C2E] transition-colors">
               <input
                 type="radio"
@@ -107,7 +99,6 @@ export default function LLMSetup() {
             </label>
           </div>
         </div>
-
         <div>
           <label htmlFor="apiKey" className="block text-lg font-light text-white mb-2">
             API Key
@@ -125,7 +116,6 @@ export default function LLMSetup() {
             Your API key will be encrypted and stored securely
           </p>
         </div>
-
         {error && (
           <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500">
             {error}
