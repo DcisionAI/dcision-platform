@@ -185,10 +185,6 @@ export default function Dashboard() {
   const [mcpMetrics, setMcpMetrics] = useState<{ requestCount?: any; latencyP95?: any } | null>(null);
   const [mcpLoading, setMcpLoading] = useState(false);
   const [mcpError, setMcpError] = useState<string | null>(null);
-  // Analytics state
-  const [analytics, setAnalytics] = useState<any>(null);
-  const [analyticsLoading, setAnalyticsLoading] = useState(false);
-  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
 
   useEffect(() => {
     setMcpLoading(true);
@@ -208,87 +204,8 @@ export default function Dashboard() {
       });
   }, []);
 
-  useEffect(() => {
-    setAnalyticsLoading(true);
-    setAnalyticsError(null);
-    (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) {
-        setAnalyticsError('No auth token');
-        setAnalyticsLoading(false);
-        return;
-      }
-      fetch('/api/analytics', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-        .then(async (res) => {
-          if (!res.ok) throw new Error('Failed to fetch analytics');
-          return res.json();
-        })
-        .then((data) => {
-          setAnalytics(data);
-          setAnalyticsLoading(false);
-        })
-        .catch((err) => {
-          setAnalyticsError(err.message);
-          setAnalyticsLoading(false);
-        });
-    })();
-  }, []);
-
   // Summary metrics
-  const summaryCards = [
-    {
-      title: 'Total Sessions',
-      value: analyticsLoading ? '—' : analyticsError ? '!' : analytics?.total_sessions ?? 0,
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-7 h-7 text-blue-400">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" />
-          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" fill="none" />
-        </svg>
-      ),
-    },
-    {
-      title: 'Total Prompts',
-      value: analyticsLoading ? '—' : analyticsError ? '!' : analytics?.total_prompts ?? 0,
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-7 h-7 text-purple-400">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 8.25V6.75A2.25 2.25 0 0014.25 4.5h-4.5A2.25 2.25 0 007.5 6.75v1.5m9 0v1.5m0-1.5h-9m9 0a2.25 2.25 0 012.25 2.25v6.75A2.25 2.25 0 0116.5 19.5h-9A2.25 2.25 0 015.25 17.25V10.5A2.25 2.25 0 017.5 8.25m9 0h-9" />
-        </svg>
-      ),
-    },
-    {
-      title: 'Total Responses',
-     // value: analyticsLoading ? '—' : analyticsError ? '!' : analytics?.total_responses ?? 0,
-      value: analyticsLoading
-        ? '—'
-        : analyticsError
-          ? '!'
-          : ((analytics?.total_prompts ?? 0) * (analytics?.total_prompts ?? 0) * 3),
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-7 h-7 text-orange-400">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h7.5m-7.5 3h7.5m-7.5 3h7.5m-7.5 3h7.5" />
-        </svg>
-      ),
-    },
-    {
-      title: 'Total Decisions',
-      value: analyticsLoading
-        ? '—'
-        : analyticsError
-          ? '!'
-          : ((analytics?.total_prompts ?? 0) * (analytics?.total_sessions ?? 0) * 4),
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-7 h-7 text-green-400">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25z" />
-        </svg>
-      ),
-    },
-  ];
+  const summaryCards: { title: string; value: React.ReactNode; icon: React.ReactNode }[] = [];
 
   return (
     <Layout>
