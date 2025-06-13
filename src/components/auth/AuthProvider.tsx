@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { supabase } from '@/lib/supabaseClient';
+import { getSupabaseClient } from '@/lib/supabaseClient';
 import { type User } from '@supabase/auth-helpers-nextjs';
 
 type AuthContextType = {
@@ -21,41 +21,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    // Check active sessions and set the user
-    const initializeAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log('AuthProvider initializeAuth: session', session);
-        setUser(session?.user ?? null);
-        setAccessToken(session?.access_token ?? null);
-        console.log('AuthProvider initializeAuth: user', session?.user ?? null);
-      } catch (error) {
-        console.error('Error checking session:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initializeAuth();
-
-    // Listen for changes on auth state
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    async function loadUser() {
+      setLoading(true);
+      const supabase = await getSupabaseClient();
+      const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
       setAccessToken(session?.access_token ?? null);
       setLoading(false);
-      console.log('AuthProvider onAuthStateChange: session', session);
-      console.log('AuthProvider onAuthStateChange: user', session?.user ?? null);
-    });
+    }
+    loadUser();
+  }, []);
 
-    return () => subscription.unsubscribe();
+  useEffect(() => {
+    let unsubscribe: any;
+    async function subscribeAuth() {
+      const supabase = await getSupabaseClient();
+      unsubscribe = supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ?? null);
+        setAccessToken(session?.access_token ?? null);
+      });
+    }
+    subscribeAuth();
+    return () => {
+      if (unsubscribe && typeof unsubscribe.unsubscribe === 'function') {
+        unsubscribe.unsubscribe();
+      }
+    };
   }, []);
 
   const resetPassword = async (email: string) => {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+    const supabase = await getSupabaseClient();
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${siteUrl}/auth/update-password`,
     });

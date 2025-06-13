@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { getSupabaseClient } from '@/lib/supabaseClient';
 
 interface AuthFormProps {
   mode: 'signin' | 'signup';
@@ -12,14 +12,13 @@ export function AuthForm({ mode, onSuccess }: AuthFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   
-  const supabase = createClientComponentClient();
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
+      const supabase = await getSupabaseClient();
       const { error } = mode === 'signin'
         ? await supabase.auth.signInWithPassword({ email, password })
         : await supabase.auth.signUp({ email, password });

@@ -1,9 +1,18 @@
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
-import { supabase } from '@/lib/supabaseClient';
+import { useEffect, useState } from 'react';
+import { getSupabaseClient } from '@/lib/supabaseClient';
 
 export default function LoginModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  if (!open) return null;
+  const [supabase, setSupabase] = useState<any>(null);
+
+  useEffect(() => {
+    if (open) {
+      getSupabaseClient().then(setSupabase);
+    }
+  }, [open]);
+
+  if (!open || !supabase) return null;
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div className="bg-docs-section dark:bg-docs-dark-bg p-6 rounded shadow w-full max-w-sm">

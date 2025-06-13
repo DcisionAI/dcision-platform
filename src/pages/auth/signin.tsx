@@ -17,7 +17,7 @@ export default function SignIn() {
 
     useEffect(() => {
       console.log('SignIn: useEffect running', { user, loading });
-      if (!loading && user) {
+      if (typeof window !== 'undefined' && !loading && user) {
         console.log('SignIn: Redirecting to dashboard');
         router.push('/dashboard');
       }

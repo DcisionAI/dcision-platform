@@ -1,12 +1,7 @@
 import { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { getSupabaseClient } from '@/lib/supabaseClient';
 
 interface CustomerKey {
   id: number;
@@ -25,19 +20,18 @@ export default function DcisionAIAdmin() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchKeys();
+    async function fetchData() {
+      const supabase = await getSupabaseClient();
+      const { data, error } = await supabase
+        .from('customer_api_keys')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) setError(error.message);
+      else setKeys(data || []);
+      setLoading(false);
+    }
+    fetchData();
   }, []);
-
-  async function fetchKeys() {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('customer_api_keys')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (error) setError(error.message);
-    else setKeys(data || []);
-    setLoading(false);
-  }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -48,21 +42,23 @@ export default function DcisionAIAdmin() {
     setError(null);
     // Generate a random API key if not provided
     const api_key = form.api_key || cryptoRandomKey();
+    const supabase = await getSupabaseClient();
     const { error } = await supabase.from('customer_api_keys').insert([
       { customer_name: form.customer_name, api_key, status: form.status },
     ]);
     if (error) setError(error.message);
     else {
       setForm({ customer_name: '', api_key: '', status: 'active' });
-      fetchKeys();
+      await fetchKeys();
     }
   }
 
   async function handleDelete(id: number) {
     if (!confirm('Delete this API key?')) return;
+    const supabase = await getSupabaseClient();
     const { error } = await supabase.from('customer_api_keys').delete().eq('id', id);
     if (error) setError(error.message);
-    else fetchKeys();
+    else await fetchKeys();
   }
 
   function startEdit(key: CustomerKey) {
@@ -77,6 +73,7 @@ export default function DcisionAIAdmin() {
   async function handleUpdate(e: React.FormEvent) {
     e.preventDefault();
     if (editingId === null) return;
+    const supabase = await getSupabaseClient();
     const { error } = await supabase
       .from('customer_api_keys')
       .update({
@@ -89,7 +86,7 @@ export default function DcisionAIAdmin() {
     else {
       setEditingId(null);
       setForm({ customer_name: '', api_key: '', status: 'active' });
-      fetchKeys();
+      await fetchKeys();
     }
   }
 
