@@ -161,7 +161,7 @@ export default function DcisionAIAdmin() {
               <table className="min-w-full border border-gray-700 rounded-lg">
                 <thead className="bg-gray-800">
                   <tr>
-                    <th className="px-3 py-2 text-left">ID</th>
+                    <th className="px-3 py-2 text-left">Customer ID</th>
                     <th className="px-3 py-2 text-left">Customer Name</th>
                     <th className="px-3 py-2 text-left">API Key</th>
                     <th className="px-3 py-2 text-left">Status</th>
