@@ -14,7 +14,7 @@ export default function Layout({ children, sidebarOverride, forceLoginModal }: L
     <SidebarProvider>
       <SidebarLayout>
         <div className="min-h-screen flex flex-col bg-docs-bg text-docs-text dark:bg-docs-dark-bg dark:text-white transition-colors duration-300">
-          <Navbar forceLoginModal={forceLoginModal} />
+          <Navbar />
           <div className="flex flex-1">
             {sidebarOverride ? sidebarOverride : <Sidebar />}
             <main className="flex-1 p-8 bg-docs-bg text-docs-text dark:bg-docs-dark-bg dark:text-white transition-colors duration-300 text-base">{children}</main>
