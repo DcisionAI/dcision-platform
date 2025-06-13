@@ -36,7 +36,7 @@ export default function SignIn() {
       );
     }
 
-    console.log('SignIn: Rendering sign in form');
+    console.log('SignIn: Rendering sign in form - after useEffect');
     return (
       <AuthLayout
         title="Sign In"
