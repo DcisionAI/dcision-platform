@@ -52,7 +52,7 @@ const deployment: NavItem[] = [
 const multiModalInterface: NavItem[] = [
   { name: 'Chat Interface', href: '/chat', icon: ChatBubbleLeftRightIcon },
   { name: 'API Reference', href: '/api', icon: CodeBracketIcon },
-  { name: 'Usage Analytics', href: '/analytics', icon: ChartBarIcon },
+  // { name: 'Usage Analytics', href: '/analytics', icon: ChartBarIcon },
 ];
 
 const settings: NavItem[] = [

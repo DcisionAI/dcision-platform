@@ -1,38 +1,34 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSupabase } from '../../../lib/supabase';
 import { resolveUser } from '../../../lib/resolveUser';
 import { validateApiKey } from '@/utils/validateApiKey';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const apiKey = req.headers.authorization?.replace('Bearer ', '');
-  if (!apiKey || !(await validateApiKey(apiKey))) {
-    return res.status(401).json({ error: 'Invalid or missing API key' });
-  }
+// Add type declaration for globalThis.responsesStore
+declare global {
+  // eslint-disable-next-line no-var
+  var responsesStore: { [userId: string]: { id: string; response: string; created_at: string }[] } | undefined;
+}
 
-  const { userId } = await resolveUser(req);
+// In-memory response store (for demo only; not persistent)
+const responsesStore: { [userId: string]: { id: string; response: string; created_at: string }[] } = global.responsesStore || (global.responsesStore = {});
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const user = await resolveUser(req);
+  const userId = user.id;
 
   if (req.method === 'POST') {
-    const { prompt_id, response_text } = req.body;
-    if (!userId || !prompt_id || !response_text) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    const { response } = req.body;
+    if (!response) {
+      return res.status(400).json({ error: 'Response is required' });
     }
-    const supabase = getServerSupabase();
-    const { data, error } = await supabase.from('responses').insert([
-      { prompt_id, user_id: userId, response_text }
-    ]).select().single();
-    if (error) return res.status(500).json({ error: error.message });
-    return res.status(200).json(data);
+    const id = Math.random().toString(36).slice(2);
+    const created_at = new Date().toISOString();
+    if (!responsesStore[userId]) responsesStore[userId] = [];
+    responsesStore[userId].push({ id, response, created_at });
+    return res.status(201).json({ id, response, created_at });
   }
 
   if (req.method === 'GET') {
-    const { prompt_id } = req.query;
-    if (!prompt_id) {
-      return res.status(400).json({ error: 'Missing prompt_id' });
-    }
-    const supabase = getServerSupabase();
-    const { data, error } = await supabase.from('responses').select('*').eq('prompt_id', prompt_id).eq('user_id', userId);
-    if (error) return res.status(500).json({ error: error.message });
-    return res.status(200).json(data);
+    return res.status(200).json(responsesStore[userId] || []);
   }
 
   return res.status(405).json({ error: 'Method not allowed' });

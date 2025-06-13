@@ -44,7 +44,6 @@
 - [ ] Advanced Features
   - [ ] Multi-user collaboration
   - [ ] Custom template builder
-  - [ ] Advanced analytics dashboard
   - [ ] Export/import functionality
 
 ## Notes

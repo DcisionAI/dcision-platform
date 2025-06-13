@@ -1,8 +1,16 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSupabase } from '@/lib/supabase';
 import { Client } from 'pg';
 import { encrypt } from '@/lib/encryption';
 import { validateApiKey } from '@/utils/validateApiKey';
+
+// Add type declaration for globalThis.dbConfigs
+declare global {
+  // eslint-disable-next-line no-var
+  var dbConfigs: { [userId: string]: any[] } | undefined;
+}
+
+// In-memory DB config store (for demo only; not persistent)
+const dbConfigs: { [userId: string]: any[] } = global.dbConfigs || (global.dbConfigs = {});
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const apiKey = req.headers.authorization?.replace('Bearer ', '');
@@ -14,12 +22,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const supabase = getServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  // For demo, use API key as userId
+  const userId = apiKey;
 
   try {
     const { host, port, database, username, password } = req.body;
@@ -41,62 +45,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     try {
       await client.connect();
-      
-      // Check if tables already exist
-      const result = await client.query(`
-        SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_schema = 'public' 
-          AND table_name = 'profiles'
-        );
-      `);
-
-      if (result.rows[0].exists) {
-        await client.end();
-        return res.status(400).json({ error: 'Database already initialized' });
-      }
-
-      // Run schema migration
-      const fs = require('fs');
-      const path = require('path');
-      const schema = fs.readFileSync(
-        path.join(process.cwd(), 'scripts/migrations/customer_schema.sql'),
-        'utf8'
-      );
-
-      await client.query(schema);
+      // Optionally, check for existing tables or run migrations here
       await client.end();
-
-      // Store encrypted connection details
-      const { error: dbError } = await supabase
-        .from('connectors')
-        .insert({
-          user_id: user.id,
-          type: 'postgres',
-          name: 'Primary Database',
-          config: {
-            connection: {
-              host,
-              port: parseInt(port),
-              database,
-              username,
-              password: await encrypt(password)
-            }
-          }
-        });
-
-      if (dbError) throw dbError;
-
-      return res.status(200).json({ success: true });
     } catch (error) {
       await client.end();
       throw error;
     }
+
+    // Store encrypted connection details in memory
+    const config = {
+      host,
+      port: parseInt(port),
+      database,
+      username,
+      password: await encrypt(password),
+      created_at: new Date().toISOString()
+    };
+    if (!dbConfigs[userId]) dbConfigs[userId] = [];
+    dbConfigs[userId].push(config);
+
+    return res.status(200).json({ success: true });
   } catch (error: any) {
-    console.error('Database setup error:', error);
-    return res.status(500).json({ 
-      error: 'Failed to setup database',
-      details: error.message 
-    });
+    return res.status(500).json({ error: error.message || 'Failed to store DB config' });
   }
 } 

@@ -1,15 +1,23 @@
-import { getServerSupabase } from './supabase';
-import { createClient } from '@supabase/supabase-js';
+import { NextApiRequest } from 'next';
 
-const DEMO_USER_ID = process.env.DEMO_USER_ID!;
+export type AuthMethod = 'api_key';
 
-export async function resolveUser(req: any) {
-  const apiKey = req.headers['x-api-key'] || req.headers['X-API-KEY'];
+export interface ResolvedUser {
+  id: string;
+  method: AuthMethod;
+}
+
+export async function resolveUser(req: NextApiRequest): Promise<ResolvedUser> {
+  const apiKey = req.headers['x-api-key'] as string;
+
   if (!apiKey) {
     throw new Error('No API key provided');
   }
 
-  // TODO: Add API key validation and user resolution logic here
-  // For now, we'll just return a placeholder user ID
-  return { userId: 'api-user', method: 'api_key' };
+  // TODO: Add proper API key validation and user resolution logic
+  // For now, we'll just use the API key as the user ID
+  return {
+    id: apiKey,
+    method: 'api_key'
+  };
 } 

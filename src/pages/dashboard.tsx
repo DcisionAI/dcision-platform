@@ -1,7 +1,7 @@
 import Layout from '@/components/Layout';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 import React, { useEffect, useState, useMemo } from 'react';
-import { supabase } from '@/lib/supabase';
+// import { supabase } from '@/lib/supabase'; // Removed Supabase import
 import Button from '@/components/ui/Button';
 import Tabs from '@/components/ui/Tabs';
 

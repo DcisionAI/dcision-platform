@@ -1,32 +1,33 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSupabase } from '../../../lib/supabase';
 import { resolveUser } from '../../../lib/resolveUser';
 
+// Add type declaration for globalThis.stepsStore
+declare global {
+  // eslint-disable-next-line no-var
+  var stepsStore: { [userId: string]: { id: string; step: any; created_at: string }[] } | undefined;
+}
+
+// In-memory step store (for demo only; not persistent)
+const stepsStore: { [userId: string]: { id: string; step: any; created_at: string }[] } = global.stepsStore || (global.stepsStore = {});
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { userId } = await resolveUser(req);
+  const user = await resolveUser(req);
+  const userId = user.id;
 
   if (req.method === 'POST') {
-    const { session_id, step_type, step_data } = req.body;
-    if (!userId || !session_id || !step_type) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    const { step } = req.body;
+    if (!step) {
+      return res.status(400).json({ error: 'Step is required' });
     }
-    const supabase = getServerSupabase();
-    const { data, error } = await supabase.from('steps').insert([
-      { session_id, user_id: userId, step_type, step_data }
-    ]).select().single();
-    if (error) return res.status(500).json({ error: error.message });
-    return res.status(200).json(data);
+    const id = Math.random().toString(36).slice(2);
+    const created_at = new Date().toISOString();
+    if (!stepsStore[userId]) stepsStore[userId] = [];
+    stepsStore[userId].push({ id, step, created_at });
+    return res.status(201).json({ id, step, created_at });
   }
 
   if (req.method === 'GET') {
-    const { session_id } = req.query;
-    if (!session_id) {
-      return res.status(400).json({ error: 'Missing session_id' });
-    }
-    const supabase = getServerSupabase();
-    const { data, error } = await supabase.from('steps').select('*').eq('session_id', session_id).eq('user_id', userId);
-    if (error) return res.status(500).json({ error: error.message });
-    return res.status(200).json(data);
+    return res.status(200).json(stepsStore[userId] || []);
   }
 
   return res.status(405).json({ error: 'Method not allowed' });

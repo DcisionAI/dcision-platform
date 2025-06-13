@@ -1,38 +1,37 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSupabase } from '../../../lib/supabase';
 import { resolveUser } from '../../../lib/resolveUser';
 import crypto from 'crypto';
+
+// Add type declaration for globalThis.apiKeysStore
+declare global {
+  // eslint-disable-next-line no-var
+  var apiKeysStore: { [userId: string]: { id: string; created_at: string }[] } | undefined;
+}
+
+// In-memory API key store (for demo only; not persistent)
+const apiKeysStore: { [userId: string]: { id: string; created_at: string }[] } = global.apiKeysStore || (global.apiKeysStore = {});
 
 function generateApiKey() {
   return crypto.randomBytes(32).toString('hex');
 }
 
-function hashApiKey(apiKey: string) {
-  return crypto.createHash('sha256').update(apiKey).digest('hex');
-}
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { userId } = await resolveUser(req);
-  const supabase = getServerSupabase();
+  const user = await resolveUser(req);
+  const userId = user.id;
 
   if (req.method === 'POST') {
-    // Generate and hash API key
-    const rawKey = generateApiKey();
-    const hashedKey = hashApiKey(rawKey);
-    // Store hashed key
-    const { data, error } = await supabase.from('api_keys').insert([
-      { user_id: userId, api_key: hashedKey }
-    ]).select('id, created_at').single();
-    if (error) return res.status(500).json({ error: error.message });
+    // Generate and store API key
+    const id = generateApiKey();
+    const created_at = new Date().toISOString();
+    if (!apiKeysStore[userId]) apiKeysStore[userId] = [];
+    apiKeysStore[userId].push({ id, created_at });
     // Return only the raw key once
-    return res.status(201).json({ id: data.id, apiKey: rawKey, created_at: data.created_at });
+    return res.status(201).json({ id, apiKey: id, created_at });
   }
 
   if (req.method === 'GET') {
     // List all API keys for the user (do not return raw keys)
-    const { data, error } = await supabase.from('api_keys').select('id, created_at').eq('user_id', userId);
-    if (error) return res.status(500).json({ error: error.message });
-    return res.status(200).json(data);
+    return res.status(200).json(apiKeysStore[userId] || []);
   }
 
   return res.status(405).json({ error: 'Method not allowed' });

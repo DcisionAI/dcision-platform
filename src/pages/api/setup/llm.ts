@@ -1,7 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSupabase } from '@/lib/supabase';
 import { encrypt } from '@/lib/encryption';
 import { validateApiKey } from '@/utils/validateApiKey';
+
+// Add type declaration for globalThis.llmConfigs
+declare global {
+  // eslint-disable-next-line no-var
+  var llmConfigs: { [userId: string]: { provider: string; apiKey: string; created_at: string }[] } | undefined;
+}
+
+// In-memory LLM config store (for demo only; not persistent)
+const llmConfigs: { [userId: string]: { provider: string; apiKey: string; created_at: string }[] } = global.llmConfigs || (global.llmConfigs = {});
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const apiKey = req.headers.authorization?.replace('Bearer ', '');
@@ -9,79 +17,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Invalid or missing API key' });
   }
 
+  // For demo, use API key as userId
+  const userId = apiKey;
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const supabase = getServerSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+    const { provider, apiKey: llmApiKey } = req.body;
+    if (!provider || !llmApiKey) {
+      return res.status(400).json({ error: 'Provider and API key are required' });
     }
-
-    const { provider } = req.body;
-
-    if (!provider) {
-      return res.status(400).json({ error: 'Provider is required' });
-    }
-
-    // Validate the API key based on provider
-    try {
-      if (provider === 'openai') {
-        const response = await fetch('https://api.openai.com/v1/models', {
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Invalid OpenAI API key');
-        }
-      } else if (provider === 'anthropic') {
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: 'claude-3-sonnet-20240229',
-            max_tokens: 1,
-            messages: [{ role: 'user', content: 'test' }]
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error('Invalid Anthropic API key');
-        }
-      }
-    } catch (error) {
-      return res.status(400).json({ error: 'Invalid API key' });
-    }
-
-    // Encrypt and store the API key
-    const encryptedKey = encrypt(apiKey);
-    
-    const { error: updateError } = await supabase
-      .from('user_settings')
-      .upsert({
-        user_id: user.id,
-        llm_provider: provider,
-        llm_api_key: encryptedKey,
-        updated_at: new Date().toISOString()
-      });
-
-    if (updateError) {
-      throw updateError;
-    }
-
+    // Optionally validate the LLM API key here (e.g., test with provider API)
+    const encryptedKey = await encrypt(llmApiKey);
+    const config = {
+      provider,
+      apiKey: encryptedKey,
+      created_at: new Date().toISOString()
+    };
+    if (!llmConfigs[userId]) llmConfigs[userId] = [];
+    llmConfigs[userId].push(config);
     return res.status(200).json({ success: true });
-  } catch (error) {
-    console.error('Error in LLM setup:', error);
-    return res.status(500).json({ error: 'Failed to configure LLM settings' });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message || 'Failed to store LLM config' });
   }
 } 
