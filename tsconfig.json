@@ -24,6 +24,7 @@
   "exclude": [
     "node_modules",
     "server",
+    "supabase/functions",
     "**/*.test.ts",
     "**/*.test.tsx"
   ]
