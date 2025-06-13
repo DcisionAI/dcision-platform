@@ -1,6 +1,5 @@
 import SettingsLayout from './layout';
 import { useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
 
@@ -11,7 +10,6 @@ interface LLMSettings {
 
 export default function LLMSettings() {
   const router = useRouter();
-  const supabase = createClientComponentClient();
   const [settings, setSettings] = useState<LLMSettings>({
     provider: 'openai',
     apiKey: ''
@@ -23,16 +21,16 @@ export default function LLMSettings() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-
     try {
-      const { error: updateError } = await supabase
-        .from('user_settings')
-        .upsert({
-          llm_provider: settings.provider,
-          llm_api_key: settings.apiKey
-        });
-
-      if (updateError) throw updateError;
+      const res = await fetch('/api/setup/llm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: settings.provider, apiKey: settings.apiKey })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to save settings');
+      }
       router.push('/settings');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save settings');
