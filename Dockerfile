@@ -81,7 +81,7 @@ RUN chmod +x scripts/init-customer-db.sh
 # Set runtime environment variables
 ENV NODE_ENV=production
 # All secrets and runtime env vars are set at runtime, not build time
-EXPOSE 3000
+EXPOSE 8080
 
-# Start the application and initialize database
-CMD ["/bin/sh"] 
+# Start the application
+CMD ["yarn", "start"] 
