@@ -1,5 +1,4 @@
 import { useRouter } from 'next/router';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useEffect, useState } from 'react';
 
 interface SetupLayoutProps {
@@ -20,18 +19,11 @@ export default function SetupLayout({
   isLastStep = false
 }: SetupLayoutProps) {
   const router = useRouter();
-  const supabase = createClientComponentClient();
   const [loading, setLoading] = useState(false);
 
   const handleComplete = async () => {
     setLoading(true);
     try {
-      // Update user settings to mark setup as complete
-      const { error } = await supabase
-        .from('user_settings')
-        .upsert({ setup_completed: true });
-
-      if (error) throw error;
       router.push('/dashboard');
     } catch (err) {
       console.error('Failed to complete setup:', err);
@@ -64,32 +56,31 @@ export default function SetupLayout({
 
         {/* Navigation buttons */}
         <div className="mt-8 flex justify-between">
-          {currentStep > 1 && (
+          {onBack && (
             <button
               onClick={onBack}
-              className="px-6 py-2.5 border border-[#3C3C3E] rounded-lg text-base font-light text-white hover:bg-[#2C2C2E] transition-colors"
+              className="px-6 py-2 rounded-lg bg-[#2C2C2E] text-white hover:bg-[#3A3A3C]"
             >
               Back
             </button>
           )}
-          <div className="ml-auto">
-            {isLastStep ? (
-              <button
-                onClick={handleComplete}
-                disabled={loading}
-                className="px-6 py-2.5 bg-[#2C2C2E] rounded-lg text-base font-light text-white hover:bg-[#3C3C3E] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {loading ? 'Completing...' : 'Complete Setup'}
-              </button>
-            ) : (
-              <button
-                onClick={onNext}
-                className="px-6 py-2.5 bg-[#2C2C2E] rounded-lg text-base font-light text-white hover:bg-[#3C3C3E] transition-colors"
-              >
-                Next
-              </button>
-            )}
-          </div>
+          {onNext && !isLastStep && (
+            <button
+              onClick={onNext}
+              className="px-6 py-2 rounded-lg bg-white text-black hover:bg-gray-200"
+            >
+              Next
+            </button>
+          )}
+          {isLastStep && (
+            <button
+              onClick={handleComplete}
+              disabled={loading}
+              className="px-6 py-2 rounded-lg bg-white text-black hover:bg-gray-200 disabled:opacity-50"
+            >
+              {loading ? 'Completing...' : 'Complete Setup'}
+            </button>
+          )}
         </div>
       </div>
     </div>

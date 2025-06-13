@@ -1,38 +1,28 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@supabase/supabase-js';
 import { logger } from '../../utils/Logger';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-);
 
 export async function authenticate(
   req: NextApiRequest,
   res: NextApiResponse
 ): Promise<boolean> {
   try {
-    const authHeader = req.headers.authorization;
+    const apiKey = req.headers['x-api-key'] || req.headers['X-API-KEY'];
     
-    if (!authHeader) {
-      res.status(401).json({ error: 'No authorization header' });
+    if (!apiKey) {
+      res.status(401).json({ error: 'No API key provided' });
       return false;
     }
 
-    // Extract the JWT token from the Authorization header
-    const token = authHeader.replace('Bearer ', '');
-
-    // Verify the session with Supabase
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-
-    if (error || !user) {
-      logger.error({ error }, 'Authentication failed');
-      res.status(401).json({ error: 'Invalid token' });
+    // TODO: Add API key validation logic here
+    // For now, we'll just check if the key exists
+    if (typeof apiKey !== 'string' || apiKey.length === 0) {
+      logger.error('Invalid API key format');
+      res.status(401).json({ error: 'Invalid API key' });
       return false;
     }
 
-    // Add the user to the request object
-    (req as any).user = user;
+    // Add the API key to the request object for use in the route handler
+    (req as any).apiKey = apiKey;
     return true;
   } catch (error) {
     logger.error({ error }, 'Authentication failed');

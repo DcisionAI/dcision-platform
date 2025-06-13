@@ -1,39 +1,23 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 export default function SetupIndex() {
   const router = useRouter();
-  const supabase = createClientComponentClient();
 
   useEffect(() => {
     const checkSetupStatus = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const apiKey = localStorage.getItem('dcisionai_api_key');
       
-      if (!user) {
-        router.push('/auth/signin');
-        return;
-      }
-
-      // Check if DcisionAI API key is configured
-      const { data: userSettings } = await supabase
-        .from('user_settings')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!userSettings?.dcai_api_key) {
+      if (!apiKey) {
         router.push('/setup/apikey');
         return;
       }
 
-      // Only require API key step for now
       router.push('/dashboard');
-      return;
     };
 
     checkSetupStatus();
-  }, [router, supabase]);
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-[#000000] text-white flex items-center justify-center">
