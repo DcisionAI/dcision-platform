@@ -1,7 +1,7 @@
 import SettingsLayout from './layout';
 import { useState, useEffect } from 'react';
 import { KeyIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { authFetch } from '@/lib/authFetch';
+import { apiFetch } from '@/utils/apiFetch';
 
 interface APIKey {
   id: string;
@@ -20,7 +20,7 @@ export default function APIKeysSettings() {
       setLoading(true);
       setError(null);
       try {
-        const res = await authFetch('/api/apikeys');
+        const res = await apiFetch('/api/apikeys');
         if (!res.ok) throw new Error('Failed to fetch API keys');
         const data = await res.json();
         setApiKeys(data);
@@ -40,7 +40,7 @@ export default function APIKeysSettings() {
     setError(null);
     setNewKey(null);
     try {
-      const res = await authFetch('/api/apikeys', { method: 'POST' });
+      const res = await apiFetch('/api/apikeys', { method: 'POST' });
       if (!res.ok) throw new Error('Failed to create API key');
       const data = await res.json();
       setNewKey(data.apiKey);
@@ -57,7 +57,7 @@ export default function APIKeysSettings() {
     setLoading(true);
     setError(null);
     try {
-      const res = await authFetch(`/api/apikeys/${id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/apikeys/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete API key');
       setApiKeys((prev) => prev.filter((key) => key.id !== id));
     } catch (err: any) {

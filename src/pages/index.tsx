@@ -9,6 +9,7 @@ import {
   LightBulbIcon,
   ArrowPathRoundedSquareIcon,
 } from '@heroicons/react/24/outline';
+import { apiFetch } from '@/utils/apiFetch';
 
 function FeatureCard({ icon: Icon, title, description }: {
   icon: React.ElementType;
@@ -70,7 +71,7 @@ export default function Home() {
         setValid(false);
         return;
       }
-      const res = await fetch('/api/validate-key', {
+      const res = await apiFetch('/api/validate-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key }),
@@ -96,7 +97,7 @@ export default function Home() {
   const handleApiKeySubmit = async (key: string) => {
     if (typeof window !== 'undefined') localStorage.setItem('DCISIONAI_KEY', key);
     // Re-run validation
-    const res = await fetch('/api/validate-key', {
+    const res = await apiFetch('/api/validate-key', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key }),

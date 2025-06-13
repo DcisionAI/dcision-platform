@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import SetupLayout from './layout';
 import { useRouter } from 'next/router';
+import { apiFetch } from '@/utils/apiFetch';
 
 export default function ApiKeySetup() {
   const router = useRouter();
@@ -23,7 +24,7 @@ export default function ApiKeySetup() {
     setError(null);
     setLoading(true);
     try {
-      const res = await fetch('/api/validate-key', {
+      const res = await apiFetch('/api/validate-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key })

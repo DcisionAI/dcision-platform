@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { authFetch } from '@/lib/authFetch';
+import { apiFetch } from '@/utils/apiFetch';
 
 export interface Step3ModelConstraintsProps {
   enrichedData: any;
@@ -83,7 +83,7 @@ const Step3ModelConstraints: React.FC<Step3ModelConstraintsProps> = ({ enrichedD
       } else if (typeof intentInterpretation === 'string' && intentInterpretation.toLowerCase().includes('vehicle')) {
         problemType = 'vehicle_routing';
       }
-      authFetch('/api/mcp/model-define', {
+      apiFetch('/api/mcp/model-define', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

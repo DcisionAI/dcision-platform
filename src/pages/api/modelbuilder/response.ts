@@ -1,8 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSupabase } from '../../../lib/supabase';
 import { resolveUser } from '../../../lib/resolveUser';
+import { validateApiKey } from '@/utils/validateApiKey';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const apiKey = req.headers.authorization?.replace('Bearer ', '');
+  if (!apiKey || !(await validateApiKey(apiKey))) {
+    return res.status(401).json({ error: 'Invalid or missing API key' });
+  }
+
   const { userId } = await resolveUser(req);
 
   if (req.method === 'POST') {

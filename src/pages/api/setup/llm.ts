@@ -1,8 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSupabase } from '@/lib/supabase';
 import { encrypt } from '@/lib/encryption';
+import { validateApiKey } from '@/utils/validateApiKey';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const apiKey = req.headers.authorization?.replace('Bearer ', '');
+  if (!apiKey || !(await validateApiKey(apiKey))) {
+    return res.status(401).json({ error: 'Invalid or missing API key' });
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -15,10 +21,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { provider, apiKey } = req.body;
+    const { provider } = req.body;
 
-    if (!provider || !apiKey) {
-      return res.status(400).json({ error: 'Provider and API key are required' });
+    if (!provider) {
+      return res.status(400).json({ error: 'Provider is required' });
     }
 
     // Validate the API key based on provider

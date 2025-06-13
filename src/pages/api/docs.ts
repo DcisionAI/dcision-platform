@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
 import path from 'path';
+import { validateApiKey } from '@/utils/validateApiKey';
 
 async function getAllMarkdownFiles(dir: string): Promise<string[]> {
   const files = await fs.promises.readdir(dir, { withFileTypes: true });
@@ -20,6 +21,11 @@ async function getAllMarkdownFiles(dir: string): Promise<string[]> {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const apiKey = req.headers.authorization?.replace('Bearer ', '');
+  if (!apiKey || !(await validateApiKey(apiKey))) {
+    return res.status(401).json({ error: 'Invalid or missing API key' });
+  }
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

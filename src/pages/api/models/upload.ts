@@ -4,6 +4,39 @@ import fs from 'fs';
 import path from 'path';
 import { getPineconeIndex } from '../../../../lib/pinecone';
 import { getEmbedding } from '../../../../lib/openai-embedding';
+import { validateApiKey } from '@/utils/validateApiKey';
+
+export const config = { api: { bodyParser: false } };
+
+function inferProblemType(filename: string, content: string): string {
+  const lower = (filename + ' ' + content).toLowerCase();
+  if (lower.includes('vehicle') || lower.includes('route')) return 'vehicle_routing';
+  if (lower.includes('knapsack')) return 'knapsack';
+  if (lower.includes('job') && lower.includes('shop')) return 'job_shop';
+  if (lower.includes('blend')) return 'blending';
+  if (lower.includes('cut')) return 'cutting';
+  if (lower.includes('staff') || lower.includes('schedule')) return 'staff_scheduling';
+  return 'custom';
+}
+
+function extractDescription(content: string): string {
+  const lines = content.split('\n').map(l => l.trim());
+  const comment = lines.find(l => l.startsWith('#') || l.startsWith('//') || l.startsWith('"""'));
+  if (comment) return comment.replace(/^#|\/\/|"""/, '').trim();
+  return lines.slice(0, 2).join(' ');
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const apiKey = req.headers.authorization?.replace('Bearer ', '');
+  if (!apiKey || !(await validateApiKey(apiKey))) {
+    return res.status(401).json({ error: 'Invalid or missing API key' });
+  }
+import type { NextApiRequest, NextApiResponse } from 'next';
+const formidable = require('formidable');
+import fs from 'fs';
+import path from 'path';
+import { getPineconeIndex } from '../../../../lib/pinecone';
+import { getEmbedding } from '../../../../lib/openai-embedding';
 
 export const config = { api: { bodyParser: false } };
 

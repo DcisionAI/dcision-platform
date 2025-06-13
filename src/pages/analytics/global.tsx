@@ -1,6 +1,6 @@
 import Layout from '@/components/Layout';
 import { useEffect, useState } from 'react';
-import { authFetch } from '@/lib/authFetch';
+import { apiFetch } from '@/utils/apiFetch';
 
 export default function GlobalAnalytics() {
   const [totals, setTotals] = useState<any>(null);
@@ -14,7 +14,7 @@ export default function GlobalAnalytics() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    authFetch('/api/analytics/global')
+    apiFetch('/api/analytics/global')
       .then(async (res) => {
         if (!res.ok) throw new Error('Failed to fetch global analytics');
         return res.json();
@@ -32,7 +32,7 @@ export default function GlobalAnalytics() {
   useEffect(() => {
     setLogsLoading(true);
     setLogsError(null);
-    authFetch('/api/analytics/logs')
+    apiFetch('/api/analytics/logs')
       .then(async (res) => {
         if (!res.ok) throw new Error('Failed to fetch logs');
         return res.json();

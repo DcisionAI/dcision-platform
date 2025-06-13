@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { validateApiKey } from '@/utils/validateApiKey';
 // GET list of tables from a Supabase project via direct DB URL or REST fallback
 
 // Expects POST with JSON body: { url: string; key: string }
@@ -13,6 +14,10 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<TableResponse | ErrorResponse>
 ) {
+  const apiKey = req.headers.authorization?.replace('Bearer ', '');
+  if (!apiKey || !(await validateApiKey(apiKey))) {
+    return res.status(401).json({ error: 'Invalid or missing API key' });
+  }
 
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');

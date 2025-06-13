@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { validateApiKey } from '@/utils/validateApiKey';
 
 // Fallback static list of connector types if API call fails (with icon URLs)
 const staticConnectorTypes = [
@@ -12,6 +13,10 @@ const staticConnectorTypes = [
 import { GoogleAuth } from 'google-auth-library';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const apiKey = req.headers.authorization?.replace('Bearer ', '');
+  if (!apiKey || !(await validateApiKey(apiKey))) {
+    return res.status(401).json({ error: 'Invalid or missing API key' });
+  }
   // Prevent HTTP caching to avoid 304 responses client-side
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'GET') {

@@ -1,64 +1,24 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Fragment, useState, useEffect } from 'react';
+import { Fragment } from 'react';
 import { Menu, Transition } from '@headlessui/react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import { Cog8ToothIcon, SunIcon, MoonIcon } from '@heroicons/react/24/outline';
-import { useAuthContext } from './auth/AuthProvider';
-import LoginModal from './auth/LoginModal';
 import { useTheme } from './layout/ThemeContext';
 
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(' ');
 }
 
-export default function Navbar({ forceLoginModal }: { forceLoginModal?: boolean }) {
+export default function Navbar() {
   const router = useRouter();
-  const supabase = createClientComponentClient();
-  const { user, loading } = useAuthContext();
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const { theme, toggleTheme } = useTheme();
-
-  useEffect(() => {
-    if (user && showLoginModal) {
-      setShowLoginModal(false);
-    }
-    // Show login modal if ?auth=signin is present
-    if (router.query.auth === 'signin' && !user) {
-      setShowLoginModal(true);
-      // Remove the query param for a clean state
-      const { auth, ...rest } = router.query;
-      router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
-    }
-    // Show login modal if forced and not authenticated
-    if (forceLoginModal && !user) {
-      setShowLoginModal(true);
-    }
-    console.log('Navbar user:', user);
-  }, [user, showLoginModal, router.query.auth, forceLoginModal]);
-
-  const handleSignOut = async () => {
-    try {
-      await supabase.auth.signOut();
-      router.push('/');
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  };
-
-  // Get user's initials or first letter of email
-  const getUserInitials = () => {
-    if (!user?.email) return '?';
-    return user.email.charAt(0).toUpperCase();
-  };
 
   return (
     <header className="flex items-center justify-between px-8 h-16 \
       bg-[#F7F3ED] border-b border-[#EFE9DA] text-[#18181b] \
       dark:bg-[#0D1117] dark:border-[#21262D] dark:text-[#E7E9EB] \
       sticky top-0 z-20 transition-colors duration-300">
-      <LoginModal open={showLoginModal} onClose={() => setShowLoginModal(false)} />
       <div className="flex items-center gap-2">
         
       </div>
@@ -102,75 +62,17 @@ export default function Navbar({ forceLoginModal }: { forceLoginModal?: boolean 
         </button>
 
         {/* Settings Link */}
-        {user && (
-          <Link href="/settings/organization" legacyBehavior>
-            <a
-              className={
-                router.pathname.startsWith('/settings')
-                  ? 'text-docs-accent dark:text-docs-accent'
-                  : 'text-docs-muted dark:text-docs-dark-muted hover:text-docs-accent dark:hover:text-docs-accent'
-              }
-            >
-              <Cog8ToothIcon className="h-5 w-5" />
-            </a>
-          </Link>
-        )}
-        
-        {/* Auth/Profile Menu */}
-        {loading ? (
-          <div className="w-8 h-8 rounded-full bg-docs-section dark:bg-docs-dark-bg animate-pulse" />
-        ) : user ? (
-          <Menu as="div" className="relative">
-            <Menu.Button className="flex items-center gap-1 focus:outline-none">
-              <span className="rounded-full bg-docs-section dark:bg-docs-dark-bg w-8 h-8 flex items-center justify-center text-docs-text dark:text-docs-dark-text font-bold text-base">
-                {getUserInitials()}
-              </span>
-              <ChevronDownIcon className="h-4 w-4 text-docs-muted dark:text-docs-dark-muted" aria-hidden="true" />
-            </Menu.Button>
-            <Transition
-              as={Fragment}
-              enter="transition ease-out duration-100"
-              enterFrom="transform opacity-0 scale-95"
-              enterTo="transform opacity-100 scale-100"
-              leave="transition ease-in duration-75"
-              leaveFrom="transform opacity-100 scale-100"
-              leaveTo="transform opacity-0 scale-95"
-            >
-            <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-docs-bg dark:bg-docs-dark-bg py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                <div className="px-4 py-2 text-sm text-docs-text border-b border-docs-section-border">
-                  {user.email}
-                </div>
-                <Menu.Item>
-                  {({ active }) => (
-                    <button
-                      onClick={handleSignOut}
-                      className={classNames(
-                        active ? 'bg-docs-section' : '',
-                        'block w-full px-4 py-2 text-left text-sm text-docs-muted dark:text-docs-dark-muted hover:text-docs-accent dark:hover:text-docs-accent'
-                      )}
-                    >
-                      Sign out
-                    </button>
-                  )}
-                </Menu.Item>
-              </Menu.Items>
-            </Transition>
-          </Menu>
-        ) : (
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setShowLoginModal(true)}
-              className="text-docs-muted dark:text-docs-dark-muted hover:text-docs-accent dark:hover:text-docs-accent"
-            >
-              Sign in
-            </button>
-            <Link href="/auth/signup" legacyBehavior>
-              <a className="px-4 py-2 rounded-md bg-docs-accent text-white hover:bg-docs-accent/90">
-                Sign up
-              </a>
-            </Link>
-          </div>
-        )}
+        <Link href="/settings/organization" legacyBehavior>
+          <a
+            className={
+              router.pathname.startsWith('/settings')
+                ? 'text-docs-accent dark:text-docs-accent'
+                : 'text-docs-muted dark:text-docs-dark-muted hover:text-docs-accent dark:hover:text-docs-accent'
+            }
+          >
+            <Cog8ToothIcon className="h-5 w-5" />
+          </a>
+        </Link>
       </nav>
     </header>
   );

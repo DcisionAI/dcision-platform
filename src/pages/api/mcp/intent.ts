@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { MCP } from '../../../../server/mcp/types';
 import { IntentInterpreterAgent } from '../../../../server/mcp/agents/IntentInterpreterAgent';
+import { validateApiKey } from '@/utils/validateApiKey';
 
 // Use the core LLMServiceImpl for intent interpretation
 import { LLMServiceImpl } from '@server/mcp/services/llm/LLMService';
@@ -8,6 +9,11 @@ import { LLMServiceImpl } from '@server/mcp/services/llm/LLMService';
 const agent = new IntentInterpreterAgent();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const apiKey = req.headers.authorization?.replace('Bearer ', '');
+  if (!apiKey || !(await validateApiKey(apiKey))) {
+    return res.status(401).json({ error: 'Invalid or missing API key' });
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

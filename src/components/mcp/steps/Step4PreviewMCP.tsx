@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { assembleMCP } from '@/components/mcp/assembleMCP';
 import { MCP } from '@/mcp/MCPTypes';
 import Button from '@/components/ui/Button';
+import { apiFetch } from '@/utils/apiFetch';
 
 export interface Step4PreviewMCPProps {
   sessionId: string;
@@ -178,7 +179,7 @@ const Step4PreviewMCP: React.FC<Step4PreviewMCPProps> = ({
       const submitUrl = process.env.NEXT_PUBLIC_MCP_BASE_URL
         ? `${process.env.NEXT_PUBLIC_MCP_BASE_URL}/mcp/submit`
         : '/api/mcp/submit';
-      const res = await fetch(submitUrl, {
+      const res = await apiFetch(submitUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

@@ -1,3 +1,5 @@
+import { apiFetch } from '@/utils/apiFetch';
+
 export interface AgnoResponse {
   message: string;
   usage: {
@@ -16,7 +18,7 @@ export class AgnoError extends Error {
 
 export async function sendMessageToAgno(message: string): Promise<AgnoResponse> {
   try {
-    const response = await fetch('/api/agno/chat', {
+    const response = await apiFetch('/api/agno/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

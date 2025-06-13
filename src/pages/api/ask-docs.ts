@@ -4,10 +4,16 @@ import { getEmbedding } from '../../../lib/openai-embedding';
 import OpenAI from 'openai';
 import fs from 'fs';
 import path from 'path';
+import { validateApiKey } from '@/utils/validateApiKey';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const apiKey = req.headers.authorization?.replace('Bearer ', '');
+  if (!apiKey || !(await validateApiKey(apiKey))) {
+    return res.status(401).json({ error: 'Invalid or missing API key' });
+  }
+
   const pineconeIndex = getPineconeIndex();
 
   if (req.method === 'GET' && req.query.all === 'true') {

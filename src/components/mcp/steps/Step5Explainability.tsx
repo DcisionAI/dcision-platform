@@ -9,6 +9,7 @@ import {
   ChartPieIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
+import { apiFetch } from '@/utils/apiFetch';
 
 interface ExplanationSection {
   id: string;
@@ -50,7 +51,7 @@ export default function Step5Explainability({ solverResponse }: { solverResponse
       setLoading(true);
       setExplanationData(null);
       setError(null);
-      fetch('/api/mcp/explain', {
+      apiFetch('/api/mcp/explain', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ solverResponse, type: selectedSection })

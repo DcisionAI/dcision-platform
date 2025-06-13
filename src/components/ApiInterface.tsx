@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '@/components/layout/ThemeContext';
+import { apiFetch } from '@/utils/apiFetch';
 
 interface RequestHistory {
   id: string;
@@ -24,7 +25,7 @@ const ApiInterface: React.FC = () => {
     try {
       // Map the request to the actual Agno endpoint internally
       const actualUrl = url.replace('/api/dcisionai/', '/api/agno/');
-      const response = await fetch(actualUrl, {
+      const response = await apiFetch(actualUrl, {
         method,
         headers: {
           'Content-Type': 'application/json',

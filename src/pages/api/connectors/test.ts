@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import dns from 'dns';
 import { URL } from 'url';
+import { validateApiKey } from '@/utils/validateApiKey';
 
 // Force DNS to prefer IPv4 to avoid IPv6 connection refused errors
 dns.setDefaultResultOrder('ipv4first');
@@ -8,6 +9,10 @@ import { GoogleAuth } from 'google-auth-library';
 import { Client } from 'pg';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const apiKey = req.headers.authorization?.replace('Bearer ', '');
+  if (!apiKey || !(await validateApiKey(apiKey))) {
+    return res.status(401).json({ error: 'Invalid or missing API key' });
+  }
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).end(`Method ${req.method} Not Allowed`);
