@@ -6,6 +6,9 @@ let anthropic: any = null;
 let openai: any = null;
 
 async function getAnthropic() {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error('ANTHROPIC_API_KEY is not set in environment variables');
+  }
   if (!anthropic) {
     const Anthropic = (await import('@anthropic-ai/sdk')).default;
     anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -14,6 +17,9 @@ async function getAnthropic() {
 }
 
 async function getOpenAI() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY is not set in environment variables');
+  }
   if (!openai) {
     const { OpenAI } = await import('openai');
     openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -35,49 +41,62 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     let conversation;
-    if (LLM_PROVIDER === 'openai') {
-      conversation = [
-        { role: 'system', content: systemPrompt },
-        ...(Array.isArray(history) ? history : []),
-        { role: 'user', content: message },
-      ];
-      const openai = await getOpenAI();
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: conversation,
-        max_tokens: 1000,
-      });
-      const responseMessage = completion.choices[0].message.content;
-      return res.status(200).json({
-        message: responseMessage,
-        usage: completion.usage,
-        model: completion.model,
-      });
-    } else {
-      conversation = [
-        { role: 'assistant', content: systemPrompt },
-        ...(Array.isArray(history) ? history.slice(-5) : []),
-        { role: 'user', content: message },
-      ];
-      const anthropic = await getAnthropic();
-      const completion = await anthropic.messages.create({
-        model: 'claude-3-sonnet-20240229',
-        max_tokens: 2000,
-        messages: conversation,
-      });
-      const responseMessage = completion.content[0];
-      if ('text' in responseMessage) {
+    try {
+      if (LLM_PROVIDER === 'openai') {
+        conversation = [
+          { role: 'system', content: systemPrompt },
+          ...(Array.isArray(history) ? history : []),
+          { role: 'user', content: message },
+        ];
+        const openai = await getOpenAI();
+        const completion = await openai.chat.completions.create({
+          model: 'gpt-4',
+          messages: conversation,
+          max_tokens: 1000,
+        });
+        const responseMessage = completion.choices[0].message.content;
         return res.status(200).json({
-          message: responseMessage.text,
+          message: responseMessage,
           usage: completion.usage,
           model: completion.model,
         });
       } else {
-        throw new Error('Invalid response format from Anthropic API');
+        conversation = [
+          { role: 'assistant', content: systemPrompt },
+          ...(Array.isArray(history) ? history.slice(-5) : []),
+          { role: 'user', content: message },
+        ];
+        const anthropic = await getAnthropic();
+        const completion = await anthropic.messages.create({
+          model: 'claude-3-sonnet-20240229',
+          max_tokens: 2000,
+          messages: conversation,
+        });
+        const responseMessage = completion.content[0];
+        if ('text' in responseMessage) {
+          return res.status(200).json({
+            message: responseMessage.text,
+            usage: completion.usage,
+            model: completion.model,
+          });
+        } else {
+          throw new Error('Invalid response format from Anthropic API');
+        }
       }
+    } catch (error: any) {
+      if (error.message.includes('API_KEY is not set')) {
+        return res.status(500).json({ 
+          error: 'LLM API key not configured',
+          details: error.message
+        });
+      }
+      throw error;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in construction chat API:', error);
-    return res.status(500).json({ error: 'Failed to process request' });
+    return res.status(500).json({ 
+      error: 'Failed to process request',
+      details: error.message || 'Unknown error occurred'
+    });
   }
 } 
