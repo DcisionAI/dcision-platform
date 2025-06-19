@@ -1,6 +1,6 @@
 import React from 'react';
 import Layout from '@/components/Layout';
-import RetailTabs from '@/components/RetailTabs';
+import RetailTabs from '@/workflows/retail/components/RetailTabs';
 
 const RetailPage: React.FC = () => {
   return (

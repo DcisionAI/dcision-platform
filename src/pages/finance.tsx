@@ -1,14 +1,11 @@
 import React from 'react';
-import Layout from '@/components/Layout';
-import FinanceTabs from '@/components/FinanceTabs';
+import FinanceTabs from '@/workflows/finance/components/FinanceTabs';
 
 const FinancePage: React.FC = () => {
   return (
-    <Layout>
-      <div className="h-full">
-        <FinanceTabs />
-      </div>
-    </Layout>
+    <div className="h-full bg-gray-100">
+      <FinanceTabs />
+    </div>
   );
 };
 

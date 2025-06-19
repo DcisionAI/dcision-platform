@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@/components/layout/ThemeContext';
-import ApiInterfaceConstruction from '@/components/ApiInterfaceConstruction';
+import ApiInterfaceConstruction from './ApiInterfaceConstruction';
 import AgentChat from '@/components/AgentChat';
 import StaticDashboard from '@/components/StaticDashboard';
 import IntentAnalysisDisplay from '@/components/IntentAnalysisDisplay';

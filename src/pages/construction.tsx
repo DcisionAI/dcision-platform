@@ -1,5 +1,5 @@
 import React from 'react';
-import ConstructionWorkflowTabs from '@/components/ConstructionWorkflowTabs';
+import ConstructionWorkflowTabs from '@/workflows/construction/components/ConstructionWorkflowTabs';
 
 const ConstructionPage: React.FC = () => {
   return (
