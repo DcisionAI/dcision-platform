@@ -24,7 +24,7 @@ export default function SetupLayout({
   const handleComplete = async () => {
     setLoading(true);
     try {
-      router.push('/dashboard');
+      router.push('/');
     } catch (err) {
       console.error('Failed to complete setup:', err);
     } finally {

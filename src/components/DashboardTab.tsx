@@ -216,12 +216,62 @@ const DashboardTab: React.FC = () => {
   const [llmLoading, setLlmLoading] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
   const [svgWidth, setSvgWidth] = useState(800);
+  const [knowledgeGraphData, setKnowledgeGraphData] = useState<{ nodes: any[]; edges: any[] } | null>(null);
+  const [kgLoading, setKgLoading] = useState(false);
+  const [kgError, setKgError] = useState<string | null>(null);
 
   useEffect(() => {
     if (svgRef.current) {
       setSvgWidth(svgRef.current.clientWidth || 800);
     }
   }, []);
+
+  useEffect(() => {
+    if (activeSubTab === 'knowledge') {
+      setKgLoading(true);
+      setKgError(null);
+      fetch('/api/rag/list?limit=100')
+        .then(res => res.json())
+        .then(data => {
+          if (!data.vectors || !Array.isArray(data.vectors)) throw new Error('No vectors');
+          // Aggregate unique entities and relationships
+          const entityMap = new Map();
+          const edgeSet = new Set();
+          data.vectors.forEach((v: any) => {
+            (v.entities || []).forEach((e: any) => {
+              if (e && e.id) entityMap.set(e.id, e);
+            });
+            (v.relationships || []).forEach((r: any) => {
+              if (r && r.source && r.target) {
+                const key = `${r.source}->${r.target}`;
+                if (!edgeSet.has(key)) edgeSet.add(key);
+              }
+            });
+          });
+          // Build nodes and edges arrays
+          const nodes = Array.from(entityMap.values());
+          const edges: any[] = [];
+          data.vectors.forEach((v: any) => {
+            (v.relationships || []).forEach((r: any) => {
+              if (r && r.source && r.target) {
+                const key = `${r.source}->${r.target}`;
+                if (edgeSet.has(key)) {
+                  edges.push({ from: r.source, to: r.target, type: r.type, description: r.description });
+                  edgeSet.delete(key); // Only add once
+                }
+              }
+            });
+          });
+          if (nodes.length === 0 || edges.length === 0) throw new Error('No entities/edges');
+          setKnowledgeGraphData({ nodes, edges });
+        })
+        .catch(err => {
+          setKgError('Failed to load knowledge graph');
+          setKnowledgeGraphData(null);
+        })
+        .finally(() => setKgLoading(false));
+    }
+  }, [activeSubTab]);
 
   // Handle LLM prompt submit (mocked for now)
   const handleLlmSubmit = async (e: React.FormEvent) => {
@@ -275,7 +325,13 @@ const DashboardTab: React.FC = () => {
         <div className="border rounded-lg p-6 bg-docs-section">
           <h3 className={`font-semibold mb-2 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>Knowledge Graph</h3>
           <div className="text-xs text-docs-muted mb-2">Click a node to expand and reveal its children.</div>
-          <ExpandableKnowledgeGraph />
+          {kgLoading ? (
+            <div className="flex items-center justify-center h-64">Loading...</div>
+          ) : kgError ? (
+            <div className="text-red-500">{kgError}</div>
+          ) : (
+            <ExpandableKnowledgeGraph data={knowledgeGraphData || undefined} />
+          )}
         </div>
       )}
       {activeSubTab === 'kpi' && (

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '@/components/layout/ThemeContext';
 import ApiInterfaceConstruction from '@/components/ApiInterfaceConstruction';
 import AgentChat from '@/components/AgentChat';
-import DashboardTab from '@/components/DashboardTab';
+import StaticDashboard from '@/components/StaticDashboard';
+import axios from 'axios';
 
 const mainTabs = [
   {
@@ -47,11 +48,6 @@ const mainTabs = [
   },
 ];
 
-const mockSources = [
-  { id: '1', name: 'OSHA Safety Checklist', type: 'PDF', tags: ['Safety', 'OSHA'], status: 'Ready' },
-  { id: '2', name: 'PMBOK Guide', type: 'Web', tags: ['Planning', 'PMBOK'], status: 'Processing' },
-];
-
 const tagOptions = ['Safety', 'OSHA', 'Planning', 'PMBOK', 'Budget', 'Quality'];
 
 const ConstructionWorkflowTabs: React.FC = () => {
@@ -60,9 +56,20 @@ const ConstructionWorkflowTabs: React.FC = () => {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [urlInput, setUrlInput] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [sources, setSources] = useState(mockSources);
+  const [sources, setSources] = useState<any[]>([]);
   const [query, setQuery] = useState('');
   const [ragResult, setRagResult] = useState<{ answer: string, sources: string[] } | null>(null);
+  const [ingestLoading, setIngestLoading] = useState(false);
+  const [queryLoading, setQueryLoading] = useState(false);
+  const [ragMatches, setRagMatches] = useState<any[]>([]);
+  const [llmAnswer, setLlmAnswer] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
+  const [filterType, setFilterType] = useState('');
+  const [filterTag, setFilterTag] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [total, setTotal] = useState(0);
+  const [addToGraphLoading, setAddToGraphLoading] = useState<string | null>(null);
 
   const baseFont = 'font-sans';
   const primaryText = theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text';
@@ -76,19 +83,43 @@ const ConstructionWorkflowTabs: React.FC = () => {
   const tableHeaderText = theme === 'dark' ? 'text-docs-accent' : 'text-docs-accent';
   const tableCellText = theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text';
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setUploadedFiles(Array.from(e.target.files));
-      // TODO: Send files to backend for ingestion
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setUploadedFiles(Array.from(files));
+      setIngestLoading(true);
+      const formData = new FormData();
+      formData.append('file', files[0]);
+      try {
+        await axios.post('/api/rag/ingest', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        setSources(prev => [
+          ...prev,
+          { id: Date.now().toString(), name: files[0].name, type: files[0].type, tags: selectedTags, status: 'Ready' }
+        ]);
+      } catch (err) {
+        alert('Failed to ingest file');
+      }
+      setIngestLoading(false);
     }
   };
 
-  const handleUrlIngest = () => {
+  const handleUrlIngest = async () => {
     if (urlInput) {
-      // TODO: Send URL and selectedTags to backend for ingestion
-      setSources([...sources, { id: Date.now().toString(), name: urlInput, type: 'Web', tags: selectedTags, status: 'Processing' }]);
-      setUrlInput('');
-      setSelectedTags([]);
+      setIngestLoading(true);
+      const formData = new FormData();
+      formData.append('url', urlInput);
+      try {
+        await axios.post('/api/rag/ingest', formData);
+        setSources(prev => [
+          ...prev,
+          { id: Date.now().toString(), name: urlInput, type: 'Web', tags: selectedTags, status: 'Ready' }
+        ]);
+        setUrlInput('');
+        setSelectedTags([]);
+      } catch (err) {
+        alert('Failed to ingest URL');
+      }
+      setIngestLoading(false);
     }
   };
 
@@ -98,18 +129,71 @@ const ConstructionWorkflowTabs: React.FC = () => {
       : [...selectedTags, tag]);
   };
 
-  const handleDeleteSource = (id: string) => {
-    // TODO: Call backend to delete
-    setSources(sources.filter(s => s.id !== id));
+  const handleDeleteSource = async (id: string) => {
+    try {
+      await axios.post('/api/rag/delete', { id });
+      setSources(sources.filter(s => s.id !== id));
+    } catch (err) {
+      alert('Failed to delete entry');
+    }
   };
 
-  const handleTestQuery = () => {
-    // TODO: Call backend RAG endpoint
-    setRagResult({
-      answer: 'This is a mock RAG answer based on your knowledge base.',
-      sources: ['OSHA Safety Checklist', 'PMBOK Guide'],
-    });
+  const handleTestQuery = async () => {
+    if (!query) return;
+    setQueryLoading(true);
+    setRagResult(null);
+    setRagMatches([]);
+    setLlmAnswer(null);
+    try {
+      const res = await axios.post('/api/rag/query', { query });
+      setRagMatches(res.data.matches || []);
+      setLlmAnswer(res.data.answer || null);
+      setRagResult({
+        answer: res.data.matches && res.data.matches.length > 0
+          ? res.data.matches.map((m: any) => m.metadata?.chunk).join('\n---\n')
+          : 'No results',
+        sources: res.data.matches ? res.data.matches.map((m: any) => m.metadata?.sourceType || 'unknown') : []
+      });
+    } catch (err) {
+      setRagResult({ answer: 'Error querying knowledge base', sources: [] });
+    }
+    setQueryLoading(false);
   };
+
+  const fetchSources = async () => {
+    try {
+      const params = {
+        limit,
+        page,
+        ...(filterType && { type: filterType }),
+        ...(filterTag && { tag: filterTag }),
+        ...(filterStatus && { status: filterStatus }),
+      };
+      const res = await axios.get('/api/rag/list', { params });
+      setSources(res.data.vectors);
+      setTotal(res.data.total || 0);
+    } catch (err) {
+      setSources([]);
+      setTotal(0);
+    }
+  };
+
+  const handleAddToKnowledgeGraph = async (source: string) => {
+    setAddToGraphLoading(source);
+    try {
+      const res = await axios.post('/api/rag/add-to-graph', { source, domain: 'construction' });
+      // Optionally update the global knowledge graph here if you want
+      alert('Successfully added to knowledge graph!');
+    } catch (err: any) {
+      alert('Failed to add to knowledge graph: ' + (err?.response?.data?.error || err.message));
+    }
+    setAddToGraphLoading(null);
+  };
+
+  useEffect(() => {
+    if (activeTab === 'knowledge') fetchSources();
+    // eslint-disable-next-line
+  }, [activeTab, page, limit, filterType, filterTag, filterStatus]);
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -117,7 +201,7 @@ const ConstructionWorkflowTabs: React.FC = () => {
         return (
           <div className={`p-8 ${baseFont} ${primaryText}`}>
             <h2 className={`text-2xl font-bold mb-4 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>Dashboard</h2>
-            <DashboardTab />
+            <StaticDashboard />
           </div>
         );
       case 'knowledge':
@@ -126,12 +210,12 @@ const ConstructionWorkflowTabs: React.FC = () => {
             <h2 className={`text-2xl font-bold mb-4 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>Build Your Construction Knowledge Base (RAG)</h2>
             {/* File Upload */}
             <div className={`mb-6 border-2 border-dashed rounded-lg p-6 text-center ${borderColor} ${cardBg}`}> 
-              <input type="file" multiple className="hidden" id="file-upload" onChange={handleFileUpload} />
+              <input type="file" accept=".csv,.xlsx,.xls,.txt,.json" multiple className="hidden" id="file-upload" onChange={handleFileUpload} />
               <label htmlFor="file-upload" className="cursor-pointer block text-lg font-medium mb-2">Drag and drop files here, or <span className="text-docs-accent underline">browse</span></label>
               {uploadedFiles.length > 0 && (
                 <div className="mt-2 text-sm">{uploadedFiles.map(f => f.name).join(', ')}</div>
               )}
-              <div className="mt-2 text-sm text-docs-muted">Supported: PDF, DOCX, CSV, MD, etc.</div>
+              <div className="mt-2 text-sm text-docs-muted">Supported: PDF, DOCX, CSV, XLSX, TXT, JSON, MD, etc.</div>
             </div>
             {/* URL Ingestion */}
             <div className="mb-6 flex items-center gap-2">
@@ -163,6 +247,24 @@ const ConstructionWorkflowTabs: React.FC = () => {
                 ))}
               </div>
             </div>
+            {/* Filtering Controls */}
+            <div className="mb-4 flex gap-2 items-center">
+              <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1); }} className="border rounded px-2 py-1">
+                <option value="">All Types</option>
+                <option value="PDF">PDF</option>
+                <option value="Web">Web</option>
+                <option value="DOCX">DOCX</option>
+                <option value="CSV">CSV</option>
+                <option value="TXT">TXT</option>
+                <option value="XLSX">XLSX</option>
+              </select>
+              <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setPage(1); }} className="border rounded px-2 py-1">
+                <option value="">All Statuses</option>
+                <option value="Ready">Ready</option>
+                <option value="Processing">Processing</option>
+              </select>
+              <input type="text" value={filterTag} onChange={e => { setFilterTag(e.target.value); setPage(1); }} placeholder="Tag" className="border rounded px-2 py-1" />
+            </div>
             {/* Knowledge Base Browser */}
             <div className="mb-6">
               <div className="mb-2 font-medium">Knowledge Base Entries:</div>
@@ -179,17 +281,44 @@ const ConstructionWorkflowTabs: React.FC = () => {
                 <tbody>
                   {sources.map(s => (
                     <tr key={s.id} className={`${theme === 'dark' ? 'bg-docs-dark-bg' : 'bg-white'}`}> 
-                      <td className={`px-2 py-2 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>{s.name}</td>
-                      <td className={`px-2 py-2 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>{s.type}</td>
-                      <td className={`px-2 py-2 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>{s.tags.join(', ')}</td>
-                      <td className={`px-2 py-2 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>{s.status}</td>
-                      <td className="px-2 py-2">
+                      <td className={`px-2 py-2 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>
+                        {s.sourceType === 'url' ? (
+                          <a href={s.source} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                            {s.source}
+                          </a>
+                        ) : (
+                          s.source || s.name || s.id
+                        )}
+                      </td>
+                      <td className={`px-2 py-2 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>
+                        {s.type || s.sourceType || 'Unknown'}
+                      </td>
+                      <td className={`px-2 py-2 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>
+                        {Array.isArray(s.tags) ? s.tags.join(', ') : (s.tags || '')}
+                      </td>
+                      <td className={`px-2 py-2 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>
+                        {s.status || 'Ready'}
+                      </td>
+                      <td className="px-2 py-2 flex gap-2">
                         <button onClick={() => handleDeleteSource(s.id)} className="text-red-500 hover:underline">Delete</button>
+                        <button
+                          onClick={() => handleAddToKnowledgeGraph(s.source || s.name || s.id)}
+                          className="text-blue-600 hover:underline"
+                          disabled={addToGraphLoading === (s.source || s.name || s.id)}
+                        >
+                          {addToGraphLoading === (s.source || s.name || s.id) ? 'Adding...' : 'Add to Knowledge Graph'}
+                        </button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+            {/* Pagination Controls */}
+            <div className="flex justify-between items-center mt-2">
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 border rounded disabled:opacity-50">Prev</button>
+              <span>Page {page} of {Math.max(1, Math.ceil(total / limit))}</span>
+              <button onClick={() => setPage(p => p + 1)} disabled={page * limit >= total} className="px-3 py-1 border rounded disabled:opacity-50">Next</button>
             </div>
             {/* Test a Query */}
             <div className="mb-6">
@@ -204,11 +333,28 @@ const ConstructionWorkflowTabs: React.FC = () => {
                 />
                 <button onClick={handleTestQuery} className={`px-4 py-2 ${accentBg} text-white rounded font-semibold`}>Run RAG</button>
               </div>
-              {ragResult && (
-                <div className={`mt-4 p-4 border rounded ${cardBg} ${borderColor}`}>
-                  <div className={`font-semibold mb-1 ${accent}`}>RAG Answer:</div>
-                  <div className={`${primaryText} mb-2`}>{ragResult.answer}</div>
-                  <div className={`text-xs ${mutedText}`}>Sources: {ragResult.sources.join(', ')}</div>
+              {llmAnswer && (
+                <div className="mb-4 p-4 bg-green-50 dark:bg-green-900 rounded shadow">
+                  <div className="font-semibold mb-1 text-green-800 dark:text-green-200">LLM Answer:</div>
+                  <div className="text-green-900 dark:text-green-100">{llmAnswer}</div>
+                </div>
+              )}
+              {ragMatches.length > 0 && (
+                <div className="mb-4">
+                  <div className="font-semibold mb-2">Top Sources:</div>
+                  <div className="grid gap-3">
+                    {ragMatches.map((m, i) => (
+                      <div key={i} className="p-3 rounded border bg-white dark:bg-docs-dark-bg">
+                        <div className="text-xs text-docs-muted mb-1">
+                          Source {i + 1} ({m.metadata?.sourceType || 'unknown'})
+                        </div>
+                        <div>
+                          {/* Optionally highlight query terms */}
+                          {m.metadata?.chunk}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

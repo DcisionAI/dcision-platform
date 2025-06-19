@@ -89,7 +89,7 @@ export default function Sidebar() {
     >
       {/* Branding/Header */}
       <div className="flex items-center h-16 mb-4 pl-6 justify-start">
-        <Link href="/dashboard" legacyBehavior>
+        <Link href="/" legacyBehavior>
           <a className="flex items-center focus:outline-none">
             {isExpanded ? (
               <span className="font-bold text-xl text-docs-text dark:text-docs-dark-text">DcisionAI</span>

@@ -29,7 +29,10 @@ supabase/functions/
 terraform/
 .terraform/
 # Exclude local scripts (not required in container)
-scripts/
+scripts/*
+!scripts/start-production.sh
+!scripts/verify-highs-mcp.js
+!scripts/verify-single-service.js
 # Exclude Cloud Build config
 cloudbuild.yaml
 # Ignore Terraform and supabase functions from build context

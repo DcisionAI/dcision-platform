@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import VisNetworkGraph, { VisNode, VisEdge } from './VisNetworkGraph';
 
 // Mock hierarchical knowledge graph data
-const fullGraph = {
+const mockData = {
   nodes: [
     { id: 'root', label: 'Construction', group: 'domain' },
     { id: 'safety', label: 'Safety', group: 'domain', parent: 'root' },
@@ -24,24 +24,28 @@ const fullGraph = {
   ]
 };
 
-const ExpandableKnowledgeGraph: React.FC = () => {
+interface ExpandableKnowledgeGraphProps {
+  data?: { nodes: any[]; edges: any[] };
+}
+
+const ExpandableKnowledgeGraph: React.FC<ExpandableKnowledgeGraphProps> = ({ data = mockData }) => {
   // Start with only the root node visible
   const [visibleNodeIds, setVisibleNodeIds] = useState(['root']);
 
   // Compute visible nodes/edges
-  const visibleNodes: VisNode[] = fullGraph.nodes.filter(n => visibleNodeIds.includes(n.id));
-  const visibleEdges: VisEdge[] = fullGraph.edges.filter(
-    e => visibleNodeIds.includes(e.from) && visibleNodeIds.includes(e.to)
+  const visibleNodes: VisNode[] = data.nodes.filter(n => visibleNodeIds.includes(n.id));
+  const visibleEdges: VisEdge[] = data.edges.filter(
+    (e: any) => visibleNodeIds.includes(e.from) && visibleNodeIds.includes(e.to)
   );
 
   // On node click, expand its children
   const handleNodeClick = useCallback((params: any) => {
     if (params.nodes.length > 0) {
       const nodeId = params.nodes[0];
-      const children = fullGraph.nodes.filter(n => n.parent === nodeId).map(n => n.id);
+      const children = data.nodes.filter(n => n.parent === nodeId).map(n => n.id);
       setVisibleNodeIds(ids => Array.from(new Set([...ids, ...children])));
     }
-  }, []);
+  }, [data.nodes]);
 
   const options = {
     groups: {

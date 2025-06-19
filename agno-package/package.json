@@ -1,0 +1,22 @@
+{
+  "name": "agno",
+  "version": "1.0.0",
+  "description": "Agno AI client library for TypeScript/Node.js",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "require": "./index.js",
+      "types": "./index.d.ts"
+    }
+  },
+  "keywords": [
+    "agno",
+    "ai",
+    "typescript",
+    "nodejs"
+  ],
+  "author": "DcisionAI",
+  "license": "MIT"
+} 
