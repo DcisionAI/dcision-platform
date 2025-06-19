@@ -1,20 +1,25 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
+import { NextApiRequest, NextApiResponse } from 'next';
+
+// Extend the NodeJS.Global interface to include our in-memory decision store
+declare global {
+  var decisions: Map<string, any>;
+}
+
+// Ensure the global map exists
+global.decisions = global.decisions || new Map<string, any>();
 
 // Returns the stored decision result for a given session
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   const { sessionId } = req.query;
-  if (!sessionId || Array.isArray(sessionId)) {
-    return res.status(400).json({ error: 'Invalid sessionId' });
+  if (!sessionId) {
+    return res.status(400).json({ error: 'Session ID is required' });
   }
+
   const key = sessionId as string;
-  if (!global.decisions || !global.decisions.has(key)) {
+  if (!global.decisions.has(key)) {
     return res.status(404).json({ error: 'Decision not found' });
   }
+
   const results = global.decisions.get(key)!;
-  // Find the solve_model step result
-  const solveStep = results.find(r => r.step.action === 'solve_model');
-  if (!solveStep) {
-    return res.status(200).json({ message: 'Model built but not solved', buildResults: results });
-  }
-  return res.status(200).json({ solution: solveStep.result, details: solveStep });
+  return res.status(200).json(results);
 }

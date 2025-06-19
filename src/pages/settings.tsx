@@ -1,5 +1,4 @@
 import UnderDevelopment from '@/components/UnderDevelopment';
-import Layout from '@/components/Layout';
 import React, { useRef, useState } from 'react';
 
 export default function Settings() {
@@ -38,35 +37,33 @@ export default function Settings() {
   };
 
   return (
-    <Layout>
-      <div className="max-w-2xl mx-auto py-8">
-        <h1 className="text-2xl font-bold mb-6">Platform Settings</h1>
-        {/* Model Upload Section */}
-        <section className="mb-10 p-6 bg-white rounded shadow border">
-          <h2 className="text-lg font-semibold mb-2">Upload Optimization Model Files</h2>
-          <p className="mb-4 text-gray-600">Upload your own optimization models (Python, Jupyter, JSON, Markdown, or text). These will be indexed for RAG and available for model building.</p>
-          <form onSubmit={handleUpload} className="flex flex-col gap-4">
-            <input
-              type="file"
-              ref={fileInputRef}
-              multiple
-              accept=".py,.ipynb,.json,.md,.txt"
-              className="border p-2 rounded"
-              disabled={uploading}
-            />
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
-              disabled={uploading}
-            >
-              {uploading ? 'Uploading...' : 'Upload'}
-            </button>
-            {uploadResult && <div className="text-green-600 font-medium">{uploadResult}</div>}
-          </form>
-        </section>
-        {/* Other settings or under development notice */}
-        <UnderDevelopment pageName="Platform Settings" />
-      </div>
-    </Layout>
+    <div className="max-w-2xl mx-auto py-8">
+      <h1 className="text-2xl font-bold mb-6">Platform Settings</h1>
+      {/* Model Upload Section */}
+      <section className="mb-10 p-6 bg-white rounded shadow border">
+        <h2 className="text-lg font-semibold mb-2">Upload Optimization Model Files</h2>
+        <p className="mb-4 text-gray-600">Upload your own optimization models (Python, Jupyter, JSON, Markdown, or text). These will be indexed for RAG and available for model building.</p>
+        <form onSubmit={handleUpload} className="flex flex-col gap-4">
+          <input
+            type="file"
+            ref={fileInputRef}
+            multiple
+            accept=".py,.ipynb,.json,.md,.txt"
+            className="border p-2 rounded"
+            disabled={uploading}
+          />
+          <button
+            type="submit"
+            className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+            disabled={uploading}
+          >
+            {uploading ? 'Uploading...' : 'Upload'}
+          </button>
+          {uploadResult && <div className="text-green-600 font-medium">{uploadResult}</div>}
+        </form>
+      </section>
+      {/* Other settings or under development notice */}
+      <UnderDevelopment pageName="Platform Settings" />
+    </div>
   );
 } 

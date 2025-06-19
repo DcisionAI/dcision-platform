@@ -27,36 +27,13 @@ interface NavItem {
   badge?: string;
 }
 
-const projectManagement: NavItem[] = [
-  { name: 'Projects', href: '/projects', icon: FolderIcon },
-  { name: 'Create Project', href: '/projects/new', icon: DocumentDuplicateIcon },
-  { name: 'Team', href: '/team', icon: UserGroupIcon },
-];
-
-const modelDevelopment: NavItem[] = [
-  { name: 'Model Builder', href: '/modelbuilder', icon: BeakerIcon },
-  { name: 'Model Library', href: '/models', icon: ChartBarIcon },
-  { name: 'Templates', href: '/templates', icon: DocumentDuplicateIcon },
-];
-
 const workflows: NavItem[] = [
   { name: 'Construction', href: '/construction', icon: BeakerIcon },
   { name: 'Retail', href: '/retail', icon: ChartBarIcon },
   { name: 'Finance', href: '/finance', icon: DocumentDuplicateIcon },
 ];
 
-const deployment: NavItem[] = [
-  
-];
-
-const multiModalInterface: NavItem[] = [
-  { name: 'Chat Interface', href: '/chat', icon: ChatBubbleLeftRightIcon },
-  { name: 'API Reference', href: '/api', icon: CodeBracketIcon },
-  // { name: 'Usage Analytics', href: '/analytics', icon: ChartBarIcon },
-];
-
 const settings: NavItem[] = [
-  { name: 'Deployments', href: '/deployments', icon: RocketLaunchIcon },
   { name: 'Endpoints', href: '/endpoints', icon: CodeBracketIcon },
   { name: 'API Keys', href: '/settings/api-keys', icon: KeyIcon },
   { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
@@ -64,7 +41,6 @@ const settings: NavItem[] = [
 
 const sections = [
   { title: 'Dcision Workflows', items: workflows },
-  { title: 'Dcision Canvas', items: modelDevelopment },
   { title: 'Settings', items: settings },
 ];
 

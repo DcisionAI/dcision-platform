@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import type { AppProps } from 'next/app';
 import '@/styles/globals.css';
 import { ThemeProvider } from '@/components/layout/ThemeContext';
+import Layout from '@/components/Layout';
 
 const API_KEY_STORAGE_KEY = 'dcisionai_api_key';
 
@@ -46,8 +47,10 @@ function ApiKeyPrompt() {
 export default function App({ Component, pageProps }: AppProps) {
   return (
     <ThemeProvider>
-      <ApiKeyPrompt />
-      <Component {...pageProps} />
+      <Layout>
+        <ApiKeyPrompt />
+        <Component {...pageProps} />
+      </Layout>
     </ThemeProvider>
   );
 } 

@@ -1,4 +1,3 @@
-import Layout from '@/components/Layout';
 import { useState } from 'react';
 import {
   CloudArrowUpIcon,
@@ -568,8 +567,9 @@ function NewEndpointModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
 }
 
 export default function EndpointsPage() {
-  const [selectedEndpoint, setSelectedEndpoint] = useState<string | null>(null);
-  const [showNewEndpointModal, setShowNewEndpointModal] = useState(false);
+  const [endpoints, setEndpoints] = useState<Endpoint[]>(mockEndpoints);
+  const [selectedEndpoint, setSelectedEndpoint] = useState<Endpoint | null>(null);
+  const [isNewEndpointModalOpen, setIsNewEndpointModalOpen] = useState(false);
 
   const getStatusColor = (status: Endpoint['status']) => {
     switch (status) {
@@ -585,31 +585,38 @@ export default function EndpointsPage() {
   };
 
   return (
-    <Layout>
-      <div className="h-[calc(100vh-4rem)] bg-docs-body overflow-hidden">
+    <div className="bg-docs-body min-h-[calc(100vh-4rem)]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <header className="mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-docs-heading">
+                Endpoints
+              </h1>
+            </div>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setIsNewEndpointModalOpen(true)}
+                className="px-3 py-1.5 text-sm font-medium text-white bg-docs-accent rounded-lg hover:bg-docs-accent/90"
+              >
+                New Endpoint
+              </button>
+            </div>
+          </div>
+        </header>
+
         <div className="flex h-full">
           {/* Sidebar */}
           <div className="w-80 border-r border-docs-border bg-docs-section overflow-y-auto">
             <div className="p-4">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-docs-heading">
-                  Endpoints
-                </h2>
-                <button
-                  onClick={() => setShowNewEndpointModal(true)}
-                  className="px-3 py-1.5 text-sm font-medium text-white bg-docs-accent rounded-lg hover:bg-docs-accent/90"
-                >
-                  New Endpoint
-                </button>
-              </div>
               <nav className="space-y-2">
-                {mockEndpoints.map((endpoint) => (
+                {endpoints.map((endpoint) => (
                   <button
                     key={endpoint.id}
-                    onClick={() => setSelectedEndpoint(endpoint.id)}
+                    onClick={() => setSelectedEndpoint(endpoint)}
                     className={classNames(
                       'w-full flex items-start p-3 text-left rounded-lg transition-colors',
-                      selectedEndpoint === endpoint.id
+                      selectedEndpoint === endpoint
                         ? 'bg-docs-accent/10 text-docs-accent'
                         : 'hover:bg-docs-hover text-docs-text'
                     )}
@@ -650,10 +657,10 @@ export default function EndpointsPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h1 className="text-xl font-bold text-docs-heading">
-                        {mockEndpoints.find(e => e.id === selectedEndpoint)?.name}
+                        {selectedEndpoint.name}
                       </h1>
                       <p className="mt-1 text-xs text-docs-muted">
-                        Domain: {mockEndpoints.find(e => e.id === selectedEndpoint)?.mcpConfig.context.domain.replace('_', ' ')}
+                        Domain: {selectedEndpoint.mcpConfig.context.domain.replace('_', ' ')}
                       </p>
                     </div>
                     <div className="flex items-center space-x-3">
@@ -677,7 +684,7 @@ export default function EndpointsPage() {
                           Description
                         </label>
                         <p className="text-sm text-docs-text">
-                          {mockEndpoints.find(e => e.id === selectedEndpoint)?.mcpConfig.context.description}
+                          {selectedEndpoint.mcpConfig.context.description}
                         </p>
                       </div>
                       <div>
@@ -685,7 +692,7 @@ export default function EndpointsPage() {
                           Examples
                         </label>
                         <ul className="list-disc list-inside space-y-1">
-                          {mockEndpoints.find(e => e.id === selectedEndpoint)?.mcpConfig.context.examples.map((example, index) => (
+                          {selectedEndpoint.mcpConfig.context.examples.map((example, index) => (
                             <li key={index} className="text-sm text-docs-text">{example}</li>
                           ))}
                         </ul>
@@ -697,15 +704,15 @@ export default function EndpointsPage() {
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
                             <span className="text-docs-muted">Type</span>
-                            <span className="text-docs-text">{mockEndpoints.find(e => e.id === selectedEndpoint)?.mcpConfig.model.type}</span>
+                            <span className="text-docs-text">{selectedEndpoint.mcpConfig.model.type}</span>
                           </div>
                           <div className="flex justify-between text-sm">
                             <span className="text-docs-muted">Temperature</span>
-                            <span className="text-docs-text">{mockEndpoints.find(e => e.id === selectedEndpoint)?.mcpConfig.model.temperature}</span>
+                            <span className="text-docs-text">{selectedEndpoint.mcpConfig.model.temperature}</span>
                           </div>
                           <div className="flex justify-between text-sm">
                             <span className="text-docs-muted">Max Tokens</span>
-                            <span className="text-docs-text">{mockEndpoints.find(e => e.id === selectedEndpoint)?.mcpConfig.model.maxTokens}</span>
+                            <span className="text-docs-text">{selectedEndpoint.mcpConfig.model.maxTokens}</span>
                           </div>
                         </div>
                       </div>
@@ -726,13 +733,13 @@ export default function EndpointsPage() {
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
                             <span className="text-docs-muted">Type</span>
-                            <span className="text-docs-text">{mockEndpoints.find(e => e.id === selectedEndpoint)?.mcpConfig.protocol.inputFormat.type}</span>
+                            <span className="text-docs-text">{selectedEndpoint.mcpConfig.protocol.inputFormat.type}</span>
                           </div>
-                          {mockEndpoints.find(e => e.id === selectedEndpoint)?.mcpConfig.protocol.inputFormat.schema && (
+                          {selectedEndpoint.mcpConfig.protocol.inputFormat.schema && (
                             <div className="text-sm">
                               <span className="text-docs-muted">Schema</span>
                               <pre className="mt-1 p-2 bg-docs-bg rounded text-xs overflow-auto">
-                                {JSON.stringify(mockEndpoints.find(e => e.id === selectedEndpoint)?.mcpConfig.protocol.inputFormat.schema, null, 2)}
+                                {JSON.stringify(selectedEndpoint.mcpConfig.protocol.inputFormat.schema, null, 2)}
                               </pre>
                             </div>
                           )}
@@ -745,13 +752,13 @@ export default function EndpointsPage() {
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
                             <span className="text-docs-muted">Type</span>
-                            <span className="text-docs-text">{mockEndpoints.find(e => e.id === selectedEndpoint)?.mcpConfig.protocol.outputFormat.type}</span>
+                            <span className="text-docs-text">{selectedEndpoint.mcpConfig.protocol.outputFormat.type}</span>
                           </div>
-                          {mockEndpoints.find(e => e.id === selectedEndpoint)?.mcpConfig.protocol.outputFormat.schema && (
+                          {selectedEndpoint.mcpConfig.protocol.outputFormat.schema && (
                             <div className="text-sm">
                               <span className="text-docs-muted">Schema</span>
                               <pre className="mt-1 p-2 bg-docs-bg rounded text-xs overflow-auto">
-                                {JSON.stringify(mockEndpoints.find(e => e.id === selectedEndpoint)?.mcpConfig.protocol.outputFormat.schema, null, 2)}
+                                {JSON.stringify(selectedEndpoint.mcpConfig.protocol.outputFormat.schema, null, 2)}
                               </pre>
                             </div>
                           )}
@@ -764,15 +771,15 @@ export default function EndpointsPage() {
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
                             <span className="text-docs-muted">Retry Strategy</span>
-                            <span className="text-docs-text">{mockEndpoints.find(e => e.id === selectedEndpoint)?.mcpConfig.protocol.errorHandling.retryStrategy}</span>
+                            <span className="text-docs-text">{selectedEndpoint.mcpConfig.protocol.errorHandling.retryStrategy}</span>
                           </div>
                           <div className="flex justify-between text-sm">
                             <span className="text-docs-muted">Max Retries</span>
-                            <span className="text-docs-text">{mockEndpoints.find(e => e.id === selectedEndpoint)?.mcpConfig.protocol.errorHandling.maxRetries}</span>
+                            <span className="text-docs-text">{selectedEndpoint.mcpConfig.protocol.errorHandling.maxRetries}</span>
                           </div>
                           <div className="flex justify-between text-sm">
                             <span className="text-docs-muted">Fallback</span>
-                            <span className="text-docs-text">{mockEndpoints.find(e => e.id === selectedEndpoint)?.mcpConfig.protocol.errorHandling.fallbackBehavior}</span>
+                            <span className="text-docs-text">{selectedEndpoint.mcpConfig.protocol.errorHandling.fallbackBehavior}</span>
                           </div>
                         </div>
                       </div>
@@ -791,7 +798,7 @@ export default function EndpointsPage() {
                           System Prompt
                         </label>
                         <pre className="p-3 bg-docs-bg rounded text-sm text-docs-text font-mono whitespace-pre-wrap">
-                          {mockEndpoints.find(e => e.id === selectedEndpoint)?.mcpConfig.prompts.system}
+                          {selectedEndpoint.mcpConfig.prompts.system}
                         </pre>
                       </div>
                       <div>
@@ -799,7 +806,7 @@ export default function EndpointsPage() {
                           Examples
                         </label>
                         <div className="space-y-4">
-                          {mockEndpoints.find(e => e.id === selectedEndpoint)?.mcpConfig.prompts.examples.map((example, index) => (
+                          {selectedEndpoint.mcpConfig.prompts.examples.map((example, index) => (
                             <div key={index} className="space-y-2">
                               <div>
                                 <span className="text-xs font-medium text-docs-muted">Input:</span>
@@ -817,13 +824,13 @@ export default function EndpointsPage() {
                           ))}
                         </div>
                       </div>
-                      {mockEndpoints.find(e => e.id === selectedEndpoint)?.mcpConfig.prompts.validation && (
+                      {selectedEndpoint.mcpConfig.prompts.validation && (
                         <div>
                           <label className="block text-sm font-medium text-docs-text mb-1">
                             Validation
                           </label>
                           <pre className="p-3 bg-docs-bg rounded text-sm text-docs-text font-mono whitespace-pre-wrap">
-                            {mockEndpoints.find(e => e.id === selectedEndpoint)?.mcpConfig.prompts.validation}
+                            {selectedEndpoint.mcpConfig.prompts.validation}
                           </pre>
                         </div>
                       )}
@@ -843,7 +850,7 @@ export default function EndpointsPage() {
                         </label>
                         <input
                           type="text"
-                          value={mockEndpoints.find(e => e.id === selectedEndpoint)?.url}
+                          value={selectedEndpoint.url}
                           readOnly
                           className="w-full rounded-md bg-docs-bg border-docs-border text-docs-text px-3 py-2 text-sm"
                         />
@@ -970,9 +977,9 @@ export default function EndpointsPage() {
         </div>
       </div>
       <NewEndpointModal
-        isOpen={showNewEndpointModal}
-        onClose={() => setShowNewEndpointModal(false)}
+        isOpen={isNewEndpointModalOpen}
+        onClose={() => setIsNewEndpointModalOpen(false)}
       />
-    </Layout>
+    </div>
   );
 } 
