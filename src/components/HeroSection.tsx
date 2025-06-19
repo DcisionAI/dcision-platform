@@ -1,13 +1,19 @@
 import React from 'react';
 
-const HeroSection: React.FC = () => {
+interface HeroSectionProps {
+  tagline?: string;
+}
+
+const HeroSection: React.FC<HeroSectionProps> = ({ 
+  tagline = "Optimizing workflows with intelligent decision-making" 
+}) => {
   return (
     <div className="w-full mb-8 text-center">
       <h1 className="text-3xl font-bold bg-gradient-to-r from-[#FF7F50] to-[#4A90E0] inline-block text-transparent bg-clip-text">
         DcisionAI
       </h1>
       <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-        Optimizing construction workflows with intelligent decision-making
+        {tagline}
       </p>
       <div className="mt-8 inline-flex gap-8 px-6 py-4 rounded-lg border border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-3">

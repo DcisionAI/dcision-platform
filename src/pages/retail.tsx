@@ -1,14 +1,13 @@
 import React from 'react';
-import Layout from '@/components/Layout';
+import HeroSection from '@/components/HeroSection';
 import RetailTabs from '@/workflows/retail/components/RetailTabs';
 
 const RetailPage: React.FC = () => {
   return (
-    <Layout>
-      <div className="h-full">
-        <RetailTabs />
-      </div>
-    </Layout>
+    <div className="h-full">
+      <HeroSection tagline="Optimizing retail operations with intelligent decision-making" />
+      <RetailTabs />
+    </div>
   );
 };
 

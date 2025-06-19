@@ -1,41 +1,46 @@
-import React, { useState } from 'react';
-import FinanceAgent from './FinanceAgent';
-import UnderDevelopment from '@/components/UnderDevelopment';
+import React from 'react';
+import { DocumentTextIcon, ChatBubbleLeftRightIcon, ChartPieIcon, CommandLineIcon } from '@heroicons/react/24/outline';
+import WorkflowTabs, { TabConfig } from '@/components/WorkflowTabs';
+
+const financeTabs: TabConfig[] = [
+  {
+    id: 'knowledge',
+    label: 'Knowledge Base',
+    icon: <DocumentTextIcon className="w-5 h-5" />,
+    description: 'Manage and query your finance knowledge base',
+    content: <div className="p-8 text-center text-lg">Finance Knowledge Base coming soon.</div>
+  },
+  {
+    id: 'chat',
+    label: 'AI Assistant',
+    icon: <ChatBubbleLeftRightIcon className="w-5 h-5" />,
+    description: 'Your intelligent finance assistant',
+    content: <div className="p-8 text-center text-lg">Finance Agent coming soon.</div>
+  },
+  {
+    id: 'scenario',
+    label: 'Scenario Analysis',
+    icon: <ChartPieIcon className="w-5 h-5" />,
+    description: 'Analyze different finance scenarios and their impacts',
+    content: <div className="p-8 text-center text-lg">Finance Scenario Analysis coming soon.</div>
+  },
+  {
+    id: 'api',
+    label: 'API',
+    icon: <CommandLineIcon className="w-5 h-5" />,
+    description: 'Access the finance workflow API',
+    content: <div className="p-8 text-center text-lg">Finance API Interface coming soon.</div>
+  },
+];
 
 const FinanceTabs: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('agent');
-
   return (
-    <div className="p-4 sm:p-6 lg:p-8 h-full">
-      <div className="mb-4 border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-          <button
-            onClick={() => setActiveTab('agent')}
-            className={`${
-              activeTab === 'agent'
-                ? 'border-indigo-500 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-          >
-            Finance Agent
-          </button>
-          <button
-            onClick={() => setActiveTab('dashboard')}
-            className={`${
-              activeTab === 'dashboard'
-                ? 'border-indigo-500 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-          >
-            Dashboard
-          </button>
-        </nav>
-      </div>
-      <div>
-        {activeTab === 'agent' && <FinanceAgent />}
-        {activeTab === 'dashboard' && <UnderDevelopment pageName="Finance Dashboard" />}
-      </div>
-    </div>
+    <WorkflowTabs
+      tabs={financeTabs}
+      defaultTabId="chat"
+      verticalName="Finance"
+      tagline="Optimizing financial decisions with intelligent analysis"
+    />
   );
 };
 
