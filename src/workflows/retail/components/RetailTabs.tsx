@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTheme } from '@/components/layout/ThemeContext';
-import AgentChat from './AgentChat';
-import AgentInterface from './AgentInterface';
+import AgentChat from '@/components/AgentChat';
+import AgentInterface from '@/components/AgentInterface';
 
 const sendRetailChatMessage = async (message: string) => {
   const res = await fetch('/api/dcisionai/retail/chat', {
