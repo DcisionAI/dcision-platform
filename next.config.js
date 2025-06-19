@@ -6,7 +6,6 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 const nextConfig = {
   reactStrictMode: true,
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
-  output: 'standalone',
   webpack: (config, { isServer }) => {
     // Monaco editor webpack config
     if (!isServer) {
@@ -31,6 +30,19 @@ const nextConfig = {
     return [
       // Removed the '/' to '/' redirect to prevent infinite loop
     ]
+  },
+  async headers() {
+    return [
+      {
+        // Allow requests from any origin to the API routes
+        source: '/api/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
+        ],
+      },
+    ];
   },
 }
 

@@ -74,8 +74,6 @@ const RetailTabs: React.FC = () => {
       case 'chat':
         return (
           <AgentChat
-            sendMessage={sendRetailChatMessage}
-            initialMessage="Hello! I'm your DcisionAI Retail Assistant. How can I help you with your retail operations today?"
             placeholder="Ask about sales, inventory, customer insights, or retail best practices..."
           />
         );

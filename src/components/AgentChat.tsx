@@ -1,212 +1,169 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useTheme } from '@/components/layout/ThemeContext';
+import React, { useState, useRef } from 'react';
+import { PlusIcon, ArrowUpIcon } from '@heroicons/react/24/outline';
 import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import ResponseTabs from './ResponseTabs';
+import { useTheme } from './layout/ThemeContext';
 
 interface Message {
   role: 'user' | 'assistant';
-  content: string;
+  content: string | any;
+  type?: 'optimization' | string;
   error?: boolean;
-  usage?: {
-    input_tokens: number;
-    output_tokens: number;
-  };
-  model?: string;
 }
 
-export interface AgentChatProps {
-  sendMessage: (message: string) => Promise<{
-    message: string;
-    usage?: { input_tokens: number; output_tokens: number };
-    model?: string;
-  }>;
-  initialMessage?: string;
+interface AgentChatProps {
   placeholder?: string;
 }
 
-const AgentChat: React.FC<AgentChatProps> = ({
-  sendMessage,
-  initialMessage = "Hello! I'm your DcisionAI Assistant. How can I help you today?",
-  placeholder = 'Ask a question...'
-}) => {
-  const { theme } = useTheme();
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: initialMessage }
-  ]);
-  const [input, setInput] = useState('');
+const AgentChat: React.FC<AgentChatProps> = ({ placeholder = "How can I help you today?" }) => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { theme } = useTheme();
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!message.trim() || isLoading) return;
 
-    const userMessage: Message = { role: 'user', content: input };
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
+    setMessages([...messages, { role: 'user', content: message }]);
+    setMessage('');
     setIsLoading(true);
 
     try {
-      const response = await sendMessage(input);
-      const assistantMessage: Message = {
+      const response = await fetch('/api/dcisionai/construction/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message }),
+        credentials: 'same-origin',
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Something went wrong');
+      }
+
+      const newMessage: Message = {
         role: 'assistant',
-        content: response.message,
-        usage: response.usage,
-        model: response.model
+        content: data.type === 'optimization' ? data.content : data.message,
+        type: data.type
       };
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (error: any) {
-      const errorMessage: Message = {
-        role: 'assistant',
-        content: error?.message || 'An unexpected error occurred',
-        error: true
-      };
-      setMessages(prev => [...prev, errorMessage]);
+
+      setMessages(messages => [...messages, newMessage]);
+    } catch (error) {
+      setMessages(messages => [...messages, { 
+        role: 'assistant', 
+        content: 'Sorry, there was an error processing your request.', 
+        error: true 
+      }]);
     } finally {
       setIsLoading(false);
+      scrollToBottom();
     }
   };
 
   return (
-    <div className={`flex flex-col h-full ${theme === 'dark' ? 'docs-dark-bg' : 'docs-bg'}`}>
-      {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`flex ${
-              message.role === 'user' ? 'justify-end' : 'justify-start'
-            }`}
-          >
-            <div
-              className={`max-w-[80%] rounded-lg p-4 ${
-                message.role === 'user'
-                  ? 'bg-docs-accent text-white'
-                  : message.error
-                  ? 'bg-red-100 dark:bg-red-900'
-                  : theme === 'dark'
-                  ? 'bg-docs-dark-bg border border-docs-dark-muted'
-                  : 'bg-docs-section'
-              }`}
-            >
-              <div className={`prose ${theme === 'dark' ? 'prose-invert' : ''} max-w-none`}>
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    code({ className, children, ...props }) {
-                      return (
-                        <code className={`${className} bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded`} {...props}>
-                          {children}
-                        </code>
-                      );
-                    },
-                    table({ children }) {
-                      return (
-                        <div className="overflow-x-auto">
-                          <table
-                            className={`min-w-full border-collapse rounded-lg overflow-hidden ${
-                              theme === 'dark'
-                                ? 'bg-[#23272e] text-[#ECEDEE]' // dark bg, light text
-                                : 'bg-white text-[#18181b]' // light bg, dark text
-                            }`}
-                          >
-                            {children}
-                          </table>
-                        </div>
-                      );
-                    },
-                    th({ children }) {
-                      return (
-                        <th
-                          className={`px-4 py-2 border-b font-semibold text-left ${
-                            theme === 'dark'
-                              ? 'bg-[#23272e] text-[#ECEDEE] border-[#363b42]'
-                              : 'bg-[#f5f5f5] text-[#18181b] border-[#e5e7eb]'
-                          }`}
-                        >
-                          {children}
-                        </th>
-                      );
-                    },
-                    td({ children }) {
-                      return (
-                        <td
-                          className={`px-4 py-2 border-b ${
-                            theme === 'dark'
-                              ? 'bg-[#18181b] text-[#ECEDEE] border-[#363b42]'
-                              : 'bg-white text-[#18181b] border-[#e5e7eb]'
-                          }`}
-                        >
-                          {children}
-                        </td>
-                      );
-                    },
-                  }}
-                >
-                  {message.content}
-                </ReactMarkdown>
-              </div>
-              {message.usage && (
-                <div className={`mt-2 text-xs ${theme === 'dark' ? 'text-docs-dark-muted' : 'text-docs-muted'}`}>
-                  Tokens: {message.usage.input_tokens + message.usage.output_tokens} | Model: {message.model}
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className={`max-w-[80%] rounded-lg p-4 ${
-              theme === 'dark' ? 'bg-docs-dark-bg border border-docs-dark-muted' : 'bg-docs-section'
-            }`}>
-              <div className="flex space-x-2">
-                <div className="w-2 h-2 bg-docs-accent rounded-full animate-bounce" />
-                <div className="w-2 h-2 bg-docs-accent rounded-full animate-bounce delay-100" />
-                <div className="w-2 h-2 bg-docs-accent rounded-full animate-bounce delay-200" />
-              </div>
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input Form */}
-      <form onSubmit={handleSubmit} className="p-4 border-t border-docs-section-border">
-        <div className="flex space-x-4">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
+    <div className="w-full h-full">
+      <div className="flex flex-col h-[calc(100vh-12rem)]">
+        {/* Input Area at Top */}
+        <div className="relative rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm mb-8 mx-4">
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit(e);
+              }
+            }}
             placeholder={placeholder}
-            className={`flex-1 p-2 rounded-lg border ${
-              theme === 'dark'
-                ? 'bg-docs-dark-bg border-docs-dark-muted text-docs-dark-text'
-                : 'bg-white border-docs-muted text-docs-text'
-            } focus:outline-none focus:ring-2 focus:ring-docs-accent`}
+            rows={2}
+            className="w-full p-4 bg-transparent border-0 resize-none focus:ring-0 text-base text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+            style={{ minHeight: '80px' }}
           />
-          <button
-            type="submit"
-            disabled={isLoading}
-            className={`px-4 py-2 rounded-lg ${
-              isLoading
-                ? 'bg-gray-400'
-                : 'bg-docs-accent hover:bg-opacity-90'
-            } text-white transition-colors`}
-          >
-            Send
-          </button>
+          
+          <div className="flex items-center justify-between px-3 py-2 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center space-x-2">
+              <button className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300">
+                <PlusIcon className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <button 
+              onClick={handleSubmit}
+              type="button"
+              className="p-2 rounded-lg bg-[#FF7F50] hover:bg-[#FF6347] text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              disabled={!message.trim() || isLoading}
+            >
+              <ArrowUpIcon className="w-5 h-5" />
+            </button>
+          </div>
         </div>
-      </form>
+
+        {/* Messages Area */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="space-y-8">
+            {messages.map((msg, index) => (
+              <div
+                key={index}
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full px-4`}
+              >
+                <div
+                  className={`${
+                    msg.role === 'user'
+                      ? 'bg-[#FF7F50] text-white'
+                      : theme === 'dark'
+                      ? 'bg-gray-800'
+                      : 'bg-gray-50'
+                  } ${msg.error ? 'border-red-500' : ''} ${
+                    msg.type === 'optimization' ? 'w-full' : 'max-w-[85%]'
+                  } rounded-lg p-6`}
+                >
+                  {msg.type === 'optimization' ? (
+                    <div className="w-full">
+                      <ResponseTabs content={msg.content} />
+                    </div>
+                  ) : (
+                    <ReactMarkdown
+                      components={{
+                        p: ({ children }) => <p className="prose dark:prose-invert max-w-none">{children}</p>,
+                        code: ({ children }) => (
+                          <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">{children}</code>
+                        )
+                      }}
+                    >
+                      {typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content, null, 2)}
+                    </ReactMarkdown>
+                  )}
+                </div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex justify-start w-full px-4">
+                <div className={`w-[85%] rounded-lg p-6 ${
+                  theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
+                }`}>
+                  <div className="flex space-x-2">
+                    <div className="w-2 h-2 bg-[#FF7F50] rounded-full animate-bounce" />
+                    <div className="w-2 h-2 bg-[#FF7F50] rounded-full animate-bounce delay-100" />
+                    <div className="w-2 h-2 bg-[#FF7F50] rounded-full animate-bounce delay-200" />
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
 
-export default AgentChat; 
+export default AgentChat;

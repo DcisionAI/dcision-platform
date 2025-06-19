@@ -25,27 +25,25 @@ export default function Navbar() {
       <nav className="flex items-center gap-8 text-sm">
         {/* Navigation Links */}
         
-        <Link href="/docs" legacyBehavior>
-          <a
-            className={
-              router.pathname === '/docs'
-                ? 'text-docs-accent dark:text-docs-accent font-semibold'
-                : 'text-docs-muted dark:text-docs-dark-muted hover:text-docs-accent dark:hover:text-docs-accent'
-            }
-          >
-            Docs
-          </a>
+        <Link
+          href="/docs"
+          className={
+            router.pathname === '/docs'
+              ? 'text-docs-accent dark:text-docs-accent font-semibold'
+              : 'text-docs-muted dark:text-docs-dark-muted hover:text-docs-accent dark:hover:text-docs-accent'
+          }
+        >
+          Docs
         </Link>
-        <Link href="/api-reference" legacyBehavior>
-          <a
-            className={
-              router.pathname.startsWith('/api-reference')
-                ? 'text-docs-accent dark:text-docs-accent font-semibold'
-                : 'text-docs-muted dark:text-docs-dark-muted hover:text-docs-accent dark:hover:text-docs-accent'
-            }
-          >
-            API reference
-          </a>
+        <Link
+          href="/api-reference"
+          className={
+            router.pathname.startsWith('/api-reference')
+              ? 'text-docs-accent dark:text-docs-accent font-semibold'
+              : 'text-docs-muted dark:text-docs-dark-muted hover:text-docs-accent dark:hover:text-docs-accent'
+          }
+        >
+          API reference
         </Link>
 
         {/* Theme Toggle Button */}
@@ -62,16 +60,15 @@ export default function Navbar() {
         </button>
 
         {/* Settings Link */}
-        <Link href="/settings/organization" legacyBehavior>
-          <a
-            className={
-              router.pathname.startsWith('/settings')
-                ? 'text-docs-accent dark:text-docs-accent'
-                : 'text-docs-muted dark:text-docs-dark-muted hover:text-docs-accent dark:hover:text-docs-accent'
-            }
-          >
-            <Cog8ToothIcon className="h-5 w-5" />
-          </a>
+        <Link
+          href="/settings/organization"
+          className={
+            router.pathname.startsWith('/settings')
+              ? 'text-docs-accent dark:text-docs-accent'
+              : 'text-docs-muted dark:text-docs-dark-muted hover:text-docs-accent dark:hover:text-docs-accent'
+          }
+        >
+          <Cog8ToothIcon className="h-5 w-5" />
         </Link>
       </nav>
     </header>

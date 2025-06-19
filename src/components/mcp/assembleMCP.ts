@@ -1,5 +1,5 @@
 import { MCPBuilder } from '@/mcp/builder/MCPBuilder';
-import { MCP, Variable, Constraint, Objective, Step, StepAction } from '@/mcp/MCPTypes';
+import { MCP, Variable, Constraint, Objective, Step, StepAction } from '../../pages/api/_lib/mcp/MCPTypes';
 
 interface AssembleMCPParams {
   sessionId: string;

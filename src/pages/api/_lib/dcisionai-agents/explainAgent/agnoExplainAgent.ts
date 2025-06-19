@@ -1,7 +1,7 @@
 // Agno-based Explainability Agent for DcisionAI
 // Now uses the real Agno Python backend for advanced AI capabilities
 
-import { agnoClient, AgnoChatRequest } from '../../lib/agno-client';
+import { agnoClient, AgnoChatRequest } from '../../agno-client';
 
 export interface Explanation {
   summary: string;
@@ -280,7 +280,7 @@ Focus on how knowledge and optimization work together to provide superior soluti
         message: prompt,
         session_id: sessionId,
         model_provider: modelProvider,
-        model_name: modelName || (modelProvider === 'anthropic' ? 'claude-3-sonnet-20240229' : 'gpt-4-turbo-preview'),
+        model_name: modelName || (modelProvider === 'anthropic' ? 'claude-3-5-sonnet-20241022' : 'gpt-4-turbo-preview'),
         context: {
           timestamp: new Date().toISOString(),
           inputType: 'solution_explanation',
@@ -291,7 +291,17 @@ Focus on how knowledge and optimization work together to provide superior soluti
       };
 
       const response = await agnoClient.chat(request);
-      const result = JSON.parse(response.response);
+      let result;
+      
+      if (typeof response.response === 'string') {
+        try {
+          result = JSON.parse(response.response);
+        } catch (err) {
+          throw new Error('Invalid JSON response from explainability agent');
+        }
+      } else {
+        result = response.response;
+      }
 
       // Validate response structure
       if (!result.summary || !Array.isArray(result.keyDecisions) || !Array.isArray(result.recommendations) || !Array.isArray(result.insights)) {

@@ -3,56 +3,71 @@ import { useTheme } from '@/components/layout/ThemeContext';
 import ApiInterfaceConstruction from '@/components/ApiInterfaceConstruction';
 import AgentChat from '@/components/AgentChat';
 import StaticDashboard from '@/components/StaticDashboard';
+import IntentAnalysisDisplay from '@/components/IntentAnalysisDisplay';
 import axios from 'axios';
+import {
+  DocumentTextIcon,
+  CpuChipIcon,
+  ChartBarIcon,
+  LightBulbIcon,
+  ArrowPathRoundedSquareIcon,
+  CogIcon,
+  RocketLaunchIcon,
+  CommandLineIcon,
+  BeakerIcon,
+  ChatBubbleLeftRightIcon,
+  ChartPieIcon,
+} from '@heroicons/react/24/outline';
+import {
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
 
 const mainTabs = [
   {
     id: 'knowledge',
-    label: 'Knowledge',
-    icon: (
-      // Database/Upload icon
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-      </svg>
-    ),
-  },
-  {
-    id: 'dashboard',
-    label: 'Dashboard',
-    icon: (
-      // Dashboard icon
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8v-10h-8v10zm0-18v6h8V3h-8z" />
-      </svg>
-    ),
+    label: 'Knowledge Base',
+    icon: <DocumentTextIcon className="w-5 h-5" />,
+    description: 'Manage and query your construction knowledge base'
   },
   {
     id: 'chat',
-    label: 'Chat',
-    icon: (
-      // Chat bubble icon
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-      </svg>
-    ),
+    label: 'AI Assistant',
+    icon: <ChatBubbleLeftRightIcon className="w-5 h-5" />,
+    description: 'Your intelligent construction assistant'
+  },
+  {
+    id: 'scenario',
+    label: 'Scenario Analysis',
+    icon: <ChartPieIcon className="w-5 h-5" />,
+    description: 'Analyze different project scenarios and their impacts'
   },
   {
     id: 'api',
     label: 'API',
-    icon: (
-      // Code/API icon
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 18l6-6-6-6M8 6l-6 6 6 6" />
-      </svg>
-    ),
+    icon: <CommandLineIcon className="w-5 h-5" />,
+    description: 'Access the construction workflow API'
   },
+  {
+    id: 'intent',
+    label: 'How It Works',
+    icon: <LightBulbIcon className="w-5 h-5" />,
+    description: 'See how AI analyzes and routes your requests'
+  }
 ];
 
 const tagOptions = ['Safety', 'OSHA', 'Planning', 'PMBOK', 'Budget', 'Quality'];
 
+const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#a4de6c', '#d0ed57'];
+
 const ConstructionWorkflowTabs: React.FC = () => {
   const { theme } = useTheme();
-  const [activeTab, setActiveTab] = useState('knowledge');
+  const [activeTab, setActiveTab] = useState('chat');
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [urlInput, setUrlInput] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -70,6 +85,38 @@ const ConstructionWorkflowTabs: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState('');
   const [total, setTotal] = useState(0);
   const [addToGraphLoading, setAddToGraphLoading] = useState<string | null>(null);
+  const [llmPrompt, setLlmPrompt] = useState('');
+  const [llmLoading, setLlmLoading] = useState(false);
+  const [selectedScenario, setSelectedScenario] = useState<string | null>(null);
+  const [scenarioData, setScenarioData] = useState([
+    {
+      name: 'Best Case',
+      description: 'Optimal conditions with minimal delays',
+      probability: 20,
+      impact: 'high',
+      metrics: { cost: 1000000, duration: 12, efficiency: 0.9 },
+      risks: ['Weather is ideal', 'No supply chain issues'],
+      recommendations: ['Maintain current suppliers', 'Monitor weather forecasts']
+    },
+    {
+      name: 'Most Likely',
+      description: 'Expected conditions with minor delays',
+      probability: 60,
+      impact: 'medium',
+      metrics: { cost: 1200000, duration: 14, efficiency: 0.8 },
+      risks: ['Minor supply chain delays', 'Some weather impact'],
+      recommendations: ['Increase buffer stock', 'Flexible scheduling']
+    },
+    {
+      name: 'Worst Case',
+      description: 'Adverse conditions with significant delays',
+      probability: 20,
+      impact: 'high',
+      metrics: { cost: 1500000, duration: 18, efficiency: 0.7 },
+      risks: ['Major supply chain disruption', 'Severe weather events'],
+      recommendations: ['Identify alternate suppliers', 'Increase contingency budget']
+    }
+  ]);
 
   const baseFont = 'font-sans';
   const primaryText = theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text';
@@ -190,6 +237,50 @@ const ConstructionWorkflowTabs: React.FC = () => {
     setAddToGraphLoading(null);
   };
 
+  const getRadarData = (scenarios: any[]) => {
+    const metrics = ['cost', 'duration', 'efficiency'] as const;
+    return metrics.map(metric => {
+      const entry: { [key: string]: string | number } = { metric: metric.charAt(0).toUpperCase() + metric.slice(1) };
+      scenarios.forEach((s) => {
+        entry[s.name] = s.metrics[metric];
+      });
+      return entry;
+    });
+  };
+
+  const handleScenarioAnalysis = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!llmPrompt.trim()) return;
+    setLlmLoading(true);
+    
+    try {
+      // In a real implementation, this would call your backend
+      // Simulating API call for now
+      setTimeout(() => {
+        const newScenario = {
+          name: 'Labor Cut 50%',
+          description: 'Labor resources are reduced by half, impacting project delivery.',
+          probability: 10,
+          impact: 'high',
+          metrics: { cost: 1100000, duration: 20, efficiency: 0.5 },
+          risks: ['Severe labor shortage', 'Delays in all phases', 'Quality issues due to overwork'],
+          recommendations: ['Hire temporary workers', 'Automate tasks', 'Negotiate with unions']
+        };
+        
+        setScenarioData(prev => {
+          if (prev.some(s => s.name === newScenario.name)) return prev;
+          return [...prev, newScenario];
+        });
+        setSelectedScenario(newScenario.name);
+        setLlmLoading(false);
+        setLlmPrompt('');
+      }, 1500);
+    } catch (error) {
+      console.error('Failed to analyze scenario:', error);
+      setLlmLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'knowledge') fetchSources();
     // eslint-disable-next-line
@@ -197,17 +288,12 @@ const ConstructionWorkflowTabs: React.FC = () => {
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'dashboard':
-        return (
-          <div className={`p-8 ${baseFont} ${primaryText}`}>
-            <h2 className={`text-2xl font-bold mb-4 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>Dashboard</h2>
-            <StaticDashboard />
-          </div>
-        );
       case 'knowledge':
         return (
-          <div className={`p-8 ${baseFont} ${primaryText}`}>
-            <h2 className={`text-2xl font-bold mb-4 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>Build Your Construction Knowledge Base (RAG)</h2>
+          <div className={`px-6 py-4 ${baseFont} ${primaryText}`}>
+            <h2 className={`text-2xl font-bold mb-4 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>
+              Construction Knowledge Base (RAG)
+            </h2>
             {/* File Upload */}
             <div className={`mb-6 border-2 border-dashed rounded-lg p-6 text-center ${borderColor} ${cardBg}`}> 
               <input type="file" accept=".csv,.xlsx,.xls,.txt,.json" multiple className="hidden" id="file-upload" onChange={handleFileUpload} />
@@ -362,33 +448,489 @@ const ConstructionWorkflowTabs: React.FC = () => {
         );
       case 'chat':
         return (
-          <div className={`p-8 ${baseFont} ${primaryText}`}>
-            <h2 className={`text-2xl font-bold mb-4 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>Chat</h2>
-            <div className={`border rounded-lg p-6 min-h-[400px] ${cardBg} ${borderColor}`}>
+          <div className={`px-6 py-4 ${baseFont} ${primaryText}`}>
+            <div className="max-w-16xl mx-auto">
+              <div className="mb-8 text-center">
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-[#FF7F50] to-[#4A90E0] inline-block text-transparent bg-clip-text">
+                  DcisionAI
+                </h1>
+                <p className={`mt-2 text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Optimizing construction workflows with intelligent decision-making
+                </p>
+                <div className="mt-8 inline-flex gap-8 px-6 py-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                      <span className="text-sm text-blue-600 dark:text-blue-400">1</span>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Input Analysis</p>
+                      <p className="text-xs text-gray-500">AI analyzes query intent</p>
+                    </div>
+                    <span className="text-gray-300 dark:text-gray-600">→</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                      <span className="text-sm text-green-600 dark:text-green-400">2</span>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Intent Classification</p>
+                      <p className="text-xs text-gray-500">Determines query type</p>
+                    </div>
+                    <span className="text-gray-300 dark:text-gray-600">→</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                      <span className="text-sm text-purple-600 dark:text-purple-400">3</span>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Path Selection</p>
+                      <p className="text-xs text-gray-500">Routes to solution</p>
+                    </div>
+                    <span className="text-gray-300 dark:text-gray-600">→</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                      <span className="text-sm text-orange-600 dark:text-orange-400">4</span>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Solution Delivery</p>
+                      <p className="text-xs text-gray-500">Delivers with metrics</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <AgentChat
-                sendMessage={async (message) => {
-                  const res = await fetch('/api/dcisionai/construction/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message }),
-                  });
-                  if (!res.ok) {
-                    const error = await res.json().catch(() => ({}));
-                    throw new Error(error.error || 'Failed to get response');
-                  }
-                  return res.json();
-                }}
-                initialMessage="Hello! I'm your DcisionAI Construction Assistant. How can I help you with your project today?"
-                placeholder="Ask about cost estimation, timelines, risks, or construction best practices..."
+                placeholder="Ask about construction workflows, project phases, or resource allocation..."
               />
+            </div>
+          </div>
+        );
+      case 'intent':
+        return (
+          <div className={`px-6 py-4 ${baseFont} ${primaryText}`}>
+            <h2 className={`text-2xl font-bold mb-4 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>
+              AI Intent Analysis
+            </h2>
+            <p className={`text-lg mb-6 ${mutedText}`}>
+              See how our AI analyzes your requests and automatically routes them to the most appropriate solution.
+            </p>
+
+            {/* Demo Examples */}
+            <div className="mb-8">
+              <h3 className={`text-xl font-semibold mb-4 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>
+                Example Analysis
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* RAG Example */}
+                <IntentAnalysisDisplay
+                  data={{
+                    executionPath: 'rag',
+                    decisionType: 'Knowledge Query',
+                    confidence: 0.92,
+                    duration: 1247,
+                    model: 'claude-3-5-sonnet-20241022',
+                    intent: {
+                      primaryIntent: 'knowledge_retrieval',
+                      secondaryIntent: 'regulatory_compliance',
+                      keywords: ['OSHA', 'scaffolding', 'requirements'],
+                      confidence: 0.92,
+                      reasoning: 'User is asking about specific regulatory requirements, indicating a knowledge-based query'
+                    }
+                  }}
+                  title="Knowledge Query Example"
+                  showRawData={true}
+                  className="h-full"
+                />
+
+                {/* Optimization Example */}
+                <IntentAnalysisDisplay
+                  data={{
+                    executionPath: 'optimization',
+                    decisionType: 'Resource Optimization',
+                    confidence: 0.87,
+                    duration: 2156,
+                    model: 'claude-3-5-sonnet-20241022',
+                    intent: {
+                      primaryIntent: 'optimization',
+                      secondaryIntent: 'resource_allocation',
+                      keywords: ['optimize', 'crew', 'assignments', 'schedule'],
+                      confidence: 0.87,
+                      reasoning: 'User is requesting optimization of resources and scheduling, indicating a mathematical optimization problem'
+                    }
+                  }}
+                  title="Optimization Example"
+                  showRawData={true}
+                  className="h-full"
+                />
+
+                {/* Hybrid Example */}
+                <IntentAnalysisDisplay
+                  data={{
+                    executionPath: 'hybrid',
+                    decisionType: 'Complex Analysis',
+                    confidence: 0.78,
+                    duration: 3421,
+                    model: 'claude-3-5-sonnet-20241022',
+                    intent: {
+                      primaryIntent: 'hybrid_analysis',
+                      secondaryIntent: 'knowledge_optimization',
+                      keywords: ['best practices', 'optimize', 'schedule', 'then'],
+                      confidence: 0.78,
+                      reasoning: 'User is requesting both knowledge retrieval and optimization, indicating a multi-step analysis'
+                    }
+                  }}
+                  title="Hybrid Analysis Example"
+                  showRawData={true}
+                  className="h-full"
+                />
+              </div>
+            </div>
+
+            {/* How It Works */}
+            <div className="mb-8">
+              <h3 className={`text-xl font-semibold mb-4 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>
+                How Intent Analysis Works
+              </h3>
+              <div className={`p-6 rounded-lg border ${theme === 'dark' ? 'bg-docs-dark-bg/50' : 'bg-blue-50'} ${borderColor}`}>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <span className="text-2xl">1</span>
+                    </div>
+                    <h4 className="font-semibold mb-2">Input Analysis</h4>
+                    <p className={`text-sm ${mutedText}`}>
+                      AI analyzes your natural language query to understand intent and context
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <span className="text-2xl">2</span>
+                    </div>
+                    <h4 className="font-semibold mb-2">Intent Classification</h4>
+                    <p className={`text-sm ${mutedText}`}>
+                      Determines if it's a knowledge query, optimization problem, or hybrid analysis
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <span className="text-2xl">3</span>
+                    </div>
+                    <h4 className="font-semibold mb-2">Path Selection</h4>
+                    <p className={`text-sm ${mutedText}`}>
+                      Routes to appropriate solution: RAG, Optimization, or Hybrid approach
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <span className="text-2xl">4</span>
+                    </div>
+                    <h4 className="font-semibold mb-2">Solution Delivery</h4>
+                    <p className={`text-sm ${mutedText}`}>
+                      Provides comprehensive response with confidence metrics and analysis
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Decision Types */}
+            <div className="mb-8">
+              <h3 className={`text-xl font-semibold mb-4 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>
+                Decision Types & Execution Paths
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className={`p-6 rounded-lg border ${cardBg} ${borderColor}`}>
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="text-3xl">🔍</span>
+                    <div>
+                      <h4 className="font-semibold">RAG Path</h4>
+                      <p className={`text-sm ${mutedText}`}>Knowledge Retrieval</p>
+                    </div>
+                  </div>
+                  <ul className={`text-sm space-y-2 ${mutedText}`}>
+                    <li>• Regulatory compliance questions</li>
+                    <li>• Best practices inquiries</li>
+                    <li>• Industry standards lookup</li>
+                    <li>• Safety requirement queries</li>
+                  </ul>
+                  <div className="mt-4 p-3 bg-orange-50 dark:bg-orange-900/20 rounded">
+                    <p className="text-sm font-medium">Example: "What are OSHA requirements for scaffolding?"</p>
+                  </div>
+                </div>
+
+                <div className={`p-6 rounded-lg border ${cardBg} ${borderColor}`}>
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="text-3xl">⚙️</span>
+                    <div>
+                      <h4 className="font-semibold">Optimization Path</h4>
+                      <p className={`text-sm ${mutedText}`}>Mathematical Optimization</p>
+                    </div>
+                  </div>
+                  <ul className={`text-sm space-y-2 ${mutedText}`}>
+                    <li>• Resource allocation problems</li>
+                    <li>• Scheduling optimization</li>
+                    <li>• Cost minimization</li>
+                    <li>• Efficiency maximization</li>
+                  </ul>
+                  <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded">
+                    <p className="text-sm font-medium">Example: "Optimize crew assignments for next week"</p>
+                  </div>
+                </div>
+
+                <div className={`p-6 rounded-lg border ${cardBg} ${borderColor}`}>
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="text-3xl">🔄</span>
+                    <div>
+                      <h4 className="font-semibold">Hybrid Path</h4>
+                      <p className={`text-sm ${mutedText}`}>Combined Analysis</p>
+                    </div>
+                  </div>
+                  <ul className={`text-sm space-y-2 ${mutedText}`}>
+                    <li>• Multi-step analysis</li>
+                    <li>• Knowledge + optimization</li>
+                    <li>• Complex decision making</li>
+                    <li>• Comprehensive solutions</li>
+                  </ul>
+                  <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded">
+                    <p className="text-sm font-medium">Example: "What are best practices for scheduling, then optimize our plan?"</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Confidence Metrics */}
+            <div className="mb-8">
+              <h3 className={`text-xl font-semibold mb-4 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>
+                Confidence Metrics
+              </h3>
+              <div className={`p-6 rounded-lg border ${cardBg} ${borderColor}`}>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <span className="text-2xl font-bold text-green-600 dark:text-green-400">90%+</span>
+                    </div>
+                    <h4 className="font-semibold mb-2">Very High</h4>
+                    <p className={`text-sm ${mutedText}`}>Clear intent, high confidence in routing decision</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">70-89%</span>
+                    </div>
+                    <h4 className="font-semibold mb-2">High</h4>
+                    <p className={`text-sm ${mutedText}`}>Good intent clarity, reliable routing decision</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <span className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">50-69%</span>
+                    </div>
+                    <h4 className="font-semibold mb-2">Medium</h4>
+                    <p className={`text-sm ${mutedText}`}>Moderate confidence, may require clarification</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <span className="text-2xl font-bold text-red-600 dark:text-red-400">&lt;50%</span>
+                    </div>
+                    <h4 className="font-semibold mb-2">Low</h4>
+                    <p className={`text-sm ${mutedText}`}>Unclear intent, may ask for clarification</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Try It Yourself */}
+            <div className="mb-8">
+              <h3 className={`text-xl font-semibold mb-4 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>
+                Try It Yourself
+              </h3>
+              <div className={`p-6 rounded-lg border ${theme === 'dark' ? 'bg-docs-dark-bg/30' : 'bg-green-50'} ${borderColor}`}>
+                <p className={`mb-4 ${mutedText}`}>
+                  Go to the <strong>AI Assistant</strong> tab and try these example queries to see intent analysis in action:
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className={`p-4 rounded ${cardBg}`}>
+                    <h4 className="font-semibold mb-2 text-orange-600">Knowledge Query</h4>
+                    <p className="text-sm italic">"What are OSHA requirements for scaffolding?"</p>
+                  </div>
+                  <div className={`p-4 rounded ${cardBg}`}>
+                    <h4 className="font-semibold mb-2 text-blue-600">Optimization Query</h4>
+                    <p className="text-sm italic">"Optimize crew assignments for next week"</p>
+                  </div>
+                  <div className={`p-4 rounded ${cardBg}`}>
+                    <h4 className="font-semibold mb-2 text-green-600">Hybrid Query</h4>
+                    <p className="text-sm italic">"What are best practices for scheduling, then optimize our plan?"</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      case 'scenario':
+        return (
+          <div className={`px-6 py-4 ${baseFont} ${primaryText}`}>
+            <h2 className={`text-2xl font-bold mb-4 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>
+              Scenario Analysis
+            </h2>
+            <div className="mb-6">
+              <p className={`text-sm ${mutedText}`}>
+                Analyze different project scenarios and their potential impacts on cost, duration, and efficiency.
+              </p>
+            </div>
+
+            {/* Scenario Analysis Input */}
+            <form onSubmit={handleScenarioAnalysis} className="mb-6">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  className={`flex-1 border rounded px-3 py-2 ${borderColor} ${cardBg}`}
+                  placeholder="Describe a scenario (e.g., what if labor costs increase by 20%?)"
+                  value={llmPrompt}
+                  onChange={(e) => setLlmPrompt(e.target.value)}
+                  disabled={llmLoading}
+                />
+                <button
+                  type="submit"
+                  className={`px-4 py-2 ${accentBg} text-white rounded font-semibold disabled:opacity-50`}
+                  disabled={llmLoading || !llmPrompt.trim()}
+                >
+                  {llmLoading ? 'Analyzing...' : 'Analyze'}
+                </button>
+              </div>
+            </form>
+
+            {/* Scenario Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              {scenarioData.map((scenario) => (
+                <div
+                  key={scenario.name}
+                  onClick={() => setSelectedScenario(scenario.name)}
+                  className={`rounded-lg p-4 cursor-pointer transition-all border-2 
+                    ${selectedScenario === scenario.name 
+                      ? 'border-docs-accent bg-docs-accent/10' 
+                      : `border-transparent ${cardBg} hover:border-docs-accent`}`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-bold">{scenario.name}</h3>
+                    <span className={`text-xs px-2 py-1 rounded ${
+                      scenario.impact === 'high' ? 'bg-red-500' :
+                      scenario.impact === 'medium' ? 'bg-yellow-500' :
+                      'bg-green-500'
+                    } text-white`}>
+                      {scenario.impact.toUpperCase()}
+                    </span>
+                  </div>
+                  <p className={`text-sm ${mutedText} mb-2`}>{scenario.description}</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-full">
+                      <div
+                        className="h-1 bg-docs-accent rounded-full"
+                        style={{ width: `${scenario.probability}%` }}
+                      />
+                    </div>
+                    <span className={`text-xs ${mutedText}`}>{scenario.probability}%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Palantir-style Visualization Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Radar Chart for scenario comparison */}
+              <div className={`rounded-lg p-4 shadow ${tableCellBg}`}>
+                <h4 className="font-semibold mb-4">Scenario Metrics Comparison</h4>
+                <ResponsiveContainer width="100%" height={300}>
+                  <RadarChart cx="50%" cy="50%" outerRadius={100} data={getRadarData(scenarioData)}>
+                    <PolarGrid />
+                    <PolarAngleAxis dataKey="metric" />
+                    <PolarRadiusAxis />
+                    {scenarioData.map((s, idx) => (
+                      <Radar
+                        key={s.name}
+                        name={s.name}
+                        dataKey={s.name}
+                        stroke={COLORS[idx % COLORS.length]}
+                        fill={COLORS[idx % COLORS.length]}
+                        fillOpacity={0.3}
+                      />
+                    ))}
+                    <Legend />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Details for selected scenario */}
+              <div className={`rounded-lg p-4 shadow ${tableCellBg}`}>
+                <h4 className="font-semibold mb-4">Scenario Details</h4>
+                {(() => {
+                  const scenario = scenarioData.find(s => s.name === selectedScenario);
+                  if (!scenario) return (
+                    <div className={`text-center p-8 ${mutedText}`}>
+                      Select a scenario to view details
+                    </div>
+                  );
+                  return (
+                    <div className="space-y-4">
+                      <div>
+                        <span className="font-semibold">Description:</span>
+                        <p className="text-sm mt-1">{scenario.description}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <span className="font-semibold">Probability:</span>
+                          <p className="text-sm mt-1">{scenario.probability}%</p>
+                        </div>
+                        <div>
+                          <span className="font-semibold">Impact:</span>
+                          <p className="text-sm mt-1">{scenario.impact}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-semibold">Metrics:</span>
+                        <div className="grid grid-cols-3 gap-2 mt-2">
+                          <div className={`p-2 rounded ${cardBg}`}>
+                            <div className={`text-xs ${mutedText}`}>Cost</div>
+                            <div className="font-semibold">${scenario.metrics.cost.toLocaleString()}</div>
+                          </div>
+                          <div className={`p-2 rounded ${cardBg}`}>
+                            <div className={`text-xs ${mutedText}`}>Duration</div>
+                            <div className="font-semibold">{scenario.metrics.duration} months</div>
+                          </div>
+                          <div className={`p-2 rounded ${cardBg}`}>
+                            <div className={`text-xs ${mutedText}`}>Efficiency</div>
+                            <div className="font-semibold">{(scenario.metrics.efficiency * 100).toFixed(0)}%</div>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-semibold">Risks:</span>
+                        <ul className="list-disc pl-4 mt-1 space-y-1">
+                          {scenario.risks.map((risk, index) => (
+                            <li key={index} className="text-sm">{risk}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <span className="font-semibold">Recommendations:</span>
+                        <ul className="list-disc pl-4 mt-1 space-y-1">
+                          {scenario.recommendations.map((rec, index) => (
+                            <li key={index} className="text-sm">{rec}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
           </div>
         );
       case 'api':
         return (
-          <div className={`p-8 ${baseFont} ${primaryText}`}>
+          <div className={`px-6 py-4 ${baseFont} ${primaryText}`}>
             <h2 className={`text-2xl font-bold mb-4 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>API</h2>
-            <div className={`border rounded-lg p-6 min-h-[400px] ${cardBg} ${borderColor}`}>
+            <div className={`border rounded-lg p-6 min-h-[calc(100vh-12rem)] ${cardBg} ${borderColor}`}>
               <ApiInterfaceConstruction />
             </div>
           </div>
@@ -399,16 +941,16 @@ const ConstructionWorkflowTabs: React.FC = () => {
   };
 
   return (
-    <div className={`flex flex-col h-full ${baseFont} ${theme === 'dark' ? 'bg-docs-dark-bg' : 'bg-docs-bg'}`}>
-      {/* Main Tabs */}
-      <div className={`border-b ${borderColor}`}>
+    <div className="flex flex-col h-full">
+      {/* Tabs */}
+      <div className={`border-b ${theme === 'dark' ? 'border-docs-dark-muted' : 'border-docs-muted'}`}>
         <nav className="flex space-x-8 px-6" aria-label="Workflow Tabs">
           {mainTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={
-                `flex items-center py-4 px-1 border-b-2 font-medium text-sm
+              className={`
+                flex items-center py-4 px-1 border-b-2 font-medium text-sm group
                 ${
                   activeTab === tab.id
                     ? 'border-docs-accent text-docs-accent'
@@ -416,17 +958,18 @@ const ConstructionWorkflowTabs: React.FC = () => {
                         theme === 'dark' ? 'text-docs-dark-muted' : 'text-docs-muted'
                       } hover:${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`
                 }
-              `
-              }
+              `}
             >
-              {tab.icon}
+              <span className="group-hover:transform group-hover:scale-110 transition-transform">
+                {tab.icon}
+              </span>
               <span className="ml-2">{tab.label}</span>
             </button>
           ))}
         </nav>
       </div>
       {/* Tab Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-auto">
         {renderTabContent()}
       </div>
     </div>

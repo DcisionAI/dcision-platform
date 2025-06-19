@@ -1,35 +1,32 @@
 // Agno-based Model Builder Agent for DcisionAI
 // Now uses the real Agno Python backend for advanced AI capabilities
 
-import { agnoClient, AgnoChatRequest } from '../../lib/agno-client';
+import { agnoClient, AgnoChatRequest } from '../../agno-client';
+import { MCPConfig } from '../../mcp/MCPTypes';
 
-export interface MCPConfig {
-  variables: Array<{
-    name: string;
-    type: string;
-    bounds?: [number, number];
-    description: string;
-  }>;
-  constraints: Array<{
-    expression: string;
-    description: string;
-    type: 'equality' | 'inequality' | 'bound';
-    priority: 'hard' | 'soft';
-  }>;
-  objective: {
-    type: 'minimize' | 'maximize';
-    expression: string;
-    description: string;
-  };
-  parameters: Record<string, any>;
-  solver_config: {
-    solver_type: string;
-    timeout_seconds: number;
-    tolerance: number;
-  };
+export interface ModelBuilderResult {
+  mcpConfig: MCPConfig;
+  confidence: number;
+  reasoning: string;
+}
+
+function isValidMCPConfig(obj: any): obj is MCPConfig {
+  return (
+    obj &&
+    typeof obj === 'object' &&
+    Array.isArray(obj.variables) &&
+    typeof obj.constraints === 'object' &&
+    Array.isArray(obj.constraints.dense) &&
+    Array.isArray(obj.constraints.sparse) &&
+    typeof obj.objective === 'object' &&
+    typeof obj.solver_config === 'object'
+  );
 }
 
 export const agnoModelBuilderAgent = {
+  name: 'Construction Model Builder Agent',
+  description: 'Builds optimization models for construction problems',
+
   /**
    * Build an OR-Tools compatible optimization model (MCP config) from enriched data and intent.
    * @param enrichedData The data enriched by the Data Agent
@@ -45,86 +42,62 @@ export const agnoModelBuilderAgent = {
     sessionId?: string,
     modelProvider: 'anthropic' | 'openai' = 'anthropic',
     modelName?: string
-  ): Promise<{ mcpConfig: MCPConfig }> {
+  ): Promise<ModelBuilderResult> {
     try {
-      const prompt = `You are an expert construction optimization model builder with deep expertise in mathematical programming, OR-Tools, and construction management optimization. 
+      const prompt = `You are a construction optimization expert. Your task is to build a mathematical optimization model for the given problem.
 
-Given the following enriched data and intent, create a comprehensive OR-Tools compatible MCP configuration:
-
-**Enriched Data:**
+Enriched Data:
 ${JSON.stringify(enrichedData, null, 2)}
 
-**Intent:**
+Intent Analysis:
 ${JSON.stringify(intent, null, 2)}
 
-Please create a detailed optimization model configuration that includes:
-
-1. **Variables**: All necessary decision variables with:
-   - Clear naming conventions
-   - Appropriate types (integer, continuous, binary)
-   - Realistic bounds based on construction constraints
-   - Descriptive names and explanations
-
-2. **Constraints**: All relevant constraints including:
-   - Resource capacity constraints
-   - Timeline and scheduling constraints
-   - Budget and cost constraints
-   - Quality and safety requirements
-   - Logical and operational constraints
-   - Priority levels (hard vs soft constraints)
-
-3. **Objective Function**: A well-defined objective that:
-   - Aligns with the decision type and intent
-   - Balances multiple objectives if needed
-   - Uses appropriate weights and scaling
-   - Is clearly explained and justified
-
-4. **Solver Configuration**: Appropriate solver settings for:
-   - Construction-scale optimization problems
-   - Reasonable timeouts and tolerances
-   - Robust solution methods
-
-Respond in JSON format with the following structure:
+Please build an optimization model in JSON format:
 
 {
   "variables": [
     {
       "name": "string",
-      "type": "integer|continuous|binary",
-      "bounds": [number, number],
+      "type": "continuous|integer|binary",
+      "lower_bound": number,
+      "upper_bound": number,
       "description": "string"
     }
   ],
-  "constraints": [
-    {
-      "expression": "string (mathematical expression)",
-      "description": "string",
-      "type": "equality|inequality|bound",
-      "priority": "hard|soft"
-    }
-  ],
+  "constraints": {
+    "dense": [
+      {
+        "name": "string",
+        "coefficients": [number],
+        "variables": ["string"],
+        "operator": "<=|>=|=",
+        "rhs": number,
+        "description": "string"
+      }
+    ],
+    "sparse": []
+  },
   "objective": {
-    "type": "minimize|maximize",
-    "expression": "string (mathematical expression)",
+    "name": "string",
+    "sense": "minimize|maximize",
+    "coefficients": [number],
+    "variables": ["string"],
     "description": "string"
   },
-  "parameters": {
-    "param1": "value1"
-  },
   "solver_config": {
-    "solver_type": "string",
-    "timeout_seconds": "number",
-    "tolerance": "number"
+    "time_limit": number,
+    "gap_tolerance": number,
+    "construction_heuristics": boolean
   }
 }
 
-Ensure all mathematical expressions are valid OR-Tools syntax and consider construction industry best practices.`;
+Consider construction industry best practices, regulatory requirements, and optimization principles in your model.`;
 
       const request: AgnoChatRequest = {
         message: prompt,
         session_id: sessionId,
         model_provider: modelProvider,
-        model_name: modelName || (modelProvider === 'anthropic' ? 'claude-3-sonnet-20240229' : 'gpt-4-turbo-preview'),
+        model_name: modelName || (modelProvider === 'anthropic' ? 'claude-3-5-sonnet-20241022' : 'gpt-4-turbo-preview'),
         context: {
           timestamp: new Date().toISOString(),
           inputType: 'model_building',
@@ -135,15 +108,27 @@ Ensure all mathematical expressions are valid OR-Tools syntax and consider const
       };
 
       const response = await agnoClient.chat(request);
-      const result = JSON.parse(response.response);
+      let result;
+      
+      if (typeof response.response === 'string') {
+        try {
+          result = JSON.parse(response.response);
+        } catch (err) {
+          throw new Error('Invalid JSON response from model builder agent');
+        }
+      } else {
+        result = response.response;
+      }
 
       // Validate response structure
-      if (!result.variables || !result.constraints || !result.objective || !result.solver_config) {
+      if (!isValidMCPConfig(result)) {
         throw new Error('Invalid response structure from model builder agent');
       }
 
       return {
-        mcpConfig: result
+        mcpConfig: result,
+        confidence: 0.95, // Assuming a default confidence
+        reasoning: 'Reasoning not provided in the original code'
       };
     } catch (err: any) {
       console.error('Model builder agent error:', err);

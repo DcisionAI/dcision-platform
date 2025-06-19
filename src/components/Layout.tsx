@@ -12,15 +12,17 @@ interface LayoutProps {
 export default function Layout({ children, sidebarOverride, forceLoginModal }: LayoutProps) {
   return (
     <SidebarProvider>
-      <SidebarLayout>
-        <div className="min-h-screen flex flex-col bg-docs-bg text-docs-text dark:bg-docs-dark-bg dark:text-white transition-colors duration-300">
-          <Navbar />
-          <div className="flex flex-1">
-            {sidebarOverride ? sidebarOverride : <Sidebar />}
-            <main className="flex-1 p-8 bg-docs-bg text-docs-text dark:bg-docs-dark-bg dark:text-white transition-colors duration-300 text-base">{children}</main>
-          </div>
+      <div className="min-h-screen bg-docs-bg text-docs-text dark:bg-docs-dark-bg dark:text-white transition-colors duration-300">
+        <Navbar />
+        <div className="flex flex-1">
+          {sidebarOverride ? sidebarOverride : <Sidebar />}
+          <SidebarLayout>
+            <main className="flex-1 bg-docs-bg text-docs-text dark:bg-docs-dark-bg dark:text-white transition-colors duration-300 text-base w-full">
+              {children}
+            </main>
+          </SidebarLayout>
         </div>
-      </SidebarLayout>
+      </div>
     </SidebarProvider>
   );
 }
@@ -28,15 +30,14 @@ export default function Layout({ children, sidebarOverride, forceLoginModal }: L
 function SidebarLayout({ children }: { children: React.ReactNode }) {
   const { isExpanded } = useSidebar();
   return (
-    <div>
-      <Sidebar />
-      <main
-        className={`transition-all duration-300 min-h-screen bg-docs-bg text-docs-text dark:bg-docs-dark-bg dark:text-white ${
-          isExpanded ? 'ml-64' : 'ml-14'
-        }`}
-      >
+    <div
+      className={`transition-all duration-300 min-h-screen w-full bg-docs-bg text-docs-text dark:bg-docs-dark-bg dark:text-white flex-1 ${
+        isExpanded ? 'pl-64' : 'pl-14'
+      }`}
+    >
+      <div className="w-full">
         {children}
-      </main>
+      </div>
     </div>
   );
 }

@@ -1,13 +1,13 @@
 // Example: How to integrate the Agno Python backend with your existing agents
 // This replaces the placeholder agno package with real Agno functionality
 
-import { agnoClient, AgnoChatRequest } from './agno-client';
+import { agnoClient, AgnoChatRequest } from '../pages/api/_lib/agno-client';
 
 // Example: Replace your existing data agent with Agno backend calls
 export async function enrichDataWithAgno(customerData: any, sessionId?: string) {
   try {
     // Create a specialized data analysis agent
-    const agentId = await agnoClient.createDataAnalysisAgent('anthropic', 'claude-3-sonnet-20240229');
+    const agentId = await agnoClient.createDataAnalysisAgent('anthropic', 'claude-3-5-sonnet-20241022');
     
     const prompt = `You are an expert construction data analyst. Given the following customer data:
 ${JSON.stringify(customerData, null, 2)}
@@ -36,7 +36,7 @@ Respond in JSON format with the following structure:
       message: prompt,
       session_id: sessionId,
       model_provider: 'anthropic',
-      model_name: 'claude-3-sonnet-20240229',
+      model_name: 'claude-3-5-sonnet-20241022',
       context: {
         timestamp: new Date().toISOString(),
         inputType: 'data_enrichment',
@@ -86,7 +86,7 @@ Respond in JSON format with the following structure:
       message: prompt,
       session_id: sessionId,
       model_provider: 'anthropic',
-      model_name: 'claude-3-sonnet-20240229',
+      model_name: 'claude-3-5-sonnet-20241022',
       context: {
         timestamp: new Date().toISOString(),
         inputType: 'intent_analysis'
@@ -147,7 +147,7 @@ Respond in JSON format with the following structure:
       message: prompt,
       session_id: sessionId,
       model_provider: 'anthropic',
-      model_name: 'claude-3-sonnet-20240229',
+      model_name: 'claude-3-5-sonnet-20241022',
       context: {
         timestamp: new Date().toISOString(),
         inputType: 'solution_explanation',

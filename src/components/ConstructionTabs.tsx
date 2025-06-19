@@ -74,8 +74,6 @@ const ConstructionTabs: React.FC = () => {
       case 'chat':
         return (
           <AgentChat
-            sendMessage={sendConstructionChatMessage}
-            initialMessage="Hello! I'm your DcisionAI Construction Assistant. How can I help you with your project today?"
             placeholder="Ask about cost estimation, timelines, risks, or construction best practices..."
           />
         );

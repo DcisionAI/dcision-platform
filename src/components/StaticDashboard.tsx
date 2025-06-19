@@ -339,7 +339,7 @@ const StaticDashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="max-w-7xl mx-auto p-8">
+      <div className="w-full">
         <div className="rounded-xl p-6 shadow border bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
           <h3 className="text-lg font-semibold text-red-800 dark:text-red-200 mb-2">Dashboard Error</h3>
           <p className="text-red-600 dark:text-red-300">{error}</p>
@@ -355,7 +355,7 @@ const StaticDashboard: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-8">
+    <div className="w-full">
       {/* Header */}
       <div className="mb-6">
         <h1 className={`text-3xl font-bold ${theme === 'dark' ? 'text-white' : 'text-docs-text'} mb-2`}>
@@ -387,226 +387,228 @@ const StaticDashboard: React.FC = () => {
       </div>
 
       {/* Sub-tab content */}
-      {activeSubTab === 'knowledge' && (
-        <div className="border rounded-lg p-6 bg-docs-section">
-          <h3 className={`font-semibold mb-2 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>Knowledge Graph</h3>
-          <div className="text-xs text-docs-muted mb-2">Click a node to expand and reveal its children.</div>
-          {kgLoading ? (
-            <div className="flex items-center justify-center h-64">Loading...</div>
-          ) : kgError ? (
-            <div className="text-red-500">{kgError}</div>
-          ) : (
-            <ExpandableKnowledgeGraph data={knowledgeGraphData || undefined} />
-          )}
-        </div>
-      )}
+      <div className="space-y-6">
+        {activeSubTab === 'knowledge' && (
+          <div className="border rounded-lg p-6 bg-docs-section">
+            <h3 className={`font-semibold mb-2 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>Knowledge Graph</h3>
+            <div className="text-xs text-docs-muted mb-2">Click a node to expand and reveal its children.</div>
+            {kgLoading ? (
+              <div className="flex items-center justify-center h-64">Loading...</div>
+            ) : kgError ? (
+              <div className="text-red-500">{kgError}</div>
+            ) : (
+              <ExpandableKnowledgeGraph data={knowledgeGraphData || undefined} />
+            )}
+          </div>
+        )}
 
-      {activeSubTab === 'kpi' && (
-        <div className="space-y-6">
-          {/* KPI Cards */}
-          {dashboardData?.kpi_cards && dashboardData.kpi_cards.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              {dashboardData.kpi_cards.map((card, index) => (
-                <StaticKPICard key={index} card={card} />
-              ))}
-            </div>
-          )}
+        {activeSubTab === 'kpi' && (
+          <div className="space-y-6">
+            {/* KPI Cards */}
+            {dashboardData?.kpi_cards && dashboardData.kpi_cards.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {dashboardData.kpi_cards.map((card, index) => (
+                  <StaticKPICard key={index} card={card} />
+                ))}
+              </div>
+            )}
 
-          {/* Charts */}
-          {dashboardData?.charts && dashboardData.charts.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {dashboardData.charts.map((chart, index) => (
-                <StaticChart key={index} chart={chart} />
-              ))}
-            </div>
-          )}
+            {/* Charts */}
+            {dashboardData?.charts && dashboardData.charts.length > 0 && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {dashboardData.charts.map((chart, index) => (
+                  <StaticChart key={index} chart={chart} />
+                ))}
+              </div>
+            )}
 
-          {/* No Data State */}
-          {(!dashboardData?.kpi_cards || dashboardData.kpi_cards.length === 0) && (
-            <div className="rounded-xl p-8 shadow border bg-[#ede9dd] border-[#f4f1ea] text-center">
-              <svg className="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            {/* No Data State */}
+            {(!dashboardData?.kpi_cards || dashboardData.kpi_cards.length === 0) && (
+              <div className="rounded-xl p-8 shadow border bg-[#ede9dd] border-[#f4f1ea] text-center">
+                <svg className="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <p className="text-lg font-semibold mb-2">No KPI Data Available</p>
+                <p className="text-sm text-gray-600">Upload project data to see KPI metrics and charts.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Timeline Tab */}
+        {activeSubTab === 'timeline' && (
+          <div className="border rounded-lg p-6 bg-docs-section">
+            <h3 className={`font-semibold mb-2 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>Project Timeline</h3>
+            <div className="text-xs text-docs-muted mb-2">Project milestones and schedule</div>
+            <div className="overflow-x-auto">
+              <svg ref={svgRef} width="100%" height={GANTT_TOP + ganttPhases.length * (GANTT_BAR_HEIGHT + GANTT_BAR_GAP)}>
+                {/* Axis */}
+                <line x1={GANTT_LEFT} y1={GANTT_TOP - 20} x2={svgWidth - GANTT_RIGHT_PAD} y2={GANTT_TOP - 20} stroke="#ccc" strokeWidth={2} />
+                {/* Bars */}
+                {ganttPhases.map((p, idx) => {
+                  const chartWidth = svgWidth - GANTT_LEFT - GANTT_RIGHT_PAD;
+                  const x = GANTT_LEFT + ((p.start - ganttStart) / ganttTotal) * chartWidth;
+                  const w = ((p.end - p.start) / ganttTotal) * chartWidth;
+                  const y = GANTT_TOP + idx * (GANTT_BAR_HEIGHT + GANTT_BAR_GAP);
+                  const textColor = w > 80 ? '#fff' : '#222';
+                  return (
+                    <g key={p.phase}>
+                      <rect x={x} y={y} width={w} height={GANTT_BAR_HEIGHT} fill={COLORS[idx % COLORS.length]} rx={8} />
+                      {/* Phase name inside bar if space, else outside */}
+                      <text
+                        x={x + 8}
+                        y={y + GANTT_BAR_HEIGHT / 2 + 6}
+                        fontSize={16}
+                        fill={textColor}
+                        fontWeight="bold"
+                        style={{ pointerEvents: 'none' }}
+                      >
+                        {p.phase}
+                      </text>
+                      {/* Start date (left) */}
+                      <text
+                        x={x - 10}
+                        y={y + GANTT_BAR_HEIGHT / 2 + 6}
+                        fontSize={12}
+                        fill="#444"
+                        textAnchor="end"
+                      >
+                        {new Date(p.start).toLocaleDateString()}
+                      </text>
+                      {/* End date (right) */}
+                      <text
+                        x={x + w + 10}
+                        y={y + GANTT_BAR_HEIGHT / 2 + 6}
+                        fontSize={12}
+                        fill="#444"
+                        textAnchor="start"
+                      >
+                        {new Date(p.end).toLocaleDateString()}
+                      </text>
+                    </g>
+                  );
+                })}
               </svg>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Project Data Available</h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                Upload construction project files (CSV, XLSX) to see real-time KPIs and analytics.
-              </p>
-              <div className="text-sm text-gray-500">
-                Supported file types: CSV, XLSX, XLS
-              </div>
             </div>
-          )}
-        </div>
-      )}
-
-      {activeSubTab === 'timeline' && (
-        <div className="border rounded-lg p-6 bg-docs-section">
-          <h3 className={`font-semibold mb-2 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>Project Timeline (Gantt)</h3>
-          <div className="overflow-x-auto">
-            <svg ref={svgRef} width="100%" height={GANTT_TOP + ganttPhases.length * (GANTT_BAR_HEIGHT + GANTT_BAR_GAP)}>
-              {/* Axis */}
-              <line x1={GANTT_LEFT} y1={GANTT_TOP - 20} x2={svgWidth - GANTT_RIGHT_PAD} y2={GANTT_TOP - 20} stroke="#ccc" strokeWidth={2} />
-              {/* Bars */}
-              {ganttPhases.map((p, idx) => {
-                const chartWidth = svgWidth - GANTT_LEFT - GANTT_RIGHT_PAD;
-                const x = GANTT_LEFT + ((p.start - ganttStart) / ganttTotal) * chartWidth;
-                const w = ((p.end - p.start) / ganttTotal) * chartWidth;
-                const y = GANTT_TOP + idx * (GANTT_BAR_HEIGHT + GANTT_BAR_GAP);
-                const textColor = w > 80 ? '#fff' : '#222';
-                return (
-                  <g key={p.phase}>
-                    <rect x={x} y={y} width={w} height={GANTT_BAR_HEIGHT} fill={COLORS[idx % COLORS.length]} rx={8} />
-                    {/* Phase name inside bar if space, else outside */}
-                    <text
-                      x={x + 8}
-                      y={y + GANTT_BAR_HEIGHT / 2 + 6}
-                      fontSize={16}
-                      fill={textColor}
-                      fontWeight="bold"
-                      style={{ pointerEvents: 'none' }}
-                    >
-                      {p.phase}
-                    </text>
-                    {/* Start date (left) */}
-                    <text
-                      x={x - 10}
-                      y={y + GANTT_BAR_HEIGHT / 2 + 6}
-                      fontSize={12}
-                      fill="#444"
-                      textAnchor="end"
-                    >
-                      {new Date(p.start).toLocaleDateString()}
-                    </text>
-                    {/* End date (right) */}
-                    <text
-                      x={x + w + 10}
-                      y={y + GANTT_BAR_HEIGHT / 2 + 6}
-                      fontSize={12}
-                      fill="#444"
-                      textAnchor="start"
-                    >
-                      {new Date(p.end).toLocaleDateString()}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
           </div>
-        </div>
-      )}
+        )}
 
-      {activeSubTab === 'rag' && (
-        <div className="border rounded-lg p-6 bg-docs-section">
-          <h3 className={`font-semibold mb-2 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>RAG (Retrieval-Augmented Generation)</h3>
-          <div className="text-xs text-docs-muted mb-2">This is a placeholder for RAG results and queries.</div>
-          <div className="bg-white dark:bg-docs-dark-bg rounded p-4 shadow">
-            <div className="font-semibold mb-2">Sample RAG Query:</div>
-            <div className="mb-2">"What are the top 3 safety risks in this project?"</div>
-            <div className="font-semibold mb-2">Sample RAG Answer:</div>
-            <div>1. Falls<br />2. Electrocution<br />3. Struck-by incidents</div>
-            <div className="mt-2 text-xs text-docs-muted">Sources: OSHA Safety Checklist, PMBOK Guide</div>
+        {/* RAG Tab */}
+        {activeSubTab === 'rag' && (
+          <div className="border rounded-lg p-6 bg-docs-section">
+            <h3 className={`font-semibold mb-2 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>RAG Analysis</h3>
+            <div className="text-xs text-docs-muted mb-2">Retrieval-Augmented Generation results</div>
+            <div className="bg-white dark:bg-docs-dark-bg rounded p-4 shadow">
+              <div className="font-semibold mb-2">Sample RAG Query:</div>
+              <div className="mb-2">"What are the top 3 safety risks in this project?"</div>
+              <div className="font-semibold mb-2">Sample RAG Answer:</div>
+              <div>1. Falls<br />2. Electrocution<br />3. Struck-by incidents</div>
+              <div className="mt-2 text-xs text-docs-muted">Sources: OSHA Safety Checklist, PMBOK Guide</div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {activeSubTab === 'scenario' && (
-        <div className="border rounded-lg p-6 bg-docs-section">
-          <h3 className={`font-semibold mb-4 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>Scenario Analysis</h3>
-          {/* LLM Prompt Input */}
-          <form onSubmit={handleLlmSubmit} className="flex flex-col md:flex-row gap-2 mb-6">
-            <input
-              type="text"
-              className="flex-1 border rounded px-3 py-2 text-sm"
-              placeholder="Ask a scenario (e.g., what happens if my labor is cut by 50%)"
-              value={llmPrompt}
-              onChange={e => setLlmPrompt(e.target.value)}
-              disabled={llmLoading}
-            />
-            <button
-              type="submit"
-              className="px-4 py-2 rounded bg-docs-accent text-white font-semibold text-sm"
-              disabled={llmLoading || !llmPrompt.trim()}
-            >
-              {llmLoading ? 'Analyzing...' : 'Analyze'}
-            </button>
-          </form>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            {scenarioData.map(s => (
-              <div
-                key={s.name}
-                className={`rounded-lg shadow p-4 cursor-pointer transition-all border-2 ${selectedScenario === s.name ? 'border-docs-accent bg-docs-accent/10' : 'border-transparent bg-white dark:bg-docs-dark-bg hover:border-docs-accent'}`}
-                onClick={() => setSelectedScenario(s.name)}
+        {/* Scenario Analysis Tab */}
+        {activeSubTab === 'scenario' && (
+          <div className="border rounded-lg p-6 bg-docs-section">
+            <h3 className={`font-semibold mb-2 ${theme === 'dark' ? 'text-docs-dark-text' : 'text-docs-text'}`}>Scenario Analysis</h3>
+            <div className="text-xs text-docs-muted mb-2">Project scenarios and impact analysis</div>
+            {/* LLM Prompt Input */}
+            <form onSubmit={handleLlmSubmit} className="flex flex-col md:flex-row gap-2 mb-6">
+              <input
+                type="text"
+                className="flex-1 border rounded px-3 py-2 text-sm"
+                placeholder="Ask a scenario (e.g., what happens if my labor is cut by 50%)"
+                value={llmPrompt}
+                onChange={e => setLlmPrompt(e.target.value)}
+                disabled={llmLoading}
+              />
+              <button
+                type="submit"
+                className="px-4 py-2 rounded bg-docs-accent text-white font-semibold text-sm"
+                disabled={llmLoading || !llmPrompt.trim()}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-lg">{s.name}</span>
-                  <span className="text-xs px-2 py-1 rounded bg-docs-accent text-white">{s.impact.toUpperCase()}</span>
+                {llmLoading ? 'Analyzing...' : 'Analyze'}
+              </button>
+            </form>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              {scenarioData.map(s => (
+                <div
+                  key={s.name}
+                  className={`rounded-lg shadow p-4 cursor-pointer transition-all border-2 ${selectedScenario === s.name ? 'border-docs-accent bg-docs-accent/10' : 'border-transparent bg-white dark:bg-docs-dark-bg hover:border-docs-accent'}`}
+                  onClick={() => setSelectedScenario(s.name)}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-bold text-lg">{s.name}</span>
+                    <span className="text-xs px-2 py-1 rounded bg-docs-accent text-white">{s.impact.toUpperCase()}</span>
+                  </div>
+                  <div className="text-xs text-docs-muted mb-2">{s.description}</div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span>Probability:</span>
+                    <span className="font-semibold">{s.probability}%</span>
+                  </div>
                 </div>
-                <div className="text-xs text-docs-muted mb-2">{s.description}</div>
-                <div className="flex items-center gap-2 text-xs">
-                  <span>Probability:</span>
-                  <span className="font-semibold">{s.probability}%</span>
-                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Radar Chart for scenario comparison */}
+              <div className="bg-white dark:bg-docs-dark-bg rounded-lg p-4 shadow">
+                <h4 className="font-semibold mb-2">Scenario Metrics Comparison</h4>
+                <ResponsiveContainer width="100%" height={300}>
+                  <RadarChart cx="50%" cy="50%" outerRadius={100} data={getRadarData(scenarioData)}>
+                    <PolarGrid />
+                    <PolarAngleAxis dataKey="metric" />
+                    <PolarRadiusAxis />
+                    {scenarioData.map((s, idx) => (
+                      <Radar
+                        key={s.name}
+                        name={s.name}
+                        dataKey={s.name}
+                        stroke={COLORS[idx % COLORS.length]}
+                        fill={COLORS[idx % COLORS.length]}
+                        fillOpacity={0.3}
+                      />
+                    ))}
+                    <Legend />
+                  </RadarChart>
+                </ResponsiveContainer>
               </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Radar Chart for scenario comparison */}
-            <div className="bg-white dark:bg-docs-dark-bg rounded-lg p-4 shadow">
-              <h4 className="font-semibold mb-2">Scenario Metrics Comparison</h4>
-              <ResponsiveContainer width="100%" height={300}>
-                <RadarChart cx="50%" cy="50%" outerRadius={100} data={getRadarData(scenarioData)}>
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="metric" />
-                  <PolarRadiusAxis />
-                  {scenarioData.map((s, idx) => (
-                    <Radar
-                      key={s.name}
-                      name={s.name}
-                      dataKey={s.name}
-                      stroke={COLORS[idx % COLORS.length]}
-                      fill={COLORS[idx % COLORS.length]}
-                      fillOpacity={0.3}
-                    />
-                  ))}
-                  <Legend />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
-            {/* Details for selected scenario */}
-            <div className="bg-white dark:bg-docs-dark-bg rounded-lg p-4 shadow flex flex-col">
-              <h4 className="font-semibold mb-2">Scenario Details</h4>
-              {(() => {
-                const s = scenarioData.find(x => x.name === selectedScenario);
-                if (!s) return null;
-                return (
-                  <>
-                    <div className="mb-2"><span className="font-semibold">Description:</span> {s.description}</div>
-                    <div className="mb-2"><span className="font-semibold">Probability:</span> {s.probability}%</div>
-                    <div className="mb-2"><span className="font-semibold">Impact:</span> {s.impact}</div>
-                    <div className="mb-2"><span className="font-semibold">Metrics:</span>
-                      <ul className="ml-4 text-sm">
-                        <li>Cost: ${s.metrics.cost.toLocaleString()}</li>
-                        <li>Duration: {s.metrics.duration} months</li>
-                        <li>Efficiency: {(s.metrics.efficiency * 100).toFixed(0)}%</li>
-                      </ul>
-                    </div>
-                    <div className="mb-2"><span className="font-semibold">Risks:</span>
-                      <ul className="ml-4 text-sm list-disc">
-                        {s.risks.map((r, i) => <li key={i}>{r}</li>)}
-                      </ul>
-                    </div>
-                    <div className="mb-2"><span className="font-semibold">Recommendations:</span>
-                      <ul className="ml-4 text-sm list-disc">
-                        {s.recommendations.map((r, i) => <li key={i}>{r}</li>)}
-                      </ul>
-                    </div>
-                  </>
-                );
-              })()}
+              {/* Details for selected scenario */}
+              <div className="bg-white dark:bg-docs-dark-bg rounded-lg p-4 shadow flex flex-col">
+                <h4 className="font-semibold mb-2">Scenario Details</h4>
+                {(() => {
+                  const s = scenarioData.find(x => x.name === selectedScenario);
+                  if (!s) return null;
+                  return (
+                    <>
+                      <div className="mb-2"><span className="font-semibold">Description:</span> {s.description}</div>
+                      <div className="mb-2"><span className="font-semibold">Probability:</span> {s.probability}%</div>
+                      <div className="mb-2"><span className="font-semibold">Impact:</span> {s.impact}</div>
+                      <div className="mb-2"><span className="font-semibold">Metrics:</span>
+                        <ul className="ml-4 text-sm">
+                          <li>Cost: ${s.metrics.cost.toLocaleString()}</li>
+                          <li>Duration: {s.metrics.duration} months</li>
+                          <li>Efficiency: {(s.metrics.efficiency * 100).toFixed(0)}%</li>
+                        </ul>
+                      </div>
+                      <div className="mb-2"><span className="font-semibold">Risks:</span>
+                        <ul className="ml-4 text-sm list-disc">
+                          {s.risks.map((r, i) => <li key={i}>{r}</li>)}
+                        </ul>
+                      </div>
+                      <div className="mb-2"><span className="font-semibold">Recommendations:</span>
+                        <ul className="ml-4 text-sm list-disc">
+                          {s.recommendations.map((r, i) => <li key={i}>{r}</li>)}
+                        </ul>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

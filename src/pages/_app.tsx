@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import type { AppProps } from 'next/app';
 import '@/styles/globals.css';
 import { ThemeProvider } from '@/components/layout/ThemeContext';
-import { SidebarProvider } from '@/components/layout/SidebarContext';
 
 const API_KEY_STORAGE_KEY = 'dcisionai_api_key';
 
@@ -47,10 +46,8 @@ function ApiKeyPrompt() {
 export default function App({ Component, pageProps }: AppProps) {
   return (
     <ThemeProvider>
-      <SidebarProvider>
-        <ApiKeyPrompt />
-        <Component {...pageProps} />
-      </SidebarProvider>
+      <ApiKeyPrompt />
+      <Component {...pageProps} />
     </ThemeProvider>
   );
 } 

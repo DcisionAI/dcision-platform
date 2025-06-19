@@ -1,4 +1,4 @@
-import { MCP, Variable, Step, StepAction, Protocol } from '@/mcp/MCPTypes';
+import { MCP, Variable, Step, StepAction, Protocol } from '../../pages/api/_lib/mcp/MCPTypes';
 
 export class MCPBuilder {
   private id: string;

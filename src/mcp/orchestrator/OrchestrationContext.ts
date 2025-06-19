@@ -1,4 +1,4 @@
-import { MCP, Variable, StepResult } from '@/mcp/MCPTypes';
+import { MCP, Variable, StepResult } from '../../pages/api/_lib/mcp/MCPTypes';
 
 export interface SessionState {
   variables: Record<string, any>;

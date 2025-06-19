@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { assembleMCP } from '@/components/mcp/assembleMCP';
-import { MCP } from '@/mcp/MCPTypes';
+import { MCP } from '../../../pages/api/_lib/mcp/MCPTypes';
 import Button from '@/components/ui/Button';
 import { apiFetch } from '@/utils/apiFetch';
 

@@ -89,20 +89,20 @@ export default function Sidebar() {
     >
       {/* Branding/Header */}
       <div className="flex items-center h-16 mb-4 pl-6 justify-start">
-        <Link href="/" legacyBehavior>
-          <a className="flex items-center focus:outline-none">
-            {isExpanded ? (
-              <span className="font-bold text-xl text-docs-text dark:text-docs-dark-text">DcisionAI</span>
-            ) : (
-              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="16" cy="16" r="16" fill="#18181b" />
-                <text x="16" y="22" textAnchor="middle" fontSize="16" fill="#fff" fontWeight="bold" fontFamily="Inter, Arial, sans-serif">D</text>
-              </svg>
-            )}
-          </a>
+        <Link 
+          href="/" 
+          className="flex items-center focus:outline-none"
+        >
+          {isExpanded ? (
+            <span className="font-bold text-xl text-docs-text dark:text-docs-dark-text">DcisionAI</span>
+          ) : (
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="16" cy="16" r="16" fill="#18181b" />
+              <text x="16" y="22" textAnchor="middle" fontSize="16" fill="#fff" fontWeight="bold" fontFamily="Inter, Arial, sans-serif">D</text>
+            </svg>
+          )}
         </Link>
       </div>
-
       {/* Carat button always visible */}
       <button
         onClick={toggleSidebar}
@@ -116,7 +116,6 @@ export default function Sidebar() {
           <ChevronRightIcon className="w-3 h-3 text-[#8B949E] dark:text-[#ECEDEE]" />
         )}
       </button>
-
       {/* Sidebar content */}
       <div className="pt-12 px-2">
         {sections.map((section) => (
@@ -134,17 +133,15 @@ export default function Sidebar() {
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={navItemClass(isActive)}
+                    className={`${navItemClass(isActive)} group`}
                     title={item.name}
                   >
-                    <Icon className="w-5 h-5 mr-2 text-docs-muted dark:text-docs-dark-muted" />
+                    <Icon className="w-5 h-5 mr-2 text-docs-muted dark:text-docs-dark-muted group-hover:text-docs-accent dark:group-hover:text-docs-accent" />
                     {isExpanded && (
-                      <span className="text-sm text-docs-muted dark:text-docs-dark-muted hover:text-docs-accent dark:hover:text-docs-accent">{item.name}</span>
-                    )}
-                    {item.badge && isExpanded && (
-                      <span>
-                        {item.badge}
-                      </span>
+                      <>
+                        <span className="text-sm text-docs-muted dark:text-docs-dark-muted group-hover:text-docs-accent dark:group-hover:text-docs-accent">{item.name}</span>
+                        {item.badge && <span>{item.badge}</span>}
+                      </>
                     )}
                   </Link>
                 );

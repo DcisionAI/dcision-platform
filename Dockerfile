@@ -70,8 +70,8 @@ CMD ["sh", "-c", "python3 agno-backend/main.py & yarn dev"]
 # Production stage
 FROM node:20-alpine AS production
 
-# Install Python, pip, and PostgreSQL client
-RUN apk add --no-cache python3 py3-pip postgresql-client
+# Install PostgreSQL client and networking tools for debugging
+RUN apk add --no-cache postgresql-client net-tools
 
 WORKDIR /app
 
@@ -84,20 +84,16 @@ COPY package.json yarn.lock ./
 COPY agno-package/ ./agno-package/
 RUN yarn install --production --frozen-lockfile
 
-## Copy Agno backend and install Python dependencies
-COPY agno-backend/ ./agno-backend/
-RUN pip3 install --break-system-packages -r agno-backend/requirements.txt
-
 # Copy startup script
 COPY scripts/start-production.sh ./scripts/
-COPY scripts/verify-highs-mcp.js ./scripts/
-COPY scripts/verify-single-service.js ./scripts/
 RUN chmod +x ./scripts/start-production.sh
 
 # Set runtime environment variables
 ENV NODE_ENV=production
-# All secrets and runtime env vars are set at runtime, not build time
-EXPOSE 8080 8000
+ENV PORT=8080
 
-# Start both services using the startup script
+# Expose the port that Cloud Run expects
+EXPOSE 8080
+
+# Start Next.js application using the startup script
 CMD ["./scripts/start-production.sh"] 

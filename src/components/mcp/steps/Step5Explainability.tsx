@@ -100,7 +100,6 @@ export default function Step5Explainability({ solverResponse }: { solverResponse
           </nav>
         </div>
       </div>
-
       {/* Main Content */}
       <div className="flex-1 p-6 overflow-y-auto">
         {/* Header */}
@@ -181,17 +180,17 @@ export default function Step5Explainability({ solverResponse }: { solverResponse
             )
           ) : (
             // Other explanation types: fetch from LLM endpoint
-            <>  {
-              loading ? (
-                <p>Loading explanation...</p>
-              ) : error ? (
-                <p className="text-red-600">{error}</p>
-              ) : explanationData ? (
-                <pre className="text-sm whitespace-pre-wrap break-all overflow-x-auto max-w-full">{explanationData}</pre>
-              ) : (
-                <p>Click on this tab to generate explanation.</p>
-              )
-            } </>
+            (<>  {
+                loading ? (
+                  <p>Loading explanation...</p>
+                ) : error ? (
+                  <p className="text-red-600">{error}</p>
+                ) : explanationData ? (
+                  <pre className="text-sm whitespace-pre-wrap break-all overflow-x-auto max-w-full">{explanationData}</pre>
+                ) : (
+                  <p>Click on this tab to generate explanation.</p>
+                )
+              } </>)
           )}
         </div>
       </div>

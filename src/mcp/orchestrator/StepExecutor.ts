@@ -1,4 +1,4 @@
-import { Step, StepResult } from '@/mcp/MCPTypes';
+import { Step, StepResult } from '../../pages/api/_lib/mcp/MCPTypes';
 import { OrchestrationContext } from './OrchestrationContext';
 
 interface RetryPolicy {
