@@ -251,7 +251,7 @@ async function handleOptimizationRequest(message: string, knowledgeBaseContext =
       }
     }
 
-    Return ONLY the JSON object, no additional text.`;
+    IMPORTANT: Return ONLY the JSON object, no markdown formatting, no code blocks, no additional text or explanations.`;
 
   try {
     const completion = await openai.chat.completions.create({
@@ -260,12 +260,46 @@ async function handleOptimizationRequest(message: string, knowledgeBaseContext =
       temperature: 0.1,
     });
 
-    const problemJson = completion.choices[0].message.content;
+    let problemJson = completion.choices[0].message.content;
     if (!problemJson) {
       throw new Error('No problem definition generated');
     }
 
-    const problem = JSON.parse(problemJson);
+    // Clean up the response to extract pure JSON
+    problemJson = problemJson.trim();
+    
+    // Remove markdown code blocks if present
+    if (problemJson.startsWith('```json')) {
+      problemJson = problemJson.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (problemJson.startsWith('```')) {
+      problemJson = problemJson.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+
+    // Try to parse the JSON
+    let problem;
+    try {
+      problem = JSON.parse(problemJson);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      console.error('Raw response:', problemJson);
+      
+      // Try to extract JSON from the response if it contains other text
+      const jsonMatch = problemJson.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          problem = JSON.parse(jsonMatch[0]);
+        } catch (secondParseError: any) {
+          throw new Error(`Failed to parse JSON: ${secondParseError.message}`);
+        }
+      } else {
+        throw new Error('No valid JSON found in response');
+      }
+    }
+    
+    // Validate the problem structure
+    if (!problem.objective || !problem.variables || !problem.constraints) {
+      throw new Error('Invalid problem structure: missing required fields');
+    }
     
     // Solve the optimization problem
     const solution = await solver.solveConstructionOptimization(problem);

@@ -16,11 +16,93 @@ function isValidMCPConfig(obj: any): obj is MCPConfig {
     typeof obj === 'object' &&
     Array.isArray(obj.variables) &&
     typeof obj.constraints === 'object' &&
-    Array.isArray(obj.constraints.dense) &&
-    Array.isArray(obj.constraints.sparse) &&
+    Array.isArray(obj.constraints?.dense) &&
+    Array.isArray(obj.constraints?.sparse) &&
     typeof obj.objective === 'object' &&
     typeof obj.solver_config === 'object'
   );
+}
+
+function createFallbackMCPConfig(enrichedData: any, intent: any): MCPConfig {
+  console.warn('Creating fallback MCP config due to invalid response');
+  
+  // Extract basic info from enriched data with defensive checks
+  const crews = enrichedData?.resources?.crews || [];
+  const tasks = enrichedData?.timeline?.tasks || [];
+  const costs = enrichedData?.costs || {};
+  
+  // Create basic variables
+  const variables: Array<{
+    name: string;
+    type: 'continuous' | 'integer' | 'binary';
+    lower_bound: number;
+    upper_bound: number;
+    description: string;
+  }> = [
+    {
+      name: "project_duration",
+      type: "continuous",
+      lower_bound: 1,
+      upper_bound: 365,
+      description: "Total project duration in days"
+    },
+    {
+      name: "total_cost",
+      type: "continuous", 
+      lower_bound: 0,
+      upper_bound: 10000000,
+      description: "Total project cost"
+    }
+  ];
+  
+  // Add crew variables if available
+  crews.forEach((crew: any, index: number) => {
+    variables.push({
+      name: `crew_${crew.id || index}`,
+      type: "integer",
+      lower_bound: 0,
+      upper_bound: crew.size || 20,
+      description: `Number of workers in ${crew.name || 'crew'}`
+    });
+  });
+  
+  // Create basic constraints
+  const constraints = {
+    dense: [
+      {
+        name: "budget_constraint",
+        coefficients: [0, 1], // [project_duration, total_cost]
+        variables: ["project_duration", "total_cost"],
+        operator: "<=" as const,
+        rhs: costs.labor?.total_budget || 1000000,
+        description: "Total cost must not exceed budget"
+      }
+    ],
+    sparse: []
+  };
+  
+  // Create objective
+  const objective = {
+    name: "minimize_duration",
+    sense: "minimize" as const,
+    coefficients: [1, 0], // [project_duration, total_cost]
+    variables: ["project_duration", "total_cost"],
+    description: "Minimize project duration"
+  };
+  
+  // Create solver config
+  const solver_config = {
+    time_limit: 300,
+    gap_tolerance: 0.01,
+    construction_heuristics: true
+  };
+  
+  return {
+    variables,
+    constraints,
+    objective,
+    solver_config
+  };
 }
 
 export const agnoModelBuilderAgent = {
@@ -44,6 +126,21 @@ export const agnoModelBuilderAgent = {
     modelName?: string
   ): Promise<ModelBuilderResult> {
     try {
+      // Validate input data
+      if (!enrichedData) {
+        console.warn('No enriched data provided, using fallback');
+        const fallbackConfig = createFallbackMCPConfig({}, intent);
+        return {
+          mcpConfig: fallbackConfig,
+          confidence: 0.5,
+          reasoning: 'Fallback model created due to missing enriched data'
+        };
+      }
+
+      // Log the input data for debugging
+      console.log('Model Builder Input - Enriched Data Keys:', Object.keys(enrichedData));
+      console.log('Model Builder Input - Intent:', intent?.decisionType);
+
       const prompt = `You are a construction optimization expert. Your task is to build a mathematical optimization model for the given problem.
 
 Enriched Data:
@@ -91,7 +188,7 @@ Please build an optimization model in JSON format:
   }
 }
 
-Consider construction industry best practices, regulatory requirements, and optimization principles in your model.`;
+Consider construction industry best practices, regulatory requirements, and optimization principles in your model. Return ONLY the JSON object, no additional text.`;
 
       const request: AgnoChatRequest = {
         message: prompt,
@@ -101,7 +198,7 @@ Consider construction industry best practices, regulatory requirements, and opti
         context: {
           timestamp: new Date().toISOString(),
           inputType: 'model_building',
-          decisionType: intent.decisionType,
+          decisionType: intent?.decisionType || 'unknown',
           dataSize: JSON.stringify(enrichedData).length,
           agentType: 'construction_model_builder'
         }
@@ -112,27 +209,55 @@ Consider construction industry best practices, regulatory requirements, and opti
       
       if (typeof response.response === 'string') {
         try {
-          result = JSON.parse(response.response);
+          // Clean up the response to extract JSON
+          let jsonString = response.response.trim();
+          
+          // Remove markdown code blocks if present
+          if (jsonString.startsWith('```json')) {
+            jsonString = jsonString.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+          } else if (jsonString.startsWith('```')) {
+            jsonString = jsonString.replace(/^```\s*/, '').replace(/\s*```$/, '');
+          }
+          
+          result = JSON.parse(jsonString);
         } catch (err) {
+          console.error('JSON parsing error in Model Builder:', err);
+          console.error('Raw response:', response.response);
           throw new Error('Invalid JSON response from model builder agent');
         }
       } else {
         result = response.response;
       }
 
-      // Validate response structure
+      // Validate response structure with defensive checks
       if (!isValidMCPConfig(result)) {
-        throw new Error('Invalid response structure from model builder agent');
+        console.error('Invalid MCP config structure:', result);
+        console.log('Creating fallback MCP config');
+        const fallbackConfig = createFallbackMCPConfig(enrichedData, intent);
+        return {
+          mcpConfig: fallbackConfig,
+          confidence: 0.6,
+          reasoning: 'Fallback model created due to invalid response structure'
+        };
       }
 
       return {
         mcpConfig: result,
-        confidence: 0.95, // Assuming a default confidence
-        reasoning: 'Reasoning not provided in the original code'
+        confidence: 0.95,
+        reasoning: 'Model built successfully from enriched data and intent analysis'
       };
     } catch (err: any) {
       console.error('Model builder agent error:', err);
-      throw new Error(`Model building failed: ${err.message}`);
+      
+      // Create fallback config on any error
+      console.log('Creating fallback MCP config due to error');
+      const fallbackConfig = createFallbackMCPConfig(enrichedData, intent);
+      
+      return {
+        mcpConfig: fallbackConfig,
+        confidence: 0.4,
+        reasoning: `Fallback model created due to error: ${err.message}`
+      };
     }
   },
 

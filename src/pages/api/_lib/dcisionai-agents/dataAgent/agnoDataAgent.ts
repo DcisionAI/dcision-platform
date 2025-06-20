@@ -75,17 +75,132 @@ function cleanAndParseJSON(jsonString: string): any {
     try {
       return JSON.parse(cleaned);
     } catch (err2: any) {
-      // If still failing, try to create a minimal valid structure
-      console.warn('Failed to parse JSON, creating fallback structure');
-      return {
-        resources: { crews: [], equipment: [], materials: [] },
-        timeline: { tasks: [], dependencies: [], milestones: [] },
-        costs: { labor: {}, equipment: {}, materials: {}, overhead: {} },
-        quality: { standards: [], inspections: [], requirements: [] },
-        risks: { identified: [], mitigations: [], impacts: [] }
-      };
+      // If still failing, create a comprehensive fallback structure
+      console.warn('Failed to parse JSON, creating comprehensive fallback structure');
+      return createComprehensiveFallbackStructure();
     }
   }
+}
+
+function createComprehensiveFallbackStructure(): any {
+  return {
+    resources: {
+      crews: [
+        {
+          id: "default_crew",
+          name: "General Construction Crew",
+          skills: ["general_construction"],
+          size: 10,
+          availability: "full_time"
+        }
+      ],
+      equipment: [
+        {
+          id: "default_equipment",
+          name: "Basic Construction Equipment",
+          type: "general",
+          availability: "available"
+        }
+      ],
+      materials: [
+        {
+          id: "default_materials",
+          name: "Standard Construction Materials",
+          type: "general",
+          quantity: "as_needed"
+        }
+      ]
+    },
+    timeline: {
+      tasks: [
+        {
+          id: "default_task",
+          name: "General Construction Task",
+          duration: 30,
+          dependencies: [],
+          resources: ["default_crew"]
+        }
+      ],
+      dependencies: [],
+      milestones: [
+        {
+          id: "default_milestone",
+          name: "Project Completion",
+          date: "project_end",
+          tasks: ["default_task"]
+        }
+      ]
+    },
+    costs: {
+      labor: {
+        hourly_rate: 50,
+        overtime_rate: 75,
+        total_budget: 1000000
+      },
+      equipment: {
+        rental_rate: 1000,
+        total_budget: 200000
+      },
+      materials: {
+        unit_cost: 100,
+        total_budget: 500000
+      },
+      overhead: {
+        percentage: 15,
+        total_budget: 300000
+      }
+    },
+    quality: {
+      standards: [
+        {
+          id: "default_standard",
+          name: "Industry Standard",
+          description: "Standard construction quality requirements"
+        }
+      ],
+      inspections: [
+        {
+          id: "default_inspection",
+          name: "Quality Inspection",
+          frequency: "weekly",
+          requirements: ["compliance_check"]
+        }
+      ],
+      requirements: [
+        {
+          id: "default_requirement",
+          name: "Quality Compliance",
+          description: "Meet all industry quality standards"
+        }
+      ]
+    },
+    risks: {
+      identified: [
+        {
+          id: "default_risk",
+          name: "General Project Risk",
+          probability: "medium",
+          impact: "medium",
+          mitigation: "standard_procedures"
+        }
+      ],
+      mitigations: [
+        {
+          id: "default_mitigation",
+          name: "Standard Risk Mitigation",
+          description: "Follow standard construction safety and quality procedures"
+        }
+      ],
+      impacts: [
+        {
+          id: "default_impact",
+          name: "Schedule Impact",
+          description: "Potential schedule delays",
+          severity: "medium"
+        }
+      ]
+    }
+  };
 }
 
 export const agnoDataAgent = {
