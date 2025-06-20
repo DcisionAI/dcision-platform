@@ -1,13 +1,13 @@
 // End-to-end orchestrating workflow for the construction vertical using Agno-based agents
-import { agnoIntentAgent } from '../pages/api/_lib/dcisionai-agents/intentAgent/agnoIntentAgent';
-import { agnoDataAgent } from '../pages/api/_lib/dcisionai-agents/dataAgent/agnoDataAgent';
-import { agnoModelBuilderAgent } from '../pages/api/_lib/dcisionai-agents/modelBuilderAgent/agnoModelBuilderAgent';
-import { agnoExplainAgent } from '../pages/api/_lib/dcisionai-agents/explainAgent/agnoExplainAgent';
+import { agnoIntentAgent } from '@/pages/api/_lib/dcisionai-agents/intentAgent/agnoIntentAgent';
+import { agnoDataAgent } from '@/pages/api/_lib/dcisionai-agents/dataAgent/agnoDataAgent';
+import { agnoModelBuilderAgent } from '@/pages/api/_lib/dcisionai-agents/modelBuilderAgent/agnoModelBuilderAgent';
+import { agnoExplainAgent } from '@/pages/api/_lib/dcisionai-agents/explainAgent/agnoExplainAgent';
 import { v4 as uuidv4 } from 'uuid';
-import { withRetry } from '../utils/agno/retry';
-import { withProgress, ProgressTracker } from '../utils/agno/progress';
-import { intentMemory, dataMemory, modelMemory, explainMemory } from '../utils/agno/memory';
-import { AgnoError, ErrorCodes } from '../utils/agno/errors';
+import { withRetry } from '@/utils/agno/retry';
+import { withProgress, ProgressTracker } from '@/utils/agno/progress';
+import { intentMemory, dataMemory, modelMemory, explainMemory } from '@/utils/agno/memory';
+import { AgnoError, ErrorCodes } from '@/utils/agno/errors';
 
 export interface WorkflowResult {
   sessionId: string;
