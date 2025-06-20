@@ -78,27 +78,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-// ✅ HiGHS Solver Implementation (currently mock)
+// ✅ HiGHS Solver Implementation (real integration)
 async function solveWithHiGHS(problem: any) {
-  // TODO: Replace with actual HiGHS integration
-  // For now, return mock solution for demonstration
-  
-  console.log('Solving with HiGHS:', JSON.stringify(problem, null, 2));
-  
-  // Simulate solving time
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  return {
-    status: 'optimal',
-    objectiveValue: 42.0,
-    variables: {
-      x1: 10.5,
-      x2: 15.2,
-      x3: 8.7
-    },
-    solveTime: 1.2,
-    iterations: 150,
-    solver: 'highs',
-    message: 'Mock solution - HiGHS integration pending'
-  };
+  try {
+    console.log('Solving with HiGHS:', JSON.stringify(problem, null, 2));
+    
+    // Import and use the real HiGHS solver
+    const { HiGHSMCPSolver } = await import('@/pages/api/_lib/solvers/highs');
+    const solver = new HiGHSMCPSolver();
+    
+    // Initialize solver
+    await solver.initialize();
+    
+    // Solve the problem
+    const result = await solver.solve(problem);
+    
+    // Cleanup
+    await solver.shutdown();
+    
+    // Convert to expected format
+    return {
+      status: result.status,
+      objectiveValue: result.objective_value,
+      variables: result.solution.reduce((acc: any, sol: any) => {
+        acc[sol.name] = sol.value;
+        return acc;
+      }, {}),
+      solveTime: result.solve_time_ms / 1000, // Convert to seconds
+      iterations: result.iterations,
+      solver: 'highs',
+      message: 'Real HiGHS solution'
+    };
+  } catch (error) {
+    console.error('Error solving with HiGHS:', error);
+    throw error;
+  }
 } 

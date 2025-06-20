@@ -2,7 +2,7 @@
 
 ## Overview
 
-DcisionAI is a modern, cloud-native platform for construction optimization and decision-making. The platform provides a unified interface for solving complex construction problems using mathematical optimization techniques through the **Model Context Protocol (MCP)** framework.
+DcisionAI is a modern, cloud-native platform for construction optimization and decision-making. The platform provides a unified interface for solving complex construction problems using mathematical optimization techniques through the **Model Context Protocol (MCP)** framework and a sophisticated **multi-agent AI system**.
 
 ## System Architecture
 
@@ -25,6 +25,16 @@ DcisionAI is a modern, cloud-native platform for construction optimization and d
 │  │  └─────────────────┘  └─────────────────────────────────┘   │ │
 │  │                                                         │   │
 │  │  ┌─────────────────────────────────────────────────────┐   │ │
+│  │  │              AI Agent Layer                         │   │ │
+│  │  │                                                     │   │ │
+│  │  │ - Intent Agent (agnoIntentAgent)                   │   │ │
+│  │  │ - Data Agent (agnoDataAgent)                       │   │ │
+│  │  │ - Model Builder Agent (agnoModelBuilderAgent)      │   │ │
+│  │  │ - Explain Agent (agnoExplainAgent)                 │   │ │
+│  │  │ - Agno Python Backend Integration                  │   │ │
+│  │  └─────────────────────────────────────────────────────┘   │ │
+│  │                                                         │   │
+│  │  ┌─────────────────────────────────────────────────────┐   │ │
 │  │  │              MCP Layer                              │   │ │
 │  │  │                                                     │   │ │
 │  │  │ - MCP Assembly (assembleMCP.ts)                    │   │ │
@@ -38,7 +48,7 @@ DcisionAI is a modern, cloud-native platform for construction optimization and d
 │  │  │                                                     │   │ │
 │  │  │ - MCPSolverClient (HTTP/WebSocket)                 │   │ │
 │  │  │ - MCPSolverManager (Multi-solver)                  │   │ │
-│  │  │ - HiGHS (implemented - mock)                       │   │ │
+│  │  │ - HiGHS (implemented - real engine)                │   │ │
 │  │  │ - OR-Tools (placeholder)                           │   │ │
 │  │  │ - Gurobi (placeholder)                             │   │ │
 │  │  │ - CPLEX (placeholder)                              │   │ │
@@ -49,11 +59,12 @@ DcisionAI is a modern, cloud-native platform for construction optimization and d
 │  │                External Services                        │   │
 │  │                                                         │   │
 │  │  ┌─────────────────┐  ┌─────────────────────────────────┐   │ │
-│  │  │   OpenAI API    │  │        Pinecone                │   │ │
-│  │  │                 │  │                                 │   │ │
-│  │  │ - GPT-4         │  │ - Vector Database              │   │ │
-│  │  │ - Embeddings    │  │ - Knowledge Graph              │   │ │
-│  │  │ - Chat Completions│ │ - RAG System                   │   │ │
+│  │  │   Agno Backend  │  │        Pinecone                │   │ │
+│  │  │   (Python)      │  │                                 │   │ │
+│  │  │                 │  │ - Vector Database              │   │ │
+│  │  │ - Claude 3      │  │ - Knowledge Graph              │   │ │
+│  │  │ - GPT-4         │  │ - RAG System                   │   │ │
+│  │  │ - Agent Registry│  │                                 │   │ │
 │  │  └─────────────────┘  └─────────────────────────────────┘   │ │
 │  └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
@@ -72,7 +83,96 @@ DcisionAI is a modern, cloud-native platform for construction optimization and d
 - **Dashboard**: Real-time monitoring and analytics
 - **MCP Builder**: Interactive Model Context Protocol creation interface
 
-### 2. API Layer
+### 2. AI Agent Layer
+
+**Location**: `src/pages/api/_lib/dcisionai-agents/`
+
+The AI Agent Layer is the intelligence core of DcisionAI, providing specialized AI agents that work together to understand, process, and solve complex construction problems.
+
+#### **Agent Architecture Overview**
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Intent Agent  │───▶│   Data Agent    │───▶│ Model Builder   │
+│                 │    │                 │    │     Agent       │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  Explain Agent  │    │   HiGHS Solver  │    │  Construction   │
+│                 │    │   (Real Engine) │    │   Workflow      │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+#### **Agent Details**
+
+##### **Intent Agent** (`agnoIntentAgent.ts`)
+- **Purpose**: Analyzes user input to determine execution path
+- **Capabilities**:
+  - Classifies requests as RAG, Optimization, or Hybrid
+  - Extracts keywords and confidence scores
+  - Generates refined queries for knowledge base
+  - Determines optimization problem descriptions
+- **Output**: `{ decisionType, confidence, reasoning, ragQuery?, optimizationQuery?, keywords, primaryIntent }`
+- **Integration**: Real Claude 3/GPT-4 via Agno backend
+
+##### **Data Agent** (`agnoDataAgent.ts`)
+- **Purpose**: Enriches customer data with construction-specific context
+- **Capabilities**:
+  - Analyzes raw project data
+  - Extracts resources, timeline, costs, quality, and risks
+  - Adds construction industry constraints
+  - Validates data completeness
+- **Output**: `{ enrichedData, constraints, metadata }`
+- **Features**: Robust JSON parsing with fallback structures
+
+##### **Model Builder Agent** (`agnoModelBuilderAgent.ts`)
+- **Purpose**: Converts enriched data into mathematical optimization models
+- **Capabilities**:
+  - Creates MCP (Model Context Protocol) configurations
+  - Defines variables, constraints, and objectives
+  - Configures solver parameters
+  - Handles different optimization problem types
+- **Output**: `{ mcpConfig, confidence, reasoning }`
+- **Integration**: MCP-compatible model generation
+
+##### **Explain Agent** (`agnoExplainAgent.ts`)
+- **Purpose**: Generates human-readable explanations of solutions
+- **Capabilities**:
+  - Explains RAG results with source attribution
+  - Interprets optimization solutions
+  - Provides actionable recommendations
+  - Creates executive summaries
+- **Output**: `{ summary, keyDecisions, recommendations, insights }`
+- **Features**: Multi-format explanation (RAG, Optimization, Hybrid)
+
+#### **Agent Workflow Integration**
+
+The agents are orchestrated through the **Construction Workflow** (`constructionWorkflow.ts`):
+
+```typescript
+1. Intent Analysis → 2. Data Enrichment → 3. Model Building → 
+4. Human Review (optional) → 5. Optimization Solving → 6. Explanation
+```
+
+**Key Features**:
+- ✅ **Real-time Progress Tracking**: Live workflow progress updates
+- ✅ **Error Handling & Retry Logic**: Robust error management with retry mechanisms
+- ✅ **Session Management**: Persistent conversation context across agents
+- ✅ **Memory Persistence**: Agent memory for context continuity
+- ✅ **Human-in-the-Loop Support**: Optional human review steps
+
+#### **Agno Backend Integration**
+
+**Location**: `agno-backend/` and `src/pages/api/_lib/agno-client.ts`
+
+- **Python FastAPI Backend**: Real AI model integration
+- **TypeScript Client**: Clean interface to Python backend
+- **Model Support**: Claude 3 (Haiku, Sonnet, Opus) and GPT-4
+- **Agent Registry**: Persistent agent management
+- **Session Management**: Conversation context persistence
+
+### 3. API Layer
 
 **Location**: `src/pages/api/`
 
@@ -82,7 +182,7 @@ DcisionAI is a modern, cloud-native platform for construction optimization and d
 - **MCP APIs**: Model Context Protocol management and execution
 - **Authentication**: API key validation and rate limiting
 
-### 3. MCP Layer
+### 4. MCP Layer
 
 **Location**: `src/components/mcp/` and `src/pages/api/_lib/mcp/`
 
@@ -128,11 +228,63 @@ interface MCP {
 - **MCPTypes.ts**: TypeScript type definitions
 - **MCPBuilder**: Fluent interface for programmatic MCP creation
 
-### 4. Solver Layer
+### 5. Solver Layer
 
 **Location**: `src/pages/api/_lib/solvers/`
 
 The solver layer provides mathematical optimization capabilities through MCP-compatible interfaces:
+
+#### **HiGHS Solver Implementation**
+
+**Location**: `src/pages/api/_lib/solvers/highs.ts`
+
+The HiGHS solver is now **fully implemented** with real optimization capabilities:
+
+##### **Real Implementation Features**
+- ✅ **Actual HiGHS Process**: Spawns real HiGHS v1.11.0 process
+- ✅ **MPS Format Support**: Converts problems to standard MPS format
+- ✅ **Solution Parsing**: Reads real HiGHS solution files
+- ✅ **Error Handling**: Comprehensive error management
+- ✅ **Temporary File Management**: Automatic cleanup of temporary files
+
+##### **Technical Implementation**
+```typescript
+export class HiGHSMCPSolver {
+  // Real HiGHS process spawning
+  private process = spawn('highs', ['--presolve', 'off']);
+  
+  // MPS format conversion
+  private formatProblemToMPS(problem: any): string
+  
+  // Real solution parsing
+  private parseHiGHSOutput(output: string, solutionFile?: string): HiGHSResult
+  
+  // Full optimization workflow
+  async solve(problem: any): Promise<HiGHSResult>
+}
+```
+
+##### **Problem Format Support**
+- **Linear Programming (LP)**: Continuous variable optimization
+- **Mixed-Integer Programming (MIP)**: Integer and binary variables
+- **Constraint Types**: ≤, ≥, = constraints
+- **Variable Bounds**: Lower and upper bounds
+- **Objective Functions**: Minimize/Maximize linear objectives
+
+##### **Solution Output**
+```typescript
+interface HiGHSResult {
+  status: 'optimal' | 'infeasible' | 'unbounded' | 'time_limit';
+  objective_value: number;
+  solution: Array<{
+    name: string;
+    value: number;
+    reduced_cost: number;
+  }>;
+  solve_time_ms: number;
+  iterations: number;
+}
+```
 
 #### **MCPSolverClient**
 - **HTTP/WebSocket Support**: Multiple transport protocols
@@ -146,40 +298,47 @@ The solver layer provides mathematical optimization capabilities through MCP-com
 - **Health Checks**: Solver availability monitoring
 - **Load Balancing**: Distributed solving across multiple solvers
 
-| Solver | Status | License | Use Case | MCP Support |
-|--------|--------|---------|----------|-------------|
-| **HiGHS** | ✅ Implemented | Open Source | Linear and mixed-integer programming | ✅ Full |
-| **OR-Tools** | 🔄 Placeholder | Open Source | Constraint programming, routing | 🔄 Planned |
-| **Gurobi** | 🔄 Placeholder | Commercial | High-performance optimization | 🔄 Planned |
-| **CPLEX** | 🔄 Placeholder | Commercial | Enterprise optimization | 🔄 Planned |
+| Solver | Status | License | Use Case | MCP Support | Implementation |
+|--------|--------|---------|----------|-------------|----------------|
+| **HiGHS** | ✅ Implemented | Open Source | Linear and mixed-integer programming | ✅ Full | Real engine with MPS format |
+| **OR-Tools** | 🔄 Placeholder | Open Source | Constraint programming, routing | 🔄 Planned | Mock implementation |
+| **Gurobi** | 🔄 Placeholder | Commercial | High-performance optimization | 🔄 Planned | Mock implementation |
+| **CPLEX** | 🔄 Placeholder | Commercial | Enterprise optimization | 🔄 Planned | Mock implementation |
 
-### 5. External Services
+### 6. External Services
 
-- **OpenAI API**: GPT-4 for natural language processing and problem understanding
+- **Agno Python Backend**: Real AI model integration (Claude 3, GPT-4)
 - **Pinecone**: Vector database for knowledge graph and RAG system
 - **Google Cloud Run**: Hosting and deployment platform
 
 ## Data Flow
 
-### 1. MCP Creation Flow
+### 1. Agent-Driven Workflow
+
+```
+User Input → Intent Agent → Data Agent → Model Builder Agent → 
+HiGHS Solver → Explain Agent → Structured Response
+```
+
+### 2. MCP Creation Flow
 
 ```
 User Input → MCP Builder UI → Step-by-Step Assembly → MCP Validation → Protocol Definition → Ready for Execution
 ```
 
-### 2. MCP Execution Flow
+### 3. MCP Execution Flow
 
 ```
 MCP Definition → Protocol Steps → Solver Selection → Problem Solving → Results Analysis → Response Generation
 ```
 
-### 3. Problem Solving Flow
+### 4. Problem Solving Flow
 
 ```
-User Input → Frontend → API Route → MCP Layer → Solver Layer → External Solver → Solution → Frontend Display
+User Input → Frontend → API Route → Agent Layer → MCP Layer → Solver Layer → External Solver → Solution → Frontend Display
 ```
 
-### 4. Chat Flow
+### 5. Chat Flow
 
 The chat interface provides a dynamic, intelligent layer for interacting with the DcisionAI platform. It uses a sophisticated routing mechanism to handle different types of user queries, from simple knowledge base questions to complex, hybrid optimization problems.
 
@@ -189,20 +348,17 @@ graph TD
         A["User sends message to /api/dcisionai/construction/chat"]
     end
 
-    subgraph "Intelligent Routing"
-        B{"LLM-based Router<br/>Classifies query"}
-    end
-
-    subgraph "Query Handlers"
-        C["handleRAGRequest<br/>(Knowledge Base Query)"]
-        D["handleOptimizationRequest<br/>(Optimization Task)"]
-        E["handleHybridRequest<br/>(RAG + Optimization)"]
+    subgraph "AI Agent Layer"
+        B["Intent Agent<br/>Classifies query"]
+        C["Data Agent<br/>Enriches data"]
+        D["Model Builder Agent<br/>Creates optimization model"]
+        E["Explain Agent<br/>Generates explanations"]
     end
 
     subgraph "Backend Services"
-        F["Pinecone Vector DB"]
-        G["Optimization Solver (e.g., HiGHS)"]
-        H["OpenAI LLM<br/>(for synthesis & model generation)"]
+        F["Agno Python Backend<br/>(Claude 3/GPT-4)"]
+        G["HiGHS Solver<br/>(Real Engine)"]
+        H["Pinecone Vector DB"]
     end
 
     subgraph "Response Generation"
@@ -211,48 +367,44 @@ graph TD
     end
 
     A --> B;
-    B -->|"rag"| C;
-    B -->|"optimization"| D;
-    B -->|"hybrid"| E;
-
-    C --> F;
-    F --> H;
-    H -->|RAG response| I;
-
-    D --> H;
-    H --> G;
-    G --> I;
-
-    E --> F;
-    F -->|"KB Context"| E;
-    E --> D;
-
+    B -->|"RAG"| H;
+    B -->|"Optimization"| C;
+    B -->|"Hybrid"| C;
+    
+    C --> D;
+    D --> G;
+    G --> E;
+    
+    H --> F;
+    F --> E;
+    
+    E --> I;
     I --> J;
 
-    classDef router fill:#e3f2fd,stroke:#01579b;
-    classDef handler fill:#f3e5f5,stroke:#4a148c;
+    classDef agent fill:#e3f2fd,stroke:#01579b;
     classDef service fill:#e8f5e9,stroke:#2e7d32;
+    classDef solver fill:#fff3e0,stroke:#e65100;
 
-    class B router;
-    class C,D,E handler;
-    class F,G,H service;
+    class B,C,D,E agent;
+    class F,H service;
+    class G solver;
 ```
 
 **Workflow Breakdown:**
 
-1.  **Query Classification**: When a user sends a message, it's first processed by an **LLM-based router**. This router analyzes the natural language to classify the user's intent into one of three categories:
-    *   `rag`: A request for information from the knowledge base.
-    *   `optimization`: A request to solve a mathematical optimization problem.
-    *   `hybrid`: A request that requires both knowledge retrieval and optimization.
+1. **Query Classification**: The **Intent Agent** analyzes natural language to classify user intent into RAG, Optimization, or Hybrid categories.
 
-2.  **Request Handling**: Based on the classification, the request is passed to the appropriate handler:
-    *   **`handleRAGRequest`**: For `rag` queries, this function generates embeddings from the user's message, queries the **Pinecone vector database** to find relevant documents, and uses an LLM to synthesize a natural language answer from the retrieved context.
-    *   **`handleOptimizationRequest`**: For `optimization` queries, this function uses a powerful LLM (e.g., GPT-4) with a carefully engineered prompt to convert the user's natural language request into a structured JSON optimization problem. This problem is then passed to the appropriate **optimization solver** (e.g., HiGHS).
-    *   **`handleHybridRequest`**: For `hybrid` queries, this function first performs a RAG query to retrieve relevant context from the knowledge base. This context is then injected into the prompt for the optimization model, allowing the AI to generate a more informed and context-aware optimization problem.
+2. **Data Processing**: The **Data Agent** enriches customer data with construction-specific context and constraints.
 
-3.  **Response Generation**: The final output from the handler is formatted into a structured JSON object containing the solution, analysis, visualizations (like Mermaid charts), and a summary, which is then sent back to the user.
+3. **Model Building**: The **Model Builder Agent** converts enriched data into mathematical optimization models (MCP format).
 
-### 5. Knowledge Graph Flow
+4. **Problem Solving**: The **HiGHS Solver** solves the optimization problem using real mathematical programming.
+
+5. **Explanation**: The **Explain Agent** generates human-readable explanations with actionable insights.
+
+6. **Response Generation**: Results are formatted into structured JSON with solutions, charts, and recommendations.
+
+### 6. Knowledge Graph Flow
 
 ```
 Document Upload → Text Extraction → OpenAI Embeddings → Pinecone Storage → RAG Query → Context Retrieval → MCP Enrichment
@@ -304,15 +456,22 @@ Document Upload → Text Extraction → OpenAI Embeddings → Pinecone Storage �
 ### Backend
 - **Node.js**: JavaScript runtime
 - **Express**: Web framework (via Next.js API routes)
-- **Mathematical Optimization**: HiGHS, OR-Tools, Gurobi, CPLEX
+- **Python FastAPI**: Agno backend for AI model integration
+- **Mathematical Optimization**: HiGHS (real), OR-Tools, Gurobi, CPLEX
 - **MCP Framework**: Model Context Protocol implementation
+
+### AI & ML
+- **Claude 3**: Anthropic's latest AI models (Haiku, Sonnet, Opus)
+- **GPT-4**: OpenAI's advanced language model
+- **Multi-Agent System**: Specialized AI agents for different tasks
+- **RAG System**: Retrieval-Augmented Generation for knowledge queries
 
 ### Infrastructure
 - **Google Cloud Run**: Serverless container platform
 - **Google Cloud Build**: CI/CD pipeline
 - **Docker**: Containerization
 - **Pinecone**: Vector database
-- **OpenAI API**: AI services
+- **Agno Backend**: Python FastAPI service for AI integration
 
 ## Deployment Architecture
 
@@ -328,6 +487,7 @@ Document Upload → Text Extraction → OpenAI Embeddings → Pinecone Storage �
 │  │  │                                                 │ │ │
 │  │  │ - Frontend UI                                   │ │ │
 │  │  │ - API Routes                                    │ │ │
+│  │  │ - AI Agent Layer                                │ │ │
 │  │  │ - MCP Layer                                     │ │ │
 │  │  │ - Solver Layer                                  │ │ │
 │  │  │ - Static Assets                                 │ │ │
@@ -335,10 +495,27 @@ Document Upload → Text Extraction → OpenAI Embeddings → Pinecone Storage �
 │  └─────────────────────────────────────────────────────┘ │
 │                                                         │
 │  ┌─────────────────────────────────────────────────────┐ │
+│  │              Agno Backend Service                   │ │
+│  │                                                     │ │
+│  │  ┌─────────────────────────────────────────────────┐ │ │
+│  │  │            Python FastAPI                       │ │ │
+│  │  │                                                 │ │ │
+│  │  │ - Claude 3 Integration                          │ │ │
+│  │  │ - GPT-4 Integration                             │ │ │
+│  │  │ - Agent Registry                                │ │ │
+│  │  │ - Session Management                            │ │ │
+│  │  └─────────────────────────────────────────────────┘ │ │
+│  └─────────────────────────────────────────────────────┘ │
+│                                                         │
+│  ┌─────────────────────────────────────────────────────┐ │
 │  │              External Services                      │ │
 │  │                                                     │ │
 │  │  ┌─────────────────┐  ┌─────────────────────────────┐ │ │
-│  │  │   OpenAI API    │  │        Pinecone             │ │ │
+│  │  │   Pinecone      │  │        HiGHS Solver        │ │ │
+│  │  │                 │  │                             │ │ │
+│  │  │ - Vector DB     │  │ - Local Process             │ │ │
+│  │  │ - Knowledge     │  │ - MPS Format                │ │ │
+│  │  │   Graph         │  │ - Real Optimization         │ │ │
 │  │  └─────────────────┘  └─────────────────────────────┘ │ │
 │  └─────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────┘
@@ -351,6 +528,7 @@ Document Upload → Text Extraction → OpenAI Embeddings → Pinecone Storage �
 - **CORS Configuration**: Cross-origin request handling
 - **Environment Variables**: Secure configuration management
 - **MCP Validation**: Protocol integrity verification
+- **Agent Isolation**: Secure agent communication channels
 
 ## Scalability
 
@@ -359,6 +537,7 @@ Document Upload → Text Extraction → OpenAI Embeddings → Pinecone Storage �
 - **CDN Integration**: Static assets served via CDN
 - **Database Optimization**: Efficient vector search and caching
 - **MCP Caching**: Protocol definition caching for performance
+- **Agent Pooling**: Multiple agent instances for high availability
 
 ## Monitoring and Observability
 
@@ -367,6 +546,7 @@ Document Upload → Text Extraction → OpenAI Embeddings → Pinecone Storage �
 - **Performance Monitoring**: Response time and throughput metrics
 - **Health Checks**: Automated service health monitoring
 - **MCP Analytics**: Protocol execution tracking and optimization
+- **Agent Metrics**: AI agent performance and accuracy tracking
 
 ## Future Enhancements
 
@@ -375,4 +555,6 @@ Document Upload → Text Extraction → OpenAI Embeddings → Pinecone Storage �
 3. **Advanced Analytics**: Predictive modeling and insights
 4. **Mobile Support**: Progressive web app capabilities
 5. **Enterprise Features**: SSO, advanced permissions, audit trails
-6. **MCP Marketplace**: Community-driven protocol sharing and reuse 
+6. **MCP Marketplace**: Community-driven protocol sharing and reuse
+7. **Agent Specialization**: Domain-specific agent training and optimization
+8. **Multi-Modal AI**: Image and document processing capabilities 

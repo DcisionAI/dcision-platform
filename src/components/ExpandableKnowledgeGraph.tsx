@@ -6,32 +6,46 @@ interface KnowledgeGraphData {
   edges: VisEdge[];
 }
 
-const ExpandableKnowledgeGraph: React.FC = () => {
+interface ExpandableKnowledgeGraphProps {
+  data?: KnowledgeGraphData;
+}
+
+const ExpandableKnowledgeGraph: React.FC<ExpandableKnowledgeGraphProps> = ({ data }) => {
   const [graphData, setGraphData] = useState<KnowledgeGraphData>({ nodes: [], edges: [] });
   const [visibleNodeIds, setVisibleNodeIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchGraphData = async () => {
-      try {
-        const response = await fetch('/api/rag/graph');
-        if (!response.ok) {
-          throw new Error('Failed to fetch knowledge graph data');
+    if (data) {
+      // Use provided data
+      setGraphData(data);
+      // Start with only root nodes visible
+      const rootIds = data.nodes.filter((n: any) => !n.parent).map((n: any) => n.id);
+      setVisibleNodeIds(rootIds);
+      setIsLoading(false);
+    } else {
+      // Fetch data internally as fallback
+      const fetchGraphData = async () => {
+        try {
+          const response = await fetch('/api/rag/graph');
+          if (!response.ok) {
+            throw new Error('Failed to fetch knowledge graph data');
+          }
+          const fetchedData = await response.json();
+          setGraphData(fetchedData);
+          // Start with only root nodes visible
+          const rootIds = fetchedData.nodes.filter((n: any) => !n.parent).map((n: any) => n.id);
+          setVisibleNodeIds(rootIds);
+        } catch (err: any) {
+          setError(err.message);
+        } finally {
+          setIsLoading(false);
         }
-        const data = await response.json();
-        setGraphData(data);
-        // Start with only root nodes visible
-        const rootIds = data.nodes.filter((n: any) => !n.parent).map((n: any) => n.id);
-        setVisibleNodeIds(rootIds);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchGraphData();
-  }, []);
+      };
+      fetchGraphData();
+    }
+  }, [data]);
 
   const visibleNodes: VisNode[] = graphData.nodes.filter(n => visibleNodeIds.includes(n.id));
   const visibleEdges: VisEdge[] = graphData.edges.filter(
