@@ -3,6 +3,7 @@ import { agnoIntentAgent } from '@/pages/api/_lib/dcisionai-agents/intentAgent/a
 import { agnoDataAgent } from '@/pages/api/_lib/dcisionai-agents/dataAgent/agnoDataAgent';
 import { agnoModelBuilderAgent } from '@/pages/api/_lib/dcisionai-agents/modelBuilderAgent/agnoModelBuilderAgent';
 import { agnoExplainAgent } from '@/pages/api/_lib/dcisionai-agents/explainAgent/agnoExplainAgent';
+import { ConstructionMCPSolver } from '@/pages/api/_lib/ConstructionMCPSolver';
 import { v4 as uuidv4 } from 'uuid';
 import { withRetry } from '@/utils/agno/retry';
 import { withProgress, ProgressTracker } from '@/utils/agno/progress';
@@ -50,7 +51,14 @@ export async function constructionWorkflow({
     progressTracker.subscribe(onProgress);
   }
 
+  // Initialize the real solver
+  let solver: ConstructionMCPSolver | null = null;
+
   try {
+    // Initialize solver early
+    solver = new ConstructionMCPSolver();
+    await solver.initialize();
+
     // 1. Intent Agent: Understand the decision
     timestamps.intentStart = new Date().toISOString();
     const intent = await withProgress(
@@ -159,8 +167,12 @@ export async function constructionWorkflow({
     const solverSolution = await withProgress(
       async (progress) => {
         try {
-          // TODO: Integrate with your solver service
-          const solution = { /* ...mock solution... */ };
+          // Use the real ConstructionMCPSolver instead of mock
+          if (!solver) {
+            throw new Error('Solver not initialized');
+          }
+          
+          const solution = await solver.solveConstructionOptimization(mcp);
           progress.complete('solver', 'Solver completed', solution);
           return solution;
         } catch (error) {

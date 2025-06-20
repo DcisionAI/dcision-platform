@@ -5,7 +5,6 @@ import AgentChat from '@/components/AgentChat';
 import ScenarioAnalysis from '@/components/ScenarioAnalysis';
 import KnowledgeBase from '@/components/KnowledgeBase';
 import { DocumentTextIcon, ChatBubbleLeftRightIcon, ChartPieIcon, CommandLineIcon } from '@heroicons/react/24/outline';
-import Layout from '@/components/Layout';
 import HeroSection from "@/components/HeroSection";
 
 const ConstructionPage: React.FC = () => {
@@ -41,17 +40,15 @@ const ConstructionPage: React.FC = () => {
   ];
 
   return (
-    <Layout>
-      <div className="p-4 md:p-8">
-        <HeroSection title="DcisionAI" tagline="Optimizing construction workflows with intelligent decision-making" />
-        <WorkflowTabs 
-          tabs={tabConfig} 
-          defaultTabId="chat" 
-          verticalName="Construction" 
-          tagline=""
-        />
-      </div>
-    </Layout>
+    <div className="p-4 md:p-8">
+      <HeroSection title="DcisionAI" tagline="Optimizing construction workflows with intelligent decision-making" />
+      <WorkflowTabs
+        tabs={tabConfig}
+        defaultTabId="chat"
+        verticalName="Construction"
+        tagline=""
+      />
+    </div>
   );
 };
 
