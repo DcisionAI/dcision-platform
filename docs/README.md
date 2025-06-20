@@ -1,120 +1,94 @@
-# DcisionAI Documentation
 
-Welcome to the DcisionAI documentation. This repository contains comprehensive documentation for the DcisionAI platform, including architecture, implementation details, and usage guides.
+# DcisionAI Platform
 
-## Quick Links
-- [Architecture Overview](./architecture/overview.md)
-- [MCP Protocol & Deployment](./mcp/protocol.md)
-- [MCP Deployment & Serving](./mcp/deployment.md)
-- [API Reference](./api/README.md)
-- [Onboarding](./onboarding/README.md)
-- [Platform Features](./platform/agenticai-workflow.md)
-- [MCP Examples](./mcp/examples/README.md)
+An AgenticAI platform for AI-powered decision making and optimization.  
+Deployable on any cloud, on-premises, or local infrastructure using Docker and Terraform.
 
-## What's New
-- **MCP Deployment & Real-Time Serving:**
-  - You can now deploy a validated MCP as a production endpoint and call it with new data for instant optimization/decisioning. See [MCP Deployment & Serving](./mcp/deployment.md).
-  - The platform now clearly separates the authoring (interactive, LLM/agent-powered) and serving (real-time, production) phases.
+---
 
-## Documentation Structure
+## 🚀 What is DcisionAI?
 
-### Architecture Documentation
-- [Architecture Overview](./architecture/overview.md): High-level system architecture, component interactions, and design principles.
-- [Model Context Protocol (MCP)](./architecture/mcp/protocol.md): Protocol specification, implementation details, and best practices.
-- [Agent System](./architecture/mcp/agents.md): Agent architecture, types, and communication patterns.
+DcisionAI is a modular, open platform for building, deploying, and managing AI-driven decision and optimization workflows.  
+- **Cloud-agnostic:** Deploy anywhere—AWS, GCP, Azure, DigitalOcean, or your own servers.
+- **Open standards:** Uses Docker and Terraform for easy, reproducible deployments.
+- **Flexible:** Bring your own database, authentication, and infrastructure.
 
-### Implementation Guides
-- [Getting Started](./onboarding/environment-setup.md)
-- [Development Guide](./onboarding/codebase-overview.md)
-- [Deployment Guide](./mcp/deployment.md)
+---
 
-### API Documentation
-- [REST API](./api/README.md)
-- [Deployed MCP Endpoint API](./mcp/deployment.md)
+## 🏠 On-Premises / Local Deployment
 
-### User Guides
-- [User Manual](./platform/agenticai-workflow.md)
-- [Tutorials](./onboarding/examples/portfolio-management.md)
+1. **Clone the repository:**
+   ```sh
+   git clone https://github.com/DcisionAI/dcision-platform.git
+   cd dcision-platform
+   ```
 
-## Contributing
-We welcome contributions to our documentation. Please see our [Contributing Guide](../CONTRIBUTING.md) for details on how to contribute.
+2. **Copy and configure environment variables:**
+   ```sh
+   cp config.example.env .env
+   ```
+   Edit `.env` to set your database, Supabase, and other secrets.
 
-## Support
-For support, please:
-1. Check our [FAQ](./support/faq.md)
-2. Review our [Troubleshooting Guide](./support/troubleshooting.md)
-3. Contact our support team at support@dcisionai.com
+3. **Start the platform:**
+   ```sh
+   docker compose -f docker-compose.prod.yml up -d
+   ```
 
-## License
-This documentation is licensed under the [MIT License](./LICENSE).
+4. **Access the platform:**  
+   Open your browser to `http://localhost:3000` (or your server’s IP/domain).
 
-# What is DcisionAI?
+---
 
-DcisionAI is an enterprise-grade platform for intelligent, automated decision-making. It leverages a modular, agent-based architecture orchestrated by the Model Context Protocol (MCP). Each agent is responsible for a specific stage in the optimization workflow, enabling flexible, scalable, and explainable automation.
+## ☁️ Cloud Deployment (Terraform)
 
-## Authoring vs. Serving
-- **Authoring (Console):** Interactive, LLM/agent-powered workflow for intent interpretation, data prep, model building, and validation.
-- **Serving (Services):** Deployed, versioned MCP endpoints for real-time optimization/decisioning with new data.
+DcisionAI provides a cloud-agnostic Terraform module for automated deployment.  
+**Terraform code is located in [`/terraform`](https://github.com/DcisionAI/dcision-platform/tree/main/terraform).**
 
-## Agent Orchestration with MCP
+### Steps:
 
-### Agent Roles and Responsibilities
+1. **Configure your infrastructure variables:**  
+   Edit `terraform/variables.tf` and/or create a `terraform.tfvars` file with your settings (Postgres host, Docker host, etc).
 
-1. **Intent Interpreter Agent**: Understands and decomposes the business problem.
-2. **Data Agents**: Data preparation, validation, and enrichment.
-3. **Model Building & Solving Agents**: Build and solve the optimization model.
-4. **Solution Review/Explanation Agents**: Human-in-the-loop and explainability.
-5. **Process Automation Agent**: Deploys the validated workflow as a live, repeatable API endpoint.
+2. **Initialize and apply Terraform:**
+   ```sh
+   cd terraform
+   terraform init
+   terraform plan
+   terraform apply
+   ```
+   This will provision infrastructure and deploy DcisionAI using Docker.
 
-### MCP Orchestration Flow
-1. User Input → Intent Interpreter Agent → Data Agents → Model Building & Solving Agents → Solution Review/Explanation Agents → Process Automation Agent → Live, Repeatable Solution
+3. **Access the platform:**  
+   The output will provide the URL or IP address for your deployment.
 
-Each step is defined as a protocol action in the MCP, with clear hand-offs between agents. The MCP ensures that the workflow is transparent, auditable, and extensible.
+---
 
-### Example MCP Protocol Steps
-```json
-[
-  { "action": "interpret_intent", "agent": "Intent Interpreter Agent", "description": "Analyze user input, identify the business problem, and select the appropriate optimization template.", "required": true },
-  { "action": "collect_data", "agent": "Data Agent", "description": "Identify and validate required data sources.", "required": true },
-  { "action": "build_model", "agent": "Model Building Agent", "description": "Construct and validate the optimization model.", "required": true },
-  { "action": "solve_model", "agent": "Solving Agent", "description": "Solve the optimization problem.", "required": true },
-  { "action": "explain_solution", "agent": "Solution Review Agent", "description": "Explain and review the solution.", "required": false },
-  { "action": "productionalize_workflow", "agent": "Process Automation Agent", "description": "Deploy the workflow as a live endpoint and enable scheduling.", "required": true }
-]
-```
+## 🛠️ Requirements
 
-### Benefits of Agent-Based MCP Orchestration
-- **Modularity:** Each agent can be developed, tested, and improved independently.
-- **Transparency:** Every step is explicit and auditable.
-- **Extensibility:** New agents can be added for new capabilities (e.g., compliance, advanced analytics).
-- **Enterprise-Readiness:** Supports production deployment, monitoring, and dynamic re-execution.
+- Docker and Docker Compose
+- [Terraform](https://www.terraform.io/downloads.html)
+- A PostgreSQL database (self-hosted, managed, or cloud)
+- (Optional) Supabase project for authentication and storage
 
-## Pinecone Integration
-DcisionAI uses Pinecone as a vector database for storing and searching documentation embeddings.
+---
 
-### Upserting Documentation to Pinecone
-To (re)ingest your documentation into Pinecone, use the upsert script. For best compatibility, use a separate TypeScript config for scripts:
+## 📦 Updating
 
-1. Create a `tsconfig.scripts.json` in your project root:
-
-```json
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "module": "commonjs"
-  },
-  "include": ["scripts/**/*.ts"]
-}
-```
-
-2. Run the upsert script with:
-
+To update, simply pull the latest image and restart:
 ```sh
-npx ts-node --project tsconfig.scripts.json scripts/upsertDocsToPinecone.ts
+docker pull ghcr.io/dcisionai/dcision-platform:latest
+docker compose -f docker-compose.prod.yml up -d
 ```
 
-This will delete all vectors in your Pinecone namespace and upsert your documentation in section-based chunks.
+---
 
-See the script in `scripts/upsertDocsToPinecone.ts` for details.
+## 📚 Documentation
 
---- 
+- [Terraform deployment code](https://github.com/DcisionAI/dcision-platform/tree/main/terraform)
+- [Full documentation](https://github.com/DcisionAI/dcision-platform)
+
+---
+
+## 🆘 Support
+
+For help, open an issue on [GitHub Issues](https://github.com/DcisionAI/dcision-platform/issues).

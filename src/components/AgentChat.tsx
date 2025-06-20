@@ -13,9 +13,13 @@ interface Message {
 
 interface AgentChatProps {
   placeholder?: string;
+  apiEndpoint: string;
 }
 
-const AgentChat: React.FC<AgentChatProps> = ({ placeholder = "How can I help you today?" }) => {
+const AgentChat: React.FC<AgentChatProps> = ({ 
+  placeholder = "How can I help you today?",
+  apiEndpoint 
+}) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -35,7 +39,7 @@ const AgentChat: React.FC<AgentChatProps> = ({ placeholder = "How can I help you
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/dcisionai/construction/chat', {
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
