@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import OpenAI from 'openai';
 import { ConstructionMCPSolver } from '../../_lib/ConstructionMCPSolver';
 import { constructionIndex, getEmbeddings } from '../../../../lib/pinecone';
+import { agnoIntentAgent } from '../../_lib/dcisionai-agents/intentAgent/agnoIntentAgent';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -107,18 +108,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ type: 'error', content: 'Message is required' });
     }
 
-    const requestType = await getRequestType(message);
-
-    switch (requestType) {
-      case 'rag':
-        return await handleRAGRequest(message, res);
+    // Use the full Intent Agent analysis instead of simple classification
+    const intentAnalysis = await agnoIntentAgent.analyzeIntent(message);
+    
+    // Determine execution path based on primary intent
+    let executionPath: 'rag' | 'optimization' | 'hybrid';
+    switch (intentAnalysis.primaryIntent) {
+      case 'knowledge_retrieval':
+        executionPath = 'rag';
+        break;
       case 'optimization':
-        return await handleOptimizationRequest(message, "", res);
+        executionPath = 'optimization';
+        break;
+      case 'hybrid_analysis':
+        executionPath = 'hybrid';
+        break;
+      default:
+        executionPath = 'optimization';
+    }
+
+    switch (executionPath) {
+      case 'rag':
+        return await handleRAGRequest(message, intentAnalysis, res);
+      case 'optimization':
+        return await handleOptimizationRequest(message, "", intentAnalysis, res);
       case 'hybrid':
-        return await handleHybridRequest(message, res);
+        return await handleHybridRequest(message, intentAnalysis, res);
       default:
         // This default case should ideally not be reached
-        return await handleOptimizationRequest(message, "", res);
+        return await handleOptimizationRequest(message, "", intentAnalysis, res);
     }
   } catch (error: any) {
     console.error('Construction chat API error:', error);
@@ -129,7 +147,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-async function handleRAGRequest(message: string, res: NextApiResponse) {
+async function handleRAGRequest(message: string, intentAnalysis: any, res: NextApiResponse) {
   try {
     const queryEmbedding = await getEmbeddings(message);
     const queryResponse = await constructionIndex.query({
@@ -160,7 +178,8 @@ async function handleRAGRequest(message: string, res: NextApiResponse) {
       type: 'rag',
       content: {
         rag: ragResponse,
-        summary: `RAG query for "${message}" completed.`
+        summary: `RAG query for "${message}" completed.`,
+        intentAgentAnalysis: intentAnalysis
       }
     });
   } catch (error) {
@@ -172,7 +191,7 @@ async function handleRAGRequest(message: string, res: NextApiResponse) {
   }
 }
 
-async function handleOptimizationRequest(message: string, knowledgeBaseContext = "", res: NextApiResponse) {
+async function handleOptimizationRequest(message: string, knowledgeBaseContext = "", intentAnalysis: any, res: NextApiResponse) {
   if (!solver) {
     try {
       solver = new ConstructionMCPSolver();
@@ -201,67 +220,79 @@ async function handleOptimizationRequest(message: string, knowledgeBaseContext =
 
     User Request: "${message}"
 
-    Based on the request, generate a JSON object for the optimization problem with this structure:
+    The problem should be in this JSON format:
     {
-      "problem_type": "resource_allocation",
-      "sense": "minimize" | "maximize",
-      "objective": { "linear": [...], "description": "..." },
-      "variables": [ { "name": "...", "type": "int" | "continuous", "lb": ..., "ub": ..., "description": "...", "category": "..." } ],
-      "constraints": { "dense": [[...]], "sense": ["<=", ">=", "=="], "rhs": [...], "descriptions": [...], "categories": [...] },
-      "metadata": { ... }
+      "objective": {
+        "description": "string describing the objective",
+        "linear": [array of coefficients for each variable]
+      },
+      "variables": [
+        {
+          "name": "string",
+          "lb": number (lower bound),
+          "ub": number (upper bound),
+          "category": "string (e.g., 'worker', 'equipment', 'material')",
+          "description": "string describing the variable"
+        }
+      ],
+      "constraints": {
+        "descriptions": ["array of constraint descriptions"],
+        "sense": ["array of constraint senses ('<=' or '>=' or '==')"],
+        "rhs": [array of right-hand side values],
+        "dense": [[array of coefficients for each constraint]]
+      },
+      "metadata": {
+        "phases": [
+          {
+            "name": "string",
+            "duration": number
+          }
+        ]
+      }
     }
-    
-    Important Modeling Guidelines:
-    1. For totals (e.g., "total workers", "total cost"), create a constraint that sums the individual variables. Do NOT create a separate variable for the total.
-    2. Example: A constraint for "total workers must not exceed 15" with variables for carpenters and electricians should be implemented in the JSON as follows:
-       - A row in the 'dense' matrix like [1, 1, ...] (with a 1 for each worker type).
-       - A corresponding '<=' in the 'sense' array.
-       - A corresponding 15 in the 'rhs' array.
 
-    Respond with ONLY the JSON object.
-  `;
-
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4-turbo-preview",
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0.1,
-    max_tokens: 2000,
-    response_format: { type: "json_object" },
-  });
-
-  const jsonText = completion.choices[0].message.content?.trim() || '';
+    Return ONLY the JSON object, no additional text.`;
 
   try {
-    const parsedProblem = JSON.parse(jsonText);
-    const solution = await solver.solveConstructionOptimization(parsedProblem);
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4-turbo-preview",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.1,
+    });
 
-    if (!solution || !solution.status) {
-      throw new Error('Received an invalid solution from the optimization solver.');
+    const problemJson = completion.choices[0].message.content;
+    if (!problemJson) {
+      throw new Error('No problem definition generated');
     }
 
-    const summary = `The optimization resulted in a status of "${solution.status}" with an objective value of ${solution.objective_value}. The solve time was ${solution.solve_time_ms}ms.`;
-    const visualization = generateMermaidChart(parsedProblem);
+    const problem = JSON.parse(problemJson);
     
+    // Solve the optimization problem
+    const solution = await solver.solveConstructionOptimization(problem);
+    
+    // Generate visualization
+    const visualization = generateMermaidChart(problem);
+
     res.status(200).json({
       type: 'optimization',
       content: {
-        problem: parsedProblem,
-        solution: solution,
-        summary: summary,
-        visualization: visualization,
-      },
+        problem,
+        solution,
+        visualization,
+        summary: `Optimization completed with ${solverName} solver.`,
+        intentAgentAnalysis: intentAnalysis
+      }
     });
-
-  } catch (parseError: any) {
-    console.error('Error parsing or solving optimization problem:', parseError);
-    res.status(200).json({
+  } catch (error) {
+    console.error('Optimization request failed:', error);
+    res.status(500).json({
       type: 'error',
-      content: `Failed to process the optimization request: ${parseError.message}. Please try rephrasing your request.`
+      content: 'Failed to solve optimization problem. Please try again.'
     });
   }
 }
 
-async function handleHybridRequest(message: string, res: NextApiResponse) {
+async function handleHybridRequest(message: string, intentAnalysis: any, res: NextApiResponse) {
   try {
     // 1. Get context from RAG
     const queryEmbedding = await getEmbeddings(message);
@@ -273,7 +304,7 @@ async function handleHybridRequest(message: string, res: NextApiResponse) {
     const ragContext = queryResponse.matches.map(match => match.metadata?.text).join('\n\n');
 
     // 2. Pass context to optimization handler
-    return await handleOptimizationRequest(message, ragContext, res);
+    return await handleOptimizationRequest(message, ragContext, intentAnalysis, res);
 
   } catch (error) {
     console.error('Hybrid request failed:', error);

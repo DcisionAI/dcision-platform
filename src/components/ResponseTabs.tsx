@@ -22,9 +22,21 @@ interface IntentAnalysis {
   identifiedEntities: IdentifiedEntities;
 }
 
+interface IntentAgentAnalysis {
+  decisionType: string;
+  confidence: number;
+  reasoning: string;
+  ragQuery?: string;
+  optimizationQuery?: string;
+  keywords: string[];
+  primaryIntent: string;
+  secondaryIntent?: string;
+}
+
 interface ResponseTabsProps {
   content: {
     intentAnalysis?: IntentAnalysis;
+    intentAgentAnalysis?: IntentAgentAnalysis;
     visualization?: string;
     zoom?: string;
     problem?: any;
@@ -50,25 +62,36 @@ const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
   const contentType = getContentType();
 
   const getTabs = () => {
+    const baseTabs = [
+      { id: 'analysis', label: 'Analysis' },
+    ];
+
     switch (contentType) {
       case 'hybrid':
         return [
+          ...baseTabs,
           { id: 'overview', label: 'Overview' },
           { id: 'rag', label: 'Knowledge Base' },
           { id: 'optimization', label: 'Optimization' },
         ];
       case 'rag':
-        return [{ id: 'content', label: 'Search Results' }];
+        return [
+          ...baseTabs,
+          { id: 'content', label: 'Search Results' }
+        ];
       case 'optimization':
         return [
-          { id: 'analysis', label: 'Analysis' },
+          ...baseTabs,
           { id: 'details', label: 'Solution Details' },
           { id: 'summary', label: 'Summary' },
           { id: 'visualization', label: 'Visualization' },
         ];
       default:
         // Fallback for general or unknown content
-        return [{ id: 'content', label: 'Response' }];
+        return [
+          ...baseTabs,
+          { id: 'content', label: 'Response' }
+        ];
     }
   };
 
@@ -79,6 +102,172 @@ const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
       setActiveTab(tabs[0].id);
     }
   });
+
+  const renderIntentAnalysis = () => {
+    const intentAnalysis = content.intentAgentAnalysis;
+    
+    if (!intentAnalysis) {
+      return (
+        <div className="text-gray-500 dark:text-gray-400 text-center py-8">
+          Intent analysis is not available for this response.
+        </div>
+      );
+    }
+
+    const getIntentTypeColor = (type: string) => {
+      switch (type.toLowerCase()) {
+        case 'knowledge_retrieval':
+        case 'rag':
+          return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
+        case 'optimization':
+          return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+        case 'hybrid_analysis':
+        case 'hybrid':
+          return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+        default:
+          return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+      }
+    };
+
+    const getConfidenceColor = (confidence: number) => {
+      if (confidence >= 0.8) return 'text-green-600 dark:text-green-400';
+      if (confidence >= 0.6) return 'text-yellow-600 dark:text-yellow-400';
+      return 'text-red-600 dark:text-red-400';
+    };
+
+    const getConfidenceBarColor = (confidence: number) => {
+      if (confidence >= 0.8) return 'bg-green-500';
+      if (confidence >= 0.6) return 'bg-yellow-500';
+      return 'bg-red-500';
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Intent Classification */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            🧠 Intent Analysis
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Primary Intent */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Primary Intent
+              </h4>
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getIntentTypeColor(intentAnalysis.primaryIntent)}`}>
+                {intentAnalysis.primaryIntent.replace('_', ' ').toUpperCase()}
+              </span>
+            </div>
+
+            {/* Decision Type */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Decision Type
+              </h4>
+              <p className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+                {intentAnalysis.decisionType}
+              </p>
+            </div>
+          </div>
+
+          {/* Confidence Score */}
+          <div className="mt-6">
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-gray-700 dark:text-gray-300">Confidence Level</span>
+              <span className={`font-medium ${getConfidenceColor(intentAnalysis.confidence)}`}>
+                {(intentAnalysis.confidence * 100).toFixed(0)}%
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div
+                className={`h-2 rounded-full ${getConfidenceBarColor(intentAnalysis.confidence)} transition-all duration-300`}
+                style={{ width: `${intentAnalysis.confidence * 100}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Keywords */}
+          {intentAnalysis.keywords && intentAnalysis.keywords.length > 0 && (
+            <div className="mt-6">
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                Key Concepts Identified
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {intentAnalysis.keywords.map((keyword, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
+                  >
+                    {keyword}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Secondary Intent */}
+          {intentAnalysis.secondaryIntent && (
+            <div className="mt-6">
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Secondary Intent
+              </h4>
+              <p className="text-sm text-gray-900 dark:text-gray-100">
+                {intentAnalysis.secondaryIntent}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Reasoning */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            💭 AI Reasoning
+          </h3>
+          <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+              {intentAnalysis.reasoning}
+            </p>
+          </div>
+        </div>
+
+        {/* Query Analysis */}
+        {(intentAnalysis.ragQuery || intentAnalysis.optimizationQuery) && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              🔍 Query Analysis
+            </h3>
+            
+            {intentAnalysis.ragQuery && (
+              <div className="mb-4">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Knowledge Base Query
+                </h4>
+                <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
+                  <p className="text-sm text-orange-800 dark:text-orange-200">
+                    {intentAnalysis.ragQuery}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {intentAnalysis.optimizationQuery && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Optimization Problem
+                </h4>
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    {intentAnalysis.optimizationQuery}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderRAGContent = () => {
     return (
@@ -374,7 +563,7 @@ const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
       case 'summary':
         return renderSummary();
       case 'analysis':
-        return renderAnalysis();
+        return renderIntentAnalysis();
       case 'details':
         return renderDetails();
       case 'visualization':
