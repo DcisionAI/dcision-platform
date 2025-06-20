@@ -1,6 +1,7 @@
 import React from 'react';
 import { DocumentTextIcon, ChatBubbleLeftRightIcon, ChartPieIcon, CommandLineIcon } from '@heroicons/react/24/outline';
 import WorkflowTabs, { TabConfig } from '@/components/WorkflowTabs';
+import KnowledgeBase from '@/components/KnowledgeBase';
 
 const financeTabs: TabConfig[] = [
   {
@@ -8,7 +9,7 @@ const financeTabs: TabConfig[] = [
     label: 'Knowledge Base',
     icon: <DocumentTextIcon className="w-5 h-5" />,
     description: 'Manage and query your finance knowledge base',
-    content: <div className="p-8 text-center text-lg">Finance Knowledge Base coming soon.</div>
+    content: <KnowledgeBase domain="finance" />
   },
   {
     id: 'chat',

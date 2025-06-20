@@ -198,15 +198,13 @@
   font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
-  margin-top: 2em;
-  margin-bottom: 0.5em;
-  letter-spacing: 0.08em;
 }
 
 /* Enforce OpenAI Docs Dark Theme by default */
 html, body {
   @apply openai-docs-dark;
   font-family: 'OpenAI Sans', Inter, ui-sans-serif, system-ui, sans-serif;
+  background: #f4f1ea;
 }
 
 /* DcisionAI Brand Sidebar Menu Color Overrides */
@@ -228,4 +226,37 @@ html, body {
 
 .sidebar-link {
   text-decoration: none !important;
+}
+
+.kb-table-header {
+  background-color: #ede9dd; /* light mode */
+  color: #18181b; /* light mode */
+}
+.dark .kb-table-header {
+  background-color: #0D1117; /* dark mode */
+  color: #E7E9EB; /* dark mode */
+}
+
+.kb-table-header th {
+  background-color: #ede9dd !important;
+  color: #18181b !important;
+}
+
+.dark .kb-table-header th {
+  background-color: #22272A !important;
+  color: #ECEDEE !important;
+}
+
+.text-gradient-brand {
+    background: linear-gradient(to right, #e07a4a, #1F6FEB);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-fill-color: transparent;
+    display: inline-block; /* Ensures the gradient is contained */
+}
+
+/* Base styles for HTML and body (light theme) */
+html, body {
+  background: #f4f1ea;
 } 

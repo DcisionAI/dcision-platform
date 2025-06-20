@@ -126,10 +126,10 @@ export default function Home() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Hero Section */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-[#18181b] leading-tight mb-4 text-center">
-            DcisionAI is a <span className="underline decoration-4 decoration-[#e07a4a] underline-offset-4">modern decision layer</span> to drive<br/>intelligent enterprise actions.
+          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-docs-text dark:text-docs-dark-text leading-tight mb-4 text-center">
+            <span className="text-gradient-brand">DcisionAI</span> is a <span className="underline decoration-4 decoration-docs-accent underline-offset-4">modern decision layer</span> to drive<br/>intelligent enterprise actions.
           </h1>
-          <p className="text-base md:text-lg font-light tracking-wide text-[#e07a4a] mb-4">
+          <p className="text-base md:text-lg font-light tracking-wide text-docs-accent mb-4">
             Beyond AI. A decision layer powered by agents — built for industries that need to act, not just analyze.
           </p>
         </div>

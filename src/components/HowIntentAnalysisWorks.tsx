@@ -25,23 +25,23 @@ const steps = [
 
 const HowIntentAnalysisWorks = () => {
   return (
-    <div className="py-12">
+    <div className="py-12 bg-docs-bg dark:bg-docs-dark-bg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-            How DcisionAI Works
+          <h2 className="text-3xl font-extrabold text-docs-text dark:text-docs-dark-text sm:text-4xl">
+            How <span className="text-gradient-brand">DcisionAI</span> Works
           </h2>
         </div>
         <div className="relative">
-          <div className="absolute left-0 right-0 h-0.5 bg-gray-200 top-1/2 -translate-y-1/2" aria-hidden="true"></div>
+          <div className="absolute left-0 right-0 h-0.5 bg-docs-section-border dark:bg-gray-700 top-1/2 -translate-y-1/2" aria-hidden="true"></div>
           <div className="relative grid grid-cols-1 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
             {steps.map((step, index) => (
               <div key={step.number} className="text-center">
-                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-white border-2 border-gray-300 text-gray-700 font-bold mx-auto">
+                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-docs-section dark:bg-gray-800 border-2 border-docs-section-border dark:border-gray-700 text-docs-text dark:text-docs-dark-text font-bold mx-auto">
                   {step.number}
                 </div>
-                <h3 className="mt-4 text-lg font-semibold text-gray-800">{step.title}</h3>
-                <p className="mt-2 text-base text-gray-600">{step.description}</p>
+                <h3 className="mt-4 text-lg font-semibold text-docs-text dark:text-docs-dark-text">{step.title}</h3>
+                <p className="mt-2 text-base text-docs-muted dark:text-docs-dark-muted">{step.description}</p>
               </div>
             ))}
           </div>

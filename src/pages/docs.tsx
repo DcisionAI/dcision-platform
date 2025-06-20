@@ -200,7 +200,16 @@ export default function Docs() {
     <Layout>
       <div className="max-w-6xl mx-auto flex relative">
         <div className="flex-1 min-w-0 px-8">
-          <h1 className="text-4xl font-bold mb-4 text-docs-text">DcisionAI</h1>
+          <div className="bg-docs-section dark:bg-gray-800/50 p-6 rounded-lg shadow-inner">
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-4xl font-bold mb-4 text-gradient-brand">DcisionAI</h1>
+                <p className="text-lg text-docs-muted dark:text-docs-dark-muted mb-4">
+                  Welcome to the DcisionAI documentation.
+                </p>
+              </div>
+            </div>
+          </div>
           <form onSubmit={handleSearch} className="mb-6 flex gap-2">
             <input
               type="text"

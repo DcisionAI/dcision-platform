@@ -70,7 +70,7 @@ export default function Sidebar() {
           className="flex items-center focus:outline-none"
         >
           {isExpanded ? (
-            <span className="font-bold text-xl text-docs-text dark:text-docs-dark-text">DcisionAI</span>
+            <span className="font-bold text-xl text-gradient-brand">DcisionAI</span>
           ) : (
             <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle cx="16" cy="16" r="16" fill="#18181b" />

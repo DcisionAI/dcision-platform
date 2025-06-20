@@ -60,7 +60,9 @@ export default function ApiKeySetup() {
       isLastStep={false}
     >
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-light mb-4">DcisionAI API Key</h1>
+        <h1 className="text-4xl font-light mb-4">
+          <span className="text-gradient-brand">DcisionAI</span> API Key
+        </h1>
         <p className="text-[#8E8E93] text-lg">
           Enter your DcisionAI API key to get started. You can find this key in your admin dashboard or from your platform administrator.
         </p>
