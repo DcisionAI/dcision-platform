@@ -20,7 +20,7 @@ const ConstructionPage: React.FC = () => {
       label: 'AI Assistant',
       icon: <ChatBubbleLeftRightIcon className="w-5 h-5" />,
       description: 'Your intelligent construction assistant',
-      content: <AgentChat apiEndpoint="/api/dcisionai/construction/chat" />
+      content: <AgentChat apiEndpoint="/api/dcisionai/construction/chat" showSmartPrompts={true} />
     },
     {
       id: 'scenario',

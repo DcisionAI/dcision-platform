@@ -1,14 +1,13 @@
 // MCP Solver Client for connecting to different optimization servers
 // Supports HiGHS, OR-Tools, Gurobi, and other MCP-compatible solvers
 
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { spawn, ChildProcess } from 'child_process';
+import axios from 'axios';
 
 export interface SolverEndpoint {
-  type: 'stdio';
-  command?: string;
-  args?: string[];
+  type: 'http' | 'websocket';
+  url: string;
+  apiKey?: string;
 }
 
 export interface SolverConfig {
@@ -92,12 +91,22 @@ export interface OptimizationResult {
 }
 
 export class MCPSolverClient {
-  private client: Client | null = null;
   private config: SolverConfig;
   private isConnected = false;
+  private httpClient: any;
 
   constructor(config: SolverConfig) {
     this.config = config;
+    this.httpClient = axios.create({
+      baseURL: config.endpoint.url,
+      timeout: config.timeout || 300000,
+      headers: config.endpoint.apiKey ? {
+        'Authorization': `Bearer ${config.endpoint.apiKey}`,
+        'Content-Type': 'application/json'
+      } : {
+        'Content-Type': 'application/json'
+      }
+    });
   }
 
   /**
@@ -109,24 +118,11 @@ export class MCPSolverClient {
         return;
       }
 
-      // Create stdio transport with server parameters
-      const transport = new StdioClientTransport({
-        command: this.config.endpoint.command || 'npx',
-        args: this.config.endpoint.args || ['highs-mcp'],
-        env: process.env as Record<string, string>
-      });
-
-      // Create MCP client
-      this.client = new Client({
-        name: 'dcisionai-solver-client',
-        version: '1.0.0'
-      });
-
-      // Connect to the server
-      await this.client.connect(transport);
+      // Test connection by making a simple request
+      await this.httpClient.get('/health');
       this.isConnected = true;
       
-      console.log(`✅ Connected to ${this.config.name} solver via stdio`);
+      console.log(`✅ Connected to ${this.config.name} solver at ${this.config.endpoint.url}`);
 
     } catch (error) {
       console.error(`❌ Failed to connect to ${this.config.name} solver:`, error);
@@ -139,11 +135,6 @@ export class MCPSolverClient {
    */
   async disconnect(): Promise<void> {
     try {
-      if (this.client) {
-        await this.client.close();
-        this.client = null;
-      }
-
       this.isConnected = false;
       console.log(`✅ Disconnected from ${this.config.name} solver`);
 
@@ -159,40 +150,29 @@ export class MCPSolverClient {
     problem: OptimizationProblem,
     options?: OptimizationOptions
   ): Promise<OptimizationResult> {
-    if (!this.isConnected || !this.client) {
+    if (!this.isConnected) {
       throw new Error(`Not connected to ${this.config.name} solver`);
     }
 
     try {
-      // Determine the tool name based on the solver
-      const toolName = this.getToolName();
-
-      // Call the solver tool
-      const result = await this.client.callTool({
-        name: toolName,
-        arguments: {
-          problem,
-          options: options || {}
-        }
+      // Send optimization problem to solver
+      const response = await this.httpClient.post('/solve', {
+        problem,
+        options: options || {},
+        solver: this.config.name.toLowerCase()
       });
 
-      // Parse the result
-      if (result.content && Array.isArray(result.content) && result.content.length > 0) {
-        const resultText = result.content[0].text;
-        const parsedResult = JSON.parse(resultText);
-        
-        // Add solver metadata
-        return {
-          ...parsedResult,
-          metadata: {
-            ...parsedResult.metadata,
-            solver_used: this.config.name,
-            solver_version: await this.getSolverVersion()
-          }
-        };
-      } else {
-        throw new Error('No result content received from solver');
-      }
+      const result = response.data;
+      
+      // Add solver metadata
+      return {
+        ...result,
+        metadata: {
+          ...result.metadata,
+          solver_used: this.config.name,
+          solver_version: await this.getSolverVersion()
+        }
+      };
 
     } catch (error) {
       console.error(`❌ Error solving with ${this.config.name}:`, error);
@@ -201,17 +181,21 @@ export class MCPSolverClient {
   }
 
   /**
-   * Get the tool name for the solver
+   * Get the tool name for this solver
    */
   private getToolName(): string {
-    const toolNames: Record<string, string> = {
-      'highs': 'optimize-mip-lp-tool',
-      'ortools': 'optimize-mip-lp-tool',
-      'gurobi': 'optimize-mip-lp-tool',
-      'cplex': 'optimize-mip-lp-tool'
-    };
-
-    return toolNames[this.config.name.toLowerCase()] || 'optimize-mip-lp-tool';
+    switch (this.config.name.toLowerCase()) {
+      case 'highs':
+        return 'solve_optimization';
+      case 'or-tools':
+        return 'solve_optimization';
+      case 'gurobi':
+        return 'solve_optimization';
+      case 'cplex':
+        return 'solve_optimization';
+      default:
+        return 'solve_optimization';
+    }
   }
 
   /**
@@ -219,18 +203,15 @@ export class MCPSolverClient {
    */
   private async getSolverVersion(): Promise<string> {
     try {
-      if (!this.client) return 'unknown';
-
-      const result = await this.client.listTools();
-      const tool = result.tools.find(t => t.name === this.getToolName());
-      return tool?.description?.split(' ')[0] || 'unknown';
+      const response = await this.httpClient.get('/version');
+      return response.data.version || 'unknown';
     } catch {
       return 'unknown';
     }
   }
 
   /**
-   * Check if the solver is connected
+   * Check if connected to solver
    */
   isConnectedToSolver(): boolean {
     return this.isConnected;
@@ -244,60 +225,76 @@ export class MCPSolverClient {
   }
 }
 
-// Predefined solver configurations
-export const SOLVER_CONFIGS: Record<string, SolverConfig> = {
-  highs: {
-    name: 'HiGHS',
-    endpoint: {
-      type: 'stdio',
-      command: 'npx',
-      args: ['highs-mcp']
-    },
-    timeout: 300000, // 5 minutes
-    retries: 3
-  },
-  ortools: {
-    name: 'OR-Tools',
-    endpoint: {
-      type: 'stdio',
-      command: 'npx',
-      args: ['@google/or-tools-mcp']
-    },
-    timeout: 300000,
-    retries: 3
-  },
-  gurobi: {
-    name: 'Gurobi',
-    endpoint: {
-      type: 'stdio',
-      command: 'gurobi_cl',
-      args: ['mcp']
-    },
-    timeout: 600000, // 10 minutes
-    retries: 2
-  },
-  cplex: {
-    name: 'CPLEX',
-    endpoint: {
-      type: 'stdio',
-      command: 'cplex',
-      args: ['mcp']
-    },
-    timeout: 600000,
-    retries: 2
-  }
-};
-
 // Factory function to create solver clients
 export function createSolverClient(solverName: string): MCPSolverClient {
-  const config = SOLVER_CONFIGS[solverName];
+  const configs: Record<string, SolverConfig> = {
+    'highs': {
+      name: 'HiGHS',
+      endpoint: {
+        type: 'http',
+        url: process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000',
+        apiKey: process.env.SOLVER_API_KEY
+      },
+      timeout: 300000, // 5 minutes
+      retries: 3
+    },
+    // TODO: IMPLEMENT OR-TOOLS SOLVER
+    // - Add OR-Tools dependency to package.json
+    // - Create src/pages/api/_lib/solvers/or-tools.ts
+    // - Implement solveProblem() method for OR-Tools
+    // - Update src/pages/api/solver/solve.ts to handle 'or-tools' case
+    'or-tools': {
+      name: 'OR-Tools',
+      endpoint: {
+        type: 'http',
+        url: process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000',
+        apiKey: process.env.SOLVER_API_KEY
+      },
+      timeout: 300000,
+      retries: 3
+    },
+    // TODO: IMPLEMENT GUROBI SOLVER
+    // - Add Gurobi Python client dependency
+    // - Create src/pages/api/_lib/solvers/gurobi.ts
+    // - Implement solveProblem() method for Gurobi
+    // - Update src/pages/api/solver/solve.ts to handle 'gurobi' case
+    // - Note: Gurobi requires commercial license
+    'gurobi': {
+      name: 'Gurobi',
+      endpoint: {
+        type: 'http',
+        url: process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000',
+        apiKey: process.env.SOLVER_API_KEY
+      },
+      timeout: 300000,
+      retries: 3
+    },
+    // TODO: IMPLEMENT CPLEX SOLVER
+    // - Add CPLEX Python client dependency
+    // - Create src/pages/api/_lib/solvers/cplex.ts
+    // - Implement solveProblem() method for CPLEX
+    // - Update src/pages/api/solver/solve.ts to handle 'cplex' case
+    // - Note: CPLEX requires commercial license
+    'cplex': {
+      name: 'CPLEX',
+      endpoint: {
+        type: 'http',
+        url: process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000',
+        apiKey: process.env.SOLVER_API_KEY
+      },
+      timeout: 300000,
+      retries: 3
+    }
+  };
+
+  const config = configs[solverName];
   if (!config) {
-    throw new Error(`Unknown solver: ${solverName}. Available solvers: ${Object.keys(SOLVER_CONFIGS).join(', ')}`);
+    throw new Error(`Unknown solver: ${solverName}`);
   }
+
   return new MCPSolverClient(config);
 }
 
-// Utility function to list available solvers
 export function listAvailableSolvers(): string[] {
-  return Object.keys(SOLVER_CONFIGS);
+  return ['highs', 'or-tools', 'gurobi', 'cplex'];
 } 

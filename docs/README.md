@@ -1,4 +1,3 @@
-
 # DcisionAI Platform
 
 An AgenticAI platform for AI-powered decision making and optimization.  
@@ -35,7 +34,7 @@ DcisionAI is a modular, open platform for building, deploying, and managing AI-d
    ```
 
 4. **Access the platform:**  
-   Open your browser to `http://localhost:3000` (or your server’s IP/domain).
+   Open your browser to `http://localhost:3000` (or your server's IP/domain).
 
 ---
 
@@ -92,3 +91,93 @@ docker compose -f docker-compose.prod.yml up -d
 ## 🆘 Support
 
 For help, open an issue on [GitHub Issues](https://github.com/DcisionAI/dcision-platform/issues).
+
+# DcisionAI Documentation
+
+Welcome to the DcisionAI platform documentation. This guide will help you understand the architecture, APIs, and development workflows.
+
+## 📚 Documentation Structure
+
+### Architecture & Design
+
+- **[Architecture Overview](architecture/architecture.md)** - System architecture and component overview
+- **[MCP Overview](architecture/mcp-overview.md)** - Model Context Protocol framework and implementation
+- **[Solver Status](architecture/solver-status.md)** - Current implementation status of optimization solvers
+- **[Adding New Solvers](architecture/adding-new-solvers.md)** - Comprehensive guide for implementing new solvers
+- **[HiGHS Integration](architecture/HIGHS_MCP_INTEGRATION_GUIDE.md)** - HiGHS solver integration details
+
+### API Documentation
+
+- **[API Reference](api/README.md)** - Complete API documentation
+- **[Authentication](api/authentication.md)** - API key authentication
+- **[Rate Limiting](api/rate-limiting.md)** - Rate limiting policies
+- **[Webhooks](api/webhooks.md)** - Webhook integration
+- **[SDK](api/sdk.md)** - Client SDK documentation
+
+### Development
+
+- **[Development Guide](onboarding/DEVELOPMENT.md)** - Local development setup
+- **[Environment Setup](onboarding/environment-setup.md)** - Environment configuration
+- **[Codebase Overview](onboarding/codebase-overview.md)** - Project structure and organization
+- **[Contributing Guidelines](onboarding/CONTRIBUTING.md)** - How to contribute to the project
+
+### Deployment
+
+- **[Cloud Run Deployment](deployment/CLOUD_RUN_DEPLOYMENT_GUIDE.md)** - Google Cloud Run deployment
+- **[Single Service Deployment](SINGLE_SERVICE_DEPLOYMENT_GUIDE.md)** - Single-service deployment guide
+
+### Platform Features
+
+- **[Platform Overview](platform/platform-overview.md)** - Platform features and capabilities
+- **[Agents System](platform/dcisionai-agents.md)** - AI agent architecture
+- **[Mathematical Optimization](platform/mathematical-optimization.md)** - Optimization capabilities
+- **[Persistence Layer](platform/persistencelayer.md)** - Data persistence and storage
+
+## 🚀 Quick Start
+
+1. **Setup Development Environment**: [Environment Setup](onboarding/environment-setup.md)
+2. **Understand Architecture**: [Architecture Overview](architecture/architecture.md)
+3. **Explore APIs**: [API Reference](api/README.md)
+4. **Deploy to Production**: [Cloud Run Deployment](deployment/CLOUD_RUN_DEPLOYMENT_GUIDE.md)
+
+## 🔧 Solver System
+
+The DcisionAI platform includes a comprehensive optimization solver system:
+
+- **Current Status**: [Solver Status](architecture/solver-status.md)
+- **Adding New Solvers**: [Implementation Guide](architecture/adding-new-solvers.md)
+- **HiGHS Integration**: [Integration Details](architecture/HIGHS_MCP_INTEGRATION_GUIDE.md)
+
+### Supported Solvers
+
+| Solver | Status | License | Use Case |
+|--------|--------|---------|----------|
+| **HiGHS** | ✅ Implemented | Open Source | Linear and mixed-integer programming |
+| **OR-Tools** | 🔄 Placeholder | Open Source | Constraint programming, routing |
+| **Gurobi** | 🔄 Placeholder | Commercial | High-performance optimization |
+| **CPLEX** | 🔄 Placeholder | Commercial | Enterprise optimization |
+
+## 📖 Additional Resources
+
+- **[Technology Stack](onboarding/technology-stack.md)** - Technologies and frameworks used
+- **[Examples](onboarding/examples/)** - Code examples and tutorials
+- **[Migration Guides](mcp/migration.md)** - Migration from legacy systems
+- **[Testing Guide](setup-testing.md)** - Testing strategies and setup
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](onboarding/CONTRIBUTING.md) for details on how to:
+
+- Report bugs and request features
+- Submit code changes
+- Improve documentation
+- Add new solvers and capabilities
+
+## 📞 Support
+
+For questions and support:
+
+1. Check the documentation above
+2. Review [FAQ](FAQ.md) for common questions
+3. Open an issue on GitHub for bugs
+4. Contact the development team for enterprise support

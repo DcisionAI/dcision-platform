@@ -1,7 +1,7 @@
 // MCP Solver Manager for switching between different optimization solvers
 // Provides a unified interface for HiGHS, OR-Tools, Gurobi, and other solvers
 
-import { MCPSolverClient, OptimizationProblem, OptimizationOptions, OptimizationResult, SOLVER_CONFIGS, createSolverClient } from './MCPSolverClient';
+import { MCPSolverClient, OptimizationProblem, OptimizationOptions, OptimizationResult, createSolverClient, listAvailableSolvers } from './MCPSolverClient';
 
 // Re-export types for convenience
 export type { OptimizationProblem, OptimizationOptions, OptimizationResult };
@@ -47,7 +47,8 @@ export class MCPSolverManager {
    * Initialize all available solvers
    */
   private initializeSolvers(): void {
-    Object.keys(SOLVER_CONFIGS).forEach(solverName => {
+    const availableSolvers = listAvailableSolvers();
+    availableSolvers.forEach(solverName => {
       const client = createSolverClient(solverName);
       this.clients.set(solverName, client);
       

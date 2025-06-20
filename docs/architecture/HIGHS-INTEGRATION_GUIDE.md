@@ -1,12 +1,12 @@
-# HiGHS MCP Integration Guide for DcisionAI
+# HiGHS Integration Guide for DcisionAI
 
 ## Overview
 
-This guide explains how to integrate the [highs-mcp](https://www.npmjs.com/package/highs-mcp) package with your DcisionAI construction management platform to complete the optimization pipeline.
+This guide explains how the HiGHS optimization solver is integrated into the DcisionAI construction management platform. The solver functionality is now **integrated directly into the Next.js application** as API routes, providing a streamlined and efficient optimization pipeline.
 
-## What is highs-mcp?
+## What is HiGHS?
 
-The `highs-mcp` package is a Model Context Protocol (MCP) server that provides linear programming (LP) and mixed-integer programming (MIP) optimization capabilities using the HiGHS solver. It's perfect for your construction optimization needs because it supports:
+[HiGHS](https://highs.dev/) is a high-performance open-source solver for linear programming (LP), mixed-integer programming (MIP), and quadratic programming (QP). It's perfect for construction optimization needs because it supports:
 
 - **Linear Programming (LP)**: Resource allocation, scheduling
 - **Mixed-Integer Programming (MIP)**: Project selection, workforce planning
@@ -14,58 +14,85 @@ The `highs-mcp` package is a Model Context Protocol (MCP) server that provides l
 - **Binary and integer variables**: Yes/no decisions, discrete quantities
 - **Multi-objective optimization**: Balancing multiple goals
 
-## Installation
-
-### 1. Install the Package
-
-```bash
-npm install highs-mcp
-```
-
-### 2. Verify Installation
-
-```bash
-npx highs-mcp --help
-```
-
-## Integration with DcisionAI
+## Integration Architecture
 
 ### Current Architecture
 
-Your DcisionAI platform now has:
+Your DcisionAI platform now has a **single-service architecture**:
 
 ```
-Customer Data → Data Agent → Intent Agent → Model Builder Agent → [MISSING: SOLVER] → Explain Agent
+Customer Data → Data Agent → Intent Agent → Model Builder Agent → Integrated HiGHS Solver → Explain Agent
 ```
 
-### With highs-mcp Integration
+### Solver Integration
+
+The optimization solver is integrated directly into the Next.js application:
 
 ```
-Customer Data → Data Agent → Intent Agent → Model Builder Agent → HiGHS MCP Solver → Explain Agent
+┌─────────────────────────────────────────────────────────┐
+│                Next.js Application                      │
+│                                                         │
+│  ┌─────────────────┐  ┌─────────────────┐              │
+│  │   Frontend UI   │  │   API Routes    │              │
+│  │                 │  │                 │              │
+│  │ • React Pages   │  │ • /api/solver   │ ← HiGHS      │
+│  │ • Components    │  │ • /api/agno     │   Integration│
+│  │ • Workflows     │  │ • /api/docs     │              │
+│  │ • Chat Interface│  │ • /api/metrics  │              │
+│  └─────────────────┘  └─────────────────┘              │
+│                                                         │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │           Optimization Engine                   │   │
+│  │                                               │   │
+│  │ • ConstructionMCPSolver                       │   │
+│  │ • HiGHS Integration                           │   │
+│  │ • Problem Templates                           │   │
+│  │ • Solution Analysis                           │   │
+│  └───────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ## Implementation
 
-### 1. Update ConstructionMCPSolver
+### 1. Solver API Endpoint
 
-The `ConstructionMCPSolver` class is already designed to integrate with highs-mcp:
+The solver functionality is exposed via the `/api/solver/solve` endpoint:
 
 ```typescript
-import ConstructionMCPSolver from './src/mcp-solver/ConstructionMCPSolver';
+// POST /api/solver/solve
+{
+  "problem": {
+    "variables": [...],
+    "constraints": {...},
+    "objective": {...}
+  },
+  "options": {
+    "time_limit": 300,
+    "solver": "highs"
+  }
+}
+```
+
+### 2. ConstructionMCPSolver Integration
+
+The `ConstructionMCPSolver` class provides the main interface:
+
+```typescript
+import ConstructionMCPSolver from './src/pages/api/_lib/ConstructionMCPSolver';
 
 const solver = new ConstructionMCPSolver();
 
 // Check if HiGHS is available
-if (solver.isHighsAvailable()) {
+if (solver.isSolverAvailable('highs')) {
   console.log('✅ HiGHS solver is available');
 } else {
   console.log('⚠️ Using fallback solver');
 }
 ```
 
-### 2. Use in Workflow
+### 3. Use in Workflow
 
-The workflow orchestrator automatically uses the solver:
+The workflow orchestrator automatically uses the integrated solver:
 
 ```typescript
 import { executeConstructionWorkflow } from './src/dcisionai-agents/constructionWorkflow';
@@ -141,98 +168,6 @@ const resourceProblem = {
 };
 ```
 
-### 3. Cost Optimization
-
-```typescript
-const costProblem = {
-  problem_type: 'cost_optimization',
-  sense: 'minimize',
-  objective: {
-    linear: [50, 75, 40, 60] // Minimize total cost
-  },
-  variables: [
-    { name: 'material_a', type: 'cont', category: 'material' },
-    { name: 'material_b', type: 'cont', category: 'material' },
-    { name: 'equipment_a', type: 'int', category: 'equipment' },
-    { name: 'equipment_b', type: 'int', category: 'equipment' }
-  ],
-  constraints: {
-    dense: [
-      [1, 1, 0, 0], // Material requirement
-      [0, 0, 1, 1], // Equipment requirement
-      [2, 1, 1, 2]  // Quality constraint
-    ],
-    sense: ['>=', '>=', '>='],
-    rhs: [100, 10, 50]
-  }
-};
-```
-
-## Advanced Features
-
-### 1. Quadratic Programming for Risk Management
-
-```typescript
-const riskProblem = {
-  problem_type: 'risk_management',
-  sense: 'minimize',
-  objective: {
-    quadratic: {
-      dense: [
-        [0.1, 0.02, 0.01],  // Risk covariance matrix
-        [0.02, 0.15, 0.03],
-        [0.01, 0.03, 0.08]
-      ]
-    }
-  },
-  variables: [
-    { name: 'risk_mitigation_a', type: 'cont', category: 'risk' },
-    { name: 'risk_mitigation_b', type: 'cont', category: 'risk' },
-    { name: 'risk_mitigation_c', type: 'cont', category: 'risk' }
-  ],
-  constraints: {
-    dense: [
-      [1, 1, 1], // Total risk budget
-      [0.8, 0.6, 0.9] // Risk reduction effectiveness
-    ],
-    sense: ['<=', '>='],
-    rhs: [100, 50]
-  }
-};
-```
-
-### 2. Large Sparse Problems
-
-For large construction projects with many variables:
-
-```typescript
-const largeProblem = {
-  problem_type: 'supply_chain',
-  sense: 'minimize',
-  objective: {
-    linear: [10, 15, 12, 8, 9, 11] // Transportation costs
-  },
-  variables: [
-    { name: 'supplier_a', type: 'cont', category: 'supplier' },
-    { name: 'supplier_b', type: 'cont', category: 'supplier' },
-    { name: 'supplier_c', type: 'cont', category: 'supplier' },
-    { name: 'supplier_d', type: 'cont', category: 'supplier' },
-    { name: 'supplier_e', type: 'cont', category: 'supplier' },
-    { name: 'supplier_f', type: 'cont', category: 'supplier' }
-  ],
-  constraints: {
-    sparse: {
-      rows: [0, 0, 1, 1, 2, 2],    // Only non-zero coefficients
-      cols: [0, 2, 1, 3, 2, 4],
-      values: [1, 1, 1, 1, 1, 1],
-      shape: [3, 6]
-    },
-    sense: ['>=', '>=', '>='],
-    rhs: [100, 150, 200]
-  }
-};
-```
-
 ## Solver Options
 
 ### Basic Options
@@ -267,22 +202,35 @@ const constructionOptions = {
 
 ## Testing the Integration
 
-### 1. Test Script
+### 1. Test the Solver API
 
-```typescript
-import { testHighsIntegration } from './src/mcp-solver/test-highs-integration';
-
-// Run integration tests
-await testHighsIntegration();
+```bash
+# Test the solver endpoint directly
+curl -X POST https://your-platform-url/api/solver/solve \
+  -H "Content-Type: application/json" \
+  -d '{
+    "problem": {
+      "variables": [
+        {"name": "x", "type": "cont", "lb": 0, "ub": 10},
+        {"name": "y", "type": "cont", "lb": 0, "ub": 10}
+      ],
+      "objective": {"linear": [1, 1]},
+      "constraints": {
+        "dense": [[1, 1]],
+        "sense": [">="],
+        "rhs": [1]
+      }
+    }
+  }'
 ```
 
-### 2. Example Usage
+### 2. Test Script
 
 ```typescript
-import { runConstructionExamples } from './src/mcp-solver/construction-examples';
+import { testHiGHSIntegration } from './src/pages/api/_lib/test-highs-integration';
 
-// Run all construction examples
-await runConstructionExamples();
+// Run integration tests
+await testHiGHSIntegration();
 ```
 
 ## Performance Considerations
@@ -325,43 +273,29 @@ try {
 
 ### 2. Fallback Behavior
 
-If highs-mcp is not available, the system automatically falls back to a simple solver for testing:
+If HiGHS is not available, the system automatically falls back to a simple solver for testing:
 
 ```typescript
-if (solver.isHighsAvailable()) {
+if (solver.isSolverAvailable('highs')) {
   console.log('Using HiGHS solver');
 } else {
-  console.log('Using fallback solver - install highs-mcp for full functionality');
+  console.log('Using fallback solver - HiGHS not available');
 }
 ```
 
 ## Production Deployment
 
-### 1. Docker Integration
-
-Add to your `docker-compose.yml`:
-
-```yaml
-services:
-  dcisionai-platform:
-    build: .
-    environment:
-      - HIGHS_MCP_ENABLED=true
-    depends_on:
-      - agno-backend
-```
-
-### 2. Environment Variables
+### 1. Environment Variables
 
 ```bash
-# HiGHS MCP Configuration
-HIGHS_MCP_ENABLED=true
-HIGHS_MCP_TIMEOUT=300
-HIGHS_MCP_THREADS=4
-HIGHS_MCP_LOG_LEVEL=info
+# HiGHS Configuration
+HIGHS_ENABLED=true
+HIGHS_TIMEOUT=300
+HIGHS_THREADS=4
+HIGHS_LOG_LEVEL=info
 ```
 
-### 3. Monitoring
+### 2. Monitoring
 
 ```typescript
 // Monitor solver performance
@@ -374,7 +308,12 @@ const metrics = {
 };
 ```
 
-## Benefits of This Integration
+## Benefits of Integrated Architecture
+
+### ✅ **Simplified Deployment**
+- Single service to deploy and manage
+- No network overhead between frontend and solver
+- Easier debugging and monitoring
 
 ### ✅ **Complete Optimization Pipeline**
 - End-to-end optimization from data to solution
@@ -398,10 +337,9 @@ const metrics = {
 
 ## Next Steps
 
-1. **Install highs-mcp**: `npm install highs-mcp`
-2. **Test integration**: Run the test scripts
-3. **Deploy to production**: Update your deployment configuration
-4. **Monitor performance**: Track solver metrics
-5. **Optimize further**: Fine-tune solver options for your specific use cases
+1. **Test the integrated solver**: Use the `/api/solver/solve` endpoint
+2. **Deploy to production**: The solver is automatically included in the main deployment
+3. **Monitor performance**: Track solver metrics and optimization results
+4. **Optimize further**: Fine-tune solver options for your specific use cases
 
-Your DcisionAI platform now has a complete, production-ready optimization pipeline powered by one of the fastest open-source optimization solvers available! 
+Your DcisionAI platform now has a complete, production-ready optimization pipeline powered by HiGHS, all integrated into a single, efficient service! 

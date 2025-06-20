@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTheme } from './layout/ThemeContext';
 import MermaidChart from './ui/MermaidChart';
+import ReactMarkdown from 'react-markdown';
 
 interface SubIntent {
   name: string;
@@ -26,6 +27,11 @@ interface ResponseTabsProps {
     intentAnalysis?: IntentAnalysis;
     visualization?: string;
     zoom?: string;
+    problem?: any;
+    solution?: any;
+    summary?: string;
+    rag?: string;
+    optimization?: string;
   };
 }
 
@@ -33,60 +39,178 @@ const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
   const [activeTab, setActiveTab] = useState('analysis');
   const { theme } = useTheme();
 
-  const tabs = [
-    { id: 'analysis', label: 'Analysis' },
-    { id: 'details', label: 'Solution Details' },
-    { id: 'summary', label: 'Summary' },
-    { id: 'visualization', label: 'Visualization' }
-  ];
+  // Determine content type and available tabs
+  const getContentType = () => {
+    if (content.rag && content.optimization) return 'hybrid';
+    if (content.rag || typeof content === 'string') return 'rag';
+    if (content.problem && content.solution) return 'optimization';
+    return 'general';
+  };
 
-  const renderSummary = () => {
-    const stats = [
-      { label: 'Workers per Phase', value: 'worker_1: 2, worker_2: 2, worker_3: 1, worker_4: 1' },
-      { label: 'Total Workers', value: '6' },
-      { label: 'Total Duration', value: '11 weeks' },
-      { label: 'Solve Time', value: '384ms' }
-    ];
+  const contentType = getContentType();
 
+  const getTabs = () => {
+    switch (contentType) {
+      case 'hybrid':
+        return [
+          { id: 'overview', label: 'Overview' },
+          { id: 'rag', label: 'Knowledge Base' },
+          { id: 'optimization', label: 'Optimization' },
+        ];
+      case 'rag':
+        return [{ id: 'content', label: 'Search Results' }];
+      case 'optimization':
+        return [
+          { id: 'analysis', label: 'Analysis' },
+          { id: 'details', label: 'Solution Details' },
+          { id: 'summary', label: 'Summary' },
+          { id: 'visualization', label: 'Visualization' },
+        ];
+      default:
+        // Fallback for general or unknown content
+        return [{ id: 'content', label: 'Response' }];
+    }
+  };
+
+  const tabs = getTabs();
+
+  useState(() => {
+    if (tabs.length > 0 && tabs[0].id !== activeTab) {
+      setActiveTab(tabs[0].id);
+    }
+  });
+
+  const renderRAGContent = () => {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {stats.map((stat, index) => (
-            <div key={index} className="bg-gray-100/50 dark:bg-gray-800/50 rounded-lg p-4">
-              <div className="text-sm text-gray-500 dark:text-gray-400">{stat.label}</div>
-              <div className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">{stat.value}</div>
-            </div>
-          ))}
-        </div>
-        <div className="bg-gray-100/50 dark:bg-gray-800/50 rounded-lg p-4">
-          <div className="text-sm text-gray-500 dark:text-gray-400">Optimization Result</div>
-          <div className="mt-2 text-gray-900 dark:text-gray-100">
-            The optimal solution achieves efficient crew assignments while maintaining safety and quality standards.
-          </div>
+        <div className="bg-gray-100/50 dark:bg-gray-800/50 rounded-lg p-6">
+          <ReactMarkdown
+            components={{
+              h2: ({ children }) => <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">{children}</h2>,
+              h3: ({ children }) => <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">{children}</h3>,
+              p: ({ children }) => <p className="text-gray-700 dark:text-gray-300 mb-3">{children}</p>,
+              ul: ({ children }) => <ul className="list-disc list-inside space-y-1 mb-3">{children}</ul>,
+              li: ({ children }) => <li className="text-gray-700 dark:text-gray-300">{children}</li>,
+              strong: ({ children }) => <strong className="font-semibold text-gray-900 dark:text-gray-100">{children}</strong>,
+              em: ({ children }) => <em className="italic text-gray-600 dark:text-gray-400">{children}</em>,
+            }}
+          >
+            {content.rag || (content as any).toString()}
+          </ReactMarkdown>
         </div>
       </div>
     );
   };
 
+  const renderHybridOverview = () => {
+    return (
+      <div className="space-y-6">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-3">
+            🧠 Smart Routing: Hybrid Approach
+          </h3>
+          <p className="text-blue-800 dark:text-blue-200 mb-4">
+            This response combines knowledge base search with optimization to provide comprehensive insights.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+              <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">📚 Knowledge Base</h4>
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                Searched construction best practices and industry standards
+              </p>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-green-200 dark:border-green-700">
+              <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">⚡ Optimization</h4>
+              <p className="text-sm text-green-800 dark:text-green-200">
+                Applied mathematical optimization to crew scheduling
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        {content.summary && (
+          <div className="bg-gray-100/50 dark:bg-gray-800/50 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Summary</h3>
+            <p className="text-gray-700 dark:text-gray-300">{content.summary}</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderHybridOptimization = () => {
+    return (
+      <div className="space-y-6">
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-green-900 dark:text-green-100 mb-3">
+            ⚡ Optimization Results
+          </h3>
+          <p className="text-green-800 dark:text-green-200 mb-4">
+            Crew allocation optimized considering knowledge base constraints
+          </p>
+        </div>
+        
+        <div className="bg-gray-100/50 dark:bg-gray-800/50 rounded-lg p-6">
+          <ReactMarkdown
+            components={{
+              h2: ({ children }) => <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">{children}</h2>,
+              h3: ({ children }) => <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">{children}</h3>,
+              p: ({ children }) => <p className="text-gray-700 dark:text-gray-300 mb-3">{children}</p>,
+              ul: ({ children }) => <ul className="list-disc list-inside space-y-1 mb-3">{children}</ul>,
+              li: ({ children }) => <li className="text-gray-700 dark:text-gray-300">{children}</li>,
+              strong: ({ children }) => <strong className="font-semibold text-gray-900 dark:text-gray-100">{children}</strong>,
+            }}
+          >
+            {content.optimization || ''}
+          </ReactMarkdown>
+        </div>
+      </div>
+    );
+  };
+  const renderSummary = () => {
+    if (!content.summary) {
+        return <div className="text-gray-500 dark:text-gray-400 text-center py-8">No summary available.</div>
+    }
+    return (
+        <div className="bg-gray-100/50 dark:bg-gray-800/50 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Summary</h3>
+          <ReactMarkdown
+            components={{
+              p: ({ children }) => <p className="text-gray-700 dark:text-gray-300 mb-3">{children}</p>,
+              ul: ({ children }) => <ul className="list-disc list-inside space-y-1 mb-3">{children}</ul>,
+              li: ({ children }) => <li className="text-gray-700 dark:text-gray-300">{children}</li>,
+              strong: ({ children }) => <strong className="font-semibold text-gray-900 dark:text-gray-100">{children}</strong>,
+            }}
+          >
+            {content.summary}
+          </ReactMarkdown>
+        </div>
+    );
+  };
+
   const renderAnalysis = () => {
-    const intentAnalysis: IntentAnalysis = content.intentAnalysis || {
-      primaryIntent: 'Construction Resource Optimization',
-      confidence: 0.95,
+    if (!content.problem) {
+      return (
+         <div className="text-gray-500 dark:text-gray-400 text-center py-8">
+            Analysis is not available for this response type.
+          </div>
+      )
+    }
+
+    const { objective, variables, constraints, metadata } = content.problem;
+
+    const intentAnalysis: IntentAnalysis = {
+      primaryIntent: objective?.description || 'Optimization Task',
+      confidence: 0.9, // Placeholder confidence for derived analysis
       subIntents: [
-        { name: 'Worker Assignment', confidence: 0.92 },
-        { name: 'Timeline Planning', confidence: 0.88 },
-        { name: 'Cost Optimization', confidence: 0.85 }
+        { name: 'Resource Allocation', confidence: 0.9 },
+        { name: 'Constraint Satisfaction', confidence: 0.88 },
       ],
-      keyConstraints: [
-        'Safety requirements must be met',
-        'Resource availability limits',
-        'Project timeline constraints',
-        'Skill matching requirements'
-      ],
+      keyConstraints: constraints?.descriptions || ['No constraints specified.'],
       identifiedEntities: {
-        resources: ['Carpenters', 'Electricians', 'HVAC Technicians', 'Plumbers'],
-        phases: ['Foundation', 'Framing', 'MEP Installation', 'Finishing'],
-        timeframe: '11 weeks'
+        resources: variables?.map((v: any) => v.description || v.name) || ['No resources specified.'],
+        phases: metadata?.phases?.map((p: any) => p.name) || [],
+        timeframe: metadata?.phases ? `${metadata.phases.reduce((sum: number, p: { duration: number }) => sum + (p.duration || 0), 0)} weeks` : 'N/A'
       }
     };
 
@@ -132,9 +256,11 @@ const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
           <div className="bg-gray-100/50 dark:bg-gray-800/50 rounded-lg p-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Project Phases</h3>
             <div className="space-y-2">
-              {intentAnalysis.identifiedEntities.phases.map((phase: string, index: number) => (
-                <div key={index} className="text-gray-700 dark:text-gray-300">• {phase}</div>
-              ))}
+              {intentAnalysis.identifiedEntities.phases.length > 0 ?
+                intentAnalysis.identifiedEntities.phases.map((phase: string, index: number) => (
+                  <div key={index} className="text-gray-700 dark:text-gray-300">• {phase}</div>
+                )) : <div className="text-gray-700 dark:text-gray-300">N/A</div>
+              }
             </div>
           </div>
         </div>
@@ -153,52 +279,81 @@ const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
   };
 
   const renderDetails = () => {
-    const phases = [
-      { name: 'Foundation', duration: '2 weeks', workers: ['2 Carpenters', '1 HVAC Tech'] },
-      { name: 'Framing', duration: '3 weeks', workers: ['2 Carpenters', '2 Electricians'] },
-      { name: 'MEP Installation', duration: '4 weeks', workers: ['3 Plumbers', '2 Electricians', '1 HVAC Tech'] },
-      { name: 'Finishing', duration: '2 weeks', workers: ['2 Carpenters', '1 Electrician'] }
-    ];
+    const { solution, problem } = content;
 
-    const constraints = [
-      { name: 'Safety Requirements', description: 'Minimum skilled workers per phase maintained' },
-      { name: 'Resource Limits', description: 'Worker assignments within available capacity' },
-      { name: 'Quality Standards', description: 'Proper skill distribution across phases' },
-      { name: 'Timeline Optimization', description: 'Efficient scheduling to minimize total duration' }
-    ];
+    if (!solution || !problem) {
+      return <div className="text-center text-gray-500 dark:text-gray-400 py-8">Solution data is not available.</div>;
+    }
+    
+    const StatCard = ({ title, value,bgColor = 'bg-gray-100/50 dark:bg-gray-800/50' }: { title: string, value: string | number, bgColor?: string }) => (
+      <div className={`rounded-lg p-4 ${bgColor}`}>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{title}</p>
+        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{value}</p>
+      </div>
+    );
+
+    const VariableCard = ({ variable }: { variable: { name?: string, variable_name?: string, value: number, category?: string, description?: string } }) => (
+        <div className="bg-gray-100/50 dark:bg-gray-800/50 rounded-lg p-4">
+            <div className="flex justify-between items-center">
+                <p className="text-md font-semibold text-gray-900 dark:text-gray-100">{variable.name || variable.variable_name}</p>
+                <p className="text-lg font-bold text-[#FF7F50]">{variable.value}</p>
+            </div>
+            {variable.description && <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{variable.description}</p>}
+            {variable.category && <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 uppercase">{variable.category}</p>}
+        </div>
+    );
+    
+    const ConstraintCard = ({ description, category, sense, rhs }: { description: string, category: string, sense: string, rhs: number }) => (
+        <div className="bg-gray-100/50 dark:bg-gray-800/50 rounded-lg p-3">
+            <div className="flex justify-between items-center">
+                <p className="text-sm text-gray-900 dark:text-gray-100">{description}</p>
+                <p className="text-sm font-mono text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700/50 rounded px-2 py-1">{sense} {rhs}</p>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 uppercase">{category}</p>
+        </div>
+    );
+
+    // Normalize solution data - solver returns "name", agent returns "variable_name"
+    const normalizedSolution = solution.solution?.map((s: any) => ({
+      ...s,
+      name: s.name || s.variable_name,
+    }));
 
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left column: Solution */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Phase Details</h3>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Solution</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <StatCard title="Status" value={solution.status} bgColor={solution.status === 'optimal' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-yellow-100 dark:bg-yellow-900/30'} />
+            <StatCard title="Objective Value" value={solution.objective_value} />
+          </div>
+          <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 pt-2">Assigned Resources</h4>
           <div className="grid grid-cols-1 gap-4">
-            {phases.map((phase, index) => (
-              <div key={index} className="bg-gray-100/50 dark:bg-gray-800/50 rounded-lg p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h4 className="font-medium text-gray-900 dark:text-gray-100">{phase.name}</h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Duration: {phase.duration}</p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Assigned Workers:</div>
-                    {phase.workers.map((worker, i) => (
-                      <div key={i} className="text-sm text-gray-500 dark:text-gray-400">{worker}</div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+            {normalizedSolution?.map((variable: any, index: number) => (
+              <VariableCard key={index} variable={variable} />
             ))}
           </div>
         </div>
         
+        {/* Right column: Problem Definition */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Optimization Constraints</h3>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Problem</h3>
+           <div className="bg-gray-100/50 dark:bg-gray-800/50 rounded-lg p-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400">Objective</p>
+              <p className="text-md font-semibold text-gray-900 dark:text-gray-100">{problem.objective?.description}</p>
+            </div>
+            
+          <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 pt-2">Key Constraints</h4>
           <div className="grid grid-cols-1 gap-4">
-            {constraints.map((constraint, index) => (
-              <div key={index} className="bg-gray-100/50 dark:bg-gray-800/50 rounded-lg p-4">
-                <h4 className="font-medium text-gray-900 dark:text-gray-100">{constraint.name}</h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{constraint.description}</p>
-              </div>
+            {problem.constraints?.descriptions?.map((desc: string, index: number) => (
+               <ConstraintCard 
+                key={index} 
+                description={desc} 
+                category={problem.constraints.categories[index]}
+                sense={problem.constraints.sense[index]}
+                rhs={problem.constraints.rhs[index]}
+              />
             ))}
           </div>
         </div>
@@ -208,6 +363,14 @@ const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
 
   const renderContent = () => {
     switch (activeTab) {
+      case 'overview':
+        return renderHybridOverview();
+      case 'rag':
+        return renderRAGContent();
+      case 'optimization':
+        return renderHybridOptimization();
+      case 'content':
+        return renderRAGContent();
       case 'summary':
         return renderSummary();
       case 'analysis':

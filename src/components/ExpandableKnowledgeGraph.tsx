@@ -1,51 +1,50 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import VisNetworkGraph, { VisNode, VisEdge } from './VisNetworkGraph';
 
-// Mock hierarchical knowledge graph data
-const mockData = {
-  nodes: [
-    { id: 'root', label: 'Construction', group: 'domain' },
-    { id: 'safety', label: 'Safety', group: 'domain', parent: 'root' },
-    { id: 'planning', label: 'Planning', group: 'domain', parent: 'root' },
-    { id: 'osha', label: 'OSHA', group: 'source', parent: 'safety' },
-    { id: 'falls', label: 'Falls', group: 'risk', parent: 'safety' },
-    { id: 'pmbok', label: 'PMBOK', group: 'source', parent: 'planning' },
-    { id: 'budget', label: 'Budget', group: 'domain', parent: 'root' },
-    { id: 'budget2024', label: 'Budget 2024', group: 'source', parent: 'budget' },
-  ],
-  edges: [
-    { from: 'root', to: 'safety' },
-    { from: 'root', to: 'planning' },
-    { from: 'root', to: 'budget' },
-    { from: 'safety', to: 'osha' },
-    { from: 'safety', to: 'falls' },
-    { from: 'planning', to: 'pmbok' },
-    { from: 'budget', to: 'budget2024' },
-  ]
-};
-
-interface ExpandableKnowledgeGraphProps {
-  data?: { nodes: any[]; edges: any[] };
+interface KnowledgeGraphData {
+  nodes: VisNode[];
+  edges: VisEdge[];
 }
 
-const ExpandableKnowledgeGraph: React.FC<ExpandableKnowledgeGraphProps> = ({ data = mockData }) => {
-  // Start with only the root node visible
-  const [visibleNodeIds, setVisibleNodeIds] = useState(['root']);
+const ExpandableKnowledgeGraph: React.FC = () => {
+  const [graphData, setGraphData] = useState<KnowledgeGraphData>({ nodes: [], edges: [] });
+  const [visibleNodeIds, setVisibleNodeIds] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Compute visible nodes/edges
-  const visibleNodes: VisNode[] = data.nodes.filter(n => visibleNodeIds.includes(n.id));
-  const visibleEdges: VisEdge[] = data.edges.filter(
-    (e: any) => visibleNodeIds.includes(e.from) && visibleNodeIds.includes(e.to)
+  useEffect(() => {
+    const fetchGraphData = async () => {
+      try {
+        const response = await fetch('/api/rag/graph');
+        if (!response.ok) {
+          throw new Error('Failed to fetch knowledge graph data');
+        }
+        const data = await response.json();
+        setGraphData(data);
+        // Start with only root nodes visible
+        const rootIds = data.nodes.filter((n: any) => !n.parent).map((n: any) => n.id);
+        setVisibleNodeIds(rootIds);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchGraphData();
+  }, []);
+
+  const visibleNodes: VisNode[] = graphData.nodes.filter(n => visibleNodeIds.includes(n.id));
+  const visibleEdges: VisEdge[] = graphData.edges.filter(
+    e => visibleNodeIds.includes(e.from) && visibleNodeIds.includes(e.to)
   );
 
-  // On node click, expand its children
   const handleNodeClick = useCallback((params: any) => {
     if (params.nodes.length > 0) {
       const nodeId = params.nodes[0];
-      const children = data.nodes.filter(n => n.parent === nodeId).map(n => n.id);
+      const children = graphData.nodes.filter((n: any) => n.parent === nodeId).map((n: any) => n.id);
       setVisibleNodeIds(ids => Array.from(new Set([...ids, ...children])));
     }
-  }, [data.nodes]);
+  }, [graphData.nodes]);
 
   const options = {
     groups: {
@@ -57,6 +56,14 @@ const ExpandableKnowledgeGraph: React.FC<ExpandableKnowledgeGraphProps> = ({ dat
     physics: { enabled: true },
     interaction: { hover: true, tooltipDelay: 200 },
   };
+  
+  if (isLoading) {
+    return <div className="text-center py-8">Loading Knowledge Graph...</div>;
+  }
+  
+  if (error) {
+    return <div className="text-center py-8 text-red-500">Failed to load knowledge graph: {error}</div>;
+  }
 
   return (
     <VisNetworkGraph
