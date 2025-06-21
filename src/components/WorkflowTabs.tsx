@@ -19,7 +19,7 @@ export interface WorkflowTabsProps {
 
 const WorkflowTabs: React.FC<WorkflowTabsProps> = ({ 
   tabs, 
-  defaultTabId = 'chat', 
+  defaultTabId = 'ai-assistant', 
   verticalName,
   tagline 
 }) => {

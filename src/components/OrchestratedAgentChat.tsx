@@ -30,7 +30,7 @@ interface OrchestratedAgentChatProps {
 
 const OrchestratedAgentChat: React.FC<OrchestratedAgentChatProps> = ({
   placeholder = 'How can I help you today?',
-  apiEndpoint = '/api/dcisionai/construction/orchestrated-chat',
+  apiEndpoint = '/api/dcisionai/construction/chat',
   showSmartPrompts = false,
   useOrchestration = true,
 }) => {
@@ -229,7 +229,16 @@ const OrchestratedAgentChat: React.FC<OrchestratedAgentChatProps> = ({
                         </div>
                       )}
                       
-                      <ResponseTabs content={msg.content} />
+                      <ResponseTabs
+                        content={
+                          msg.content?.explanation
+                            ? { ...msg.content, ...msg.content.explanation }
+                            : {
+                                ...msg.content,
+                                visualization: msg.content.mermaidDiagram,
+                              }
+                        }
+                      />
                     </div>
                   ) : (
                     <ReactMarkdown

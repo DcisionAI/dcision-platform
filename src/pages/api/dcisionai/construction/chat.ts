@@ -1,98 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import OpenAI from 'openai';
-import { ConstructionMCPSolver } from '../../_lib/ConstructionMCPSolver';
-import { constructionIndex, getEmbeddings } from '../../../../lib/pinecone';
-import { agnoIntentAgent } from '../../_lib/dcisionai-agents/intentAgent/agnoIntentAgent';
-
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-// Keep a solver instance
-let solver: ConstructionMCPSolver | null = null;
-
-/**
- * Generate a Mermaid chart for optimization problems
- */
-function generateMermaidChart(problem: any): string {
-    // Helper function to get clean node names
-    const getNodeName = (v: any, index: number) => {
-        if (!v.name) return `worker_${index + 1}`;
-        const baseName = v.name.split('_')[0];
-        return baseName || `worker_${index + 1}`;
-    };
-
-    return `graph TD
-    subgraph Workers
-      ${problem.variables.map((v: any, i: number) => 
-        `${v.name || `worker_${i+1}`}["${getNodeName(v, i)}<br/>${v.category || 'worker'}<br/>${v.lb}-${v.ub} units"]`
-      ).join('\n      ')}
-    end
-    subgraph Objective
-      obj["${problem.objective.description}"]
-    end
-    subgraph Constraints
-      ${problem.constraints.descriptions.map((desc: string, i: number) => 
-        `c${i}["${desc}<br/>${problem.constraints.sense[i]} ${problem.constraints.rhs[i]}"]`
-      ).join('\n      ')}
-    end
-    ${problem.variables.map((v: any, i: number) => `${v.name || `worker_${i+1}`} -->|${problem.objective.linear[i]}| obj`).join('\n    ')}
-    ${problem.variables.map((v: any, vi: number) => 
-        problem.constraints.dense.map((row: number[], ci: number) => 
-            row[vi] !== 0 ? `${v.name || `worker_${vi+1}`} -->|${row[vi]}| c${ci}` : ''
-        ).filter(Boolean).join('\n    ')
-    ).join('\n    ')}
-    classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px;
-    classDef objective fill:#e3f2fd,stroke:#01579b,stroke-width:2px;
-    classDef constraint fill:#f3e5f5,stroke:#4a148c,stroke-width:2px;
-    class obj objective;
-    ${problem.constraints.descriptions.map((_: any, i: number) => `class c${i} constraint;`).join('\n    ')}
-  `;
-}
-
-async function getRequestType(message: string): Promise<'rag' | 'optimization' | 'hybrid'> {
-  const prompt = `
-    Analyze the user's request and classify it into one of three categories: "rag", "optimization", or "hybrid".
-
-    1.  **"rag"**: The user is asking a question that can be answered from a knowledge base.
-        Examples:
-        *   "What are the best practices for curing concrete in cold weather?"
-        *   "Summarize the safety requirements for scaffolding."
-        *   "Find information on sustainable building materials."
-
-    2.  **"optimization"**: The user wants to solve a mathematical optimization problem, like resource allocation, scheduling, or cost minimization.
-        Examples:
-        *   "Allocate 30 workers across 5 projects to minimize costs."
-        *   "Find the best schedule for a 3-month construction project."
-        *   "Optimize the material cutting to reduce waste."
-
-    3.  **"hybrid"**: The user is asking to perform an optimization task that requires information from the knowledge base. The query combines a question with an optimization goal.
-        Examples:
-        *   "Given the safety regulations for scaffolding from the knowledge base, create an optimized work schedule."
-        *   "Find the best fire-resistant materials from the KB and then use them to create a cost-effective building plan."
-        *   "How do soil conditions affect foundation costs? Use that to optimize my budget."
-
-    User Request: "${message}"
-
-    Respond with ONLY one word: "rag", "optimization", or "hybrid".
-  `;
-
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-4-turbo-preview',
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0,
-    max_tokens: 10,
-  });
-
-  const result = completion.choices[0].message.content?.trim().toLowerCase();
-
-  if (result === 'rag' || result === 'optimization' || result === 'hybrid') {
-    return result;
-  }
-  // Fallback if the classification fails
-  return 'optimization';
-}
+import { agentOrchestrator, ProgressEvent } from '../../_lib/AgentOrchestrator';
+import { v4 as uuidv4 } from 'uuid';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'OPTIONS') {
@@ -103,248 +11,97 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { message } = req.body;
+    const { message, customerData = {}, sessionId = uuidv4(), useOrchestration = true } = req.body;
     if (!message) {
       return res.status(400).json({ type: 'error', content: 'Message is required' });
     }
 
-    // Use the full Intent Agent analysis instead of simple classification
-    const intentAnalysis = await agnoIntentAgent.analyzeIntent(message);
-    
-    // Determine execution path based on primary intent
-    let executionPath: 'rag' | 'optimization' | 'hybrid';
-    switch (intentAnalysis.primaryIntent) {
-      case 'knowledge_retrieval':
-        executionPath = 'rag';
-        break;
-      case 'optimization':
-        executionPath = 'optimization';
-        break;
-      case 'hybrid_analysis':
-        executionPath = 'hybrid';
-        break;
-      default:
-        executionPath = 'optimization';
+    // If orchestration is enabled (default), use the full orchestrated workflow
+    if (useOrchestration) {
+      console.log(`🚀 Starting orchestrated workflow for session: ${sessionId}`);
+      console.log(`📝 User message: ${message}`);
+
+      // Progress tracking
+      const progressEvents: ProgressEvent[] = [];
+      const onProgress = (event: ProgressEvent) => {
+        progressEvents.push(event);
+        console.log(`📊 Progress [${event.step}]: ${event.status} - ${event.message}`);
+      };
+
+      // Execute the full orchestrated workflow
+      const result = await agentOrchestrator.orchestrate(
+        message,
+        customerData,
+        sessionId,
+        onProgress
+      );
+
+      if (result.status === 'error') {
+        console.error('❌ Orchestration failed:', result.error);
+        return res.status(500).json({
+          type: 'error',
+          content: result.error?.message || 'Workflow execution failed'
+        });
+      }
+
+      // Format response based on execution path
+      let responseContent: any = {
+        intentAgentAnalysis: result.intentAnalysis,
+        summary: `Orchestrated workflow completed successfully via ${result.executionPath} path.`,
+        progressEvents,
+        timestamps: result.timestamps
+      };
+
+      switch (result.executionPath) {
+        case 'rag':
+          responseContent.rag = result.ragResult?.answer;
+          responseContent.sources = result.ragResult?.sources;
+          break;
+
+        case 'optimization':
+          responseContent.problem = result.optimizationResult?.problem;
+          responseContent.solution = result.optimizationResult?.solution;
+          responseContent.enrichedData = result.optimizationResult?.enrichedData;
+          break;
+
+        case 'hybrid':
+          responseContent.rag = result.ragResult?.answer;
+          responseContent.sources = result.ragResult?.sources;
+          responseContent.problem = result.optimizationResult?.problem;
+          responseContent.solution = result.optimizationResult?.solution;
+          responseContent.enrichedData = result.optimizationResult?.enrichedData;
+          break;
+      }
+
+      // Add explanation if available
+      if (result.explanation) {
+        responseContent.explanation = result.explanation;
+      }
+
+      console.log(`✅ Orchestration completed successfully for session: ${sessionId}`);
+      console.log(`📊 Execution path: ${result.executionPath}`);
+      console.log(`⏱️ Total time: ${new Date(result.timestamps.end).getTime() - new Date(result.timestamps.start).getTime()}ms`);
+
+      res.status(200).json({
+        type: result.executionPath,
+        content: responseContent
+      });
+    } else {
+      // Fallback to simple chat (for backward compatibility)
+      res.status(200).json({
+        type: 'chat',
+        content: {
+          message: 'Simple chat mode is deprecated. Please use orchestration mode.',
+          summary: 'Orchestration is now the default AI Assistant mode.'
+        }
+      });
     }
 
-    switch (executionPath) {
-      case 'rag':
-        return await handleRAGRequest(message, intentAnalysis, res);
-      case 'optimization':
-        return await handleOptimizationRequest(message, "", intentAnalysis, res);
-      case 'hybrid':
-        return await handleHybridRequest(message, intentAnalysis, res);
-      default:
-        // This default case should ideally not be reached
-        return await handleOptimizationRequest(message, "", intentAnalysis, res);
-    }
   } catch (error: any) {
-    console.error('Construction chat API error:', error);
+    console.error('❌ Construction chat API error:', error);
     res.status(500).json({
       type: 'error',
       content: 'Network or server error. Please try again in a moment.'
-    });
-  }
-}
-
-async function handleRAGRequest(message: string, intentAnalysis: any, res: NextApiResponse) {
-  try {
-    const queryEmbedding = await getEmbeddings(message);
-    const queryResponse = await constructionIndex.query({
-      vector: queryEmbedding,
-      topK: 5,
-      includeMetadata: true,
-    });
-
-    const context = queryResponse.matches.map(match => match.metadata?.text).join('\n\n');
-
-    const prompt = `You are a helpful construction knowledge base assistant. Answer the user's question based on the provided context.
-
-    Context:
-    ${context}
-    
-    Question: ${message}
-    
-    Answer:`;
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    const ragResponse = completion.choices[0].message.content || 'No information found.';
-
-    res.status(200).json({
-      type: 'rag',
-      content: {
-        rag: ragResponse,
-        summary: `RAG query for "${message}" completed.`,
-        intentAgentAnalysis: intentAnalysis
-      }
-    });
-  } catch (error) {
-    console.error('RAG request failed:', error);
-    res.status(500).json({
-      type: 'error',
-      content: 'Failed to search knowledge base. Please try again.'
-    });
-  }
-}
-
-async function handleOptimizationRequest(message: string, knowledgeBaseContext = "", intentAnalysis: any, res: NextApiResponse) {
-  if (!solver) {
-    try {
-      solver = new ConstructionMCPSolver();
-      await solver.initialize();
-    } catch (initError) {
-      console.error('Failed to initialize solver:', initError);
-      return res.status(500).json({ 
-        type: 'error', 
-        content: 'Failed to initialize optimization solver. Please try again.' 
-      });
-    }
-  }
-
-  const solverName = solver.getCurrentSolver();
-
-  const prompt = `
-    You are a mathematical optimization expert with a PhD. Your task is to formulate a mathematical optimization problem for the ${solverName} solver, based on the user's request.
-
-    Create a construction optimization problem in JSON format.
-    
-    ${knowledgeBaseContext ? `Use the following information from the knowledge base to inform the constraints and variables:
-    ---
-    ${knowledgeBaseContext}
-    ---
-    ` : ''}
-
-    User Request: "${message}"
-
-    The problem should be in this JSON format:
-    {
-      "objective": {
-        "description": "string describing the objective",
-        "linear": [array of coefficients for each variable]
-      },
-      "variables": [
-        {
-          "name": "string",
-          "lb": number (lower bound),
-          "ub": number (upper bound),
-          "category": "string (e.g., 'worker', 'equipment', 'material')",
-          "description": "string describing the variable"
-        }
-      ],
-      "constraints": {
-        "descriptions": ["array of constraint descriptions"],
-        "sense": ["array of constraint senses ('<=' or '>=' or '==')"],
-        "rhs": [array of right-hand side values],
-        "dense": [[array of coefficients for each constraint]]
-      },
-      "metadata": {
-        "phases": [
-          {
-            "name": "string",
-            "duration": number
-          }
-        ]
-      }
-    }
-
-    IMPORTANT: Return ONLY the JSON object, no markdown formatting, no code blocks, no additional text or explanations.`;
-
-  try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.1,
-    });
-
-    let problemJson = completion.choices[0].message.content;
-    if (!problemJson) {
-      throw new Error('No problem definition generated');
-    }
-
-    // Clean up the response to extract pure JSON
-    problemJson = problemJson.trim();
-    
-    // Remove markdown code blocks if present
-    if (problemJson.startsWith('```json')) {
-      problemJson = problemJson.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-    } else if (problemJson.startsWith('```')) {
-      problemJson = problemJson.replace(/^```\s*/, '').replace(/\s*```$/, '');
-    }
-
-    // Try to parse the JSON
-    let problem;
-    try {
-      problem = JSON.parse(problemJson);
-    } catch (parseError) {
-      console.error('JSON parse error:', parseError);
-      console.error('Raw response:', problemJson);
-      
-      // Try to extract JSON from the response if it contains other text
-      const jsonMatch = problemJson.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
-          problem = JSON.parse(jsonMatch[0]);
-        } catch (secondParseError: any) {
-          throw new Error(`Failed to parse JSON: ${secondParseError.message}`);
-        }
-      } else {
-        throw new Error('No valid JSON found in response');
-      }
-    }
-    
-    // Validate the problem structure
-    if (!problem.objective || !problem.variables || !problem.constraints) {
-      throw new Error('Invalid problem structure: missing required fields');
-    }
-    
-    // Solve the optimization problem
-    const solution = await solver.solveConstructionOptimization(problem);
-    
-    // Generate visualization
-    const visualization = generateMermaidChart(problem);
-
-    res.status(200).json({
-      type: 'optimization',
-      content: {
-        problem,
-        solution,
-        visualization,
-        summary: `Optimization completed with ${solverName} solver.`,
-        intentAgentAnalysis: intentAnalysis
-      }
-    });
-  } catch (error) {
-    console.error('Optimization request failed:', error);
-    res.status(500).json({
-      type: 'error',
-      content: 'Failed to solve optimization problem. Please try again.'
-    });
-  }
-}
-
-async function handleHybridRequest(message: string, intentAnalysis: any, res: NextApiResponse) {
-  try {
-    // 1. Get context from RAG
-    const queryEmbedding = await getEmbeddings(message);
-    const queryResponse = await constructionIndex.query({
-      vector: queryEmbedding,
-      topK: 5,
-      includeMetadata: true,
-    });
-    const ragContext = queryResponse.matches.map(match => match.metadata?.text).join('\n\n');
-
-    // 2. Pass context to optimization handler
-    return await handleOptimizationRequest(message, ragContext, intentAnalysis, res);
-
-  } catch (error) {
-    console.error('Hybrid request failed:', error);
-    res.status(500).json({
-      type: 'error',
-      content: 'Failed to process hybrid request. Please try again.'
     });
   }
 } 

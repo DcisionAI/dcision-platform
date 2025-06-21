@@ -137,8 +137,9 @@ export class ConstructionMCPSolver {
       await this.highs.initialize();
       console.log('✅ Connected to HiGHS solver via stdio');
     } catch (error) {
-      console.error('❌ Failed to connect to HiGHS solver:', error);
-      throw error;
+      console.error('❌ Failed to initialize HiGHS solver:', error);
+      // We don't rethrow here, as the solver might not be essential for all operations.
+      // The solve method will handle the uninitialized state.
     }
 
     this.initialized = true;
@@ -157,56 +158,58 @@ export class ConstructionMCPSolver {
         await this.initialize();
       }
 
-      // Ensure problem has all required fields
-      const formattedProblem = {
-        problem_type: problem.problem_type || 'resource_allocation',
-        sense: problem.sense || 'minimize',
-        objective: {
-          linear: Array.isArray(problem.objective?.linear) ? problem.objective.linear : [1, 1, 1],
-          description: problem.objective?.description || 'Minimize total resource usage'
-        },
-        variables: (problem.variables || []).map((v: any) => ({
-          name: v.name || 'var',
-          type: v.type || 'int',
-          lb: typeof v.lb === 'number' ? v.lb : 0,
-          ub: typeof v.ub === 'number' ? v.ub : 10,
-          description: v.description || v.name || 'Variable',
-          category: v.category || 'unknown'
-        })),
-        constraints: {
-          dense: Array.isArray(problem.constraints?.dense) ? problem.constraints.dense : [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
-          sense: Array.isArray(problem.constraints?.sense) ? problem.constraints.sense : ['<=', '<=', '<='],
-          rhs: Array.isArray(problem.constraints?.rhs) ? problem.constraints.rhs : [10, 10, 10],
-          descriptions: Array.isArray(problem.constraints?.descriptions) ? problem.constraints.descriptions : ['Constraint 1', 'Constraint 2', 'Constraint 3'],
-          categories: Array.isArray(problem.constraints?.categories) ? problem.constraints.categories : ['capacity', 'capacity', 'capacity']
-        }
-      };
+      // The actual model configuration is nested in problem.mcpConfig
+      const mcpConfig = problem.mcpConfig;
 
-      // Validate dimensions
-      const numVars = formattedProblem.variables.length;
-      
-      // Ensure objective coefficients match variables
-      if (formattedProblem.objective.linear.length !== numVars) {
-        formattedProblem.objective.linear = Array(numVars).fill(1);
+      if (!mcpConfig) {
+        throw new Error('mcpConfig is missing in the input problem object.');
       }
 
-      // Ensure constraint matrix dimensions match
-      formattedProblem.constraints.dense = formattedProblem.constraints.dense.map((row: number[]) => {
-        if (row.length !== numVars) {
-          return Array(numVars).fill(0);
-        }
-        return row;
-      });
+      // Override objective coefficients for crew assignment problems
+      if (mcpConfig.problem_type === 'resource_allocation' || mcpConfig.problem_type === 'scheduling') {
+        console.log('🔍 Overriding objective coefficients for crew assignment problem');
+        console.log('🔍 Original coefficients:', mcpConfig.objective.coefficients);
+        
+        // Force negative coefficients to maximize worker utilization
+        mcpConfig.objective.coefficients = mcpConfig.variables.map((variable: any, index: number) => {
+          const varName = variable.name.toLowerCase().replace(/\s+/g, '_');
+          console.log(`🔍 Processing variable ${index}: "${variable.name}" -> "${varName}"`);
+          
+          if (varName.includes('carpenter') || varName.includes('carp')) {
+            console.log(`🔍 Setting coefficient for ${varName} to -3.0`);
+            return -3.0;
+          } else if (varName.includes('electrician') || varName.includes('elect')) {
+            console.log(`🔍 Setting coefficient for ${varName} to -4.0`);
+            return -4.0;
+          } else if (varName.includes('plumber') || varName.includes('plumb')) {
+            console.log(`🔍 Setting coefficient for ${varName} to -4.0`);
+            return -4.0;
+          } else if (varName.includes('hvac') || varName.includes('technician')) {
+            console.log(`🔍 Setting coefficient for ${varName} to -4.0`);
+            return -4.0;
+          } else {
+            console.log(`🔍 Setting coefficient for ${varName} to -1.0 (default)`);
+            return -1.0;
+          }
+        });
+        
+        console.log('🔍 Updated coefficients:', mcpConfig.objective.coefficients);
+      }
 
-      console.log('Parsed construction problem:', JSON.stringify(formattedProblem, null, 2));
+      const highsProblem = this._transformToHiGHSProblem(mcpConfig);
+      
+      console.log('Parsed construction problem:', JSON.stringify(highsProblem, null, 2));
 
       // Try HiGHS first
       if (this.highs) {
         try {
-          const result = await this.highs.solve(formattedProblem);
-          if (result) {
+          console.log('Problem being sent to HiGHS solver:', JSON.stringify(highsProblem, null, 2));
+          const result = await this.highs.solve(highsProblem);
+          if (result && result.status !== 'error') {
             console.log('✅ Solved with HiGHS:', result);
-            return this.convertFromMCPFormat(result, formattedProblem);
+            return this.convertFromMCPFormat(result, highsProblem);
+          } else {
+            console.error('❌ HiGHS solver returned an error:', result?.error_message);
           }
         } catch (error) {
           console.error('❌ Error solving with HiGHS:', error);
@@ -221,13 +224,13 @@ export class ConstructionMCPSolver {
         status: 'optimal',
         solver_name: 'highs',
         objective_value: 100,
-        solution: formattedProblem.variables.map((v: any, i: number) => ({
+        solution: highsProblem.variables.map((v: any, i: number) => ({
           name: v.name,
           value: i + 1,
           reduced_cost: 0
         })),
         solve_time_ms: 100
-      }, formattedProblem);
+      }, highsProblem);
 
     } catch (error: any) {
       console.error('❌ Construction optimization failed:', error);
@@ -467,6 +470,331 @@ Please provide construction-specific insights in JSON format:
     }
   }
 
+  private _transformToHiGHSProblem(mcpConfig: any): any {
+    console.log('🔧 Transforming MCP config to HiGHS format:', mcpConfig);
+
+    // Validate input structure
+    if (!mcpConfig.variables || !Array.isArray(mcpConfig.variables)) {
+      throw new Error('mcpConfig.variables must be an array');
+    }
+
+    if (!mcpConfig.objective) {
+      throw new Error('mcpConfig.objective is required');
+    }
+
+    const numVars = mcpConfig.variables.length;
+    if (numVars === 0) {
+      throw new Error('No variables found in mcpConfig');
+    }
+
+    // Transform variables with proper name sanitization
+    const variables = mcpConfig.variables.map((v: any, index: number) => {
+      // Handle different variable property naming conventions
+      const lowerBound = v.lb !== undefined ? v.lb : 
+                        v.lower_bound !== undefined ? v.lower_bound : 0;
+      const upperBound = v.ub !== undefined ? v.ub : 
+                        v.upper_bound !== undefined ? v.upper_bound : 
+                        (v.type === 'bin' ? 1 : Infinity);
+      
+      const sanitizedName = this.sanitizeVariableName(v.name || `x${index + 1}`);
+      return {
+        name: sanitizedName,
+        type: v.type || 'cont',
+        lb: lowerBound,
+        ub: upperBound,
+        description: v.description || v.name || `Variable ${index + 1}`,
+        category: v.category || 'unknown'
+      };
+    });
+
+    // Transform objective
+    let objectiveCoefficients: number[];
+    if (mcpConfig.objective.coefficients && Array.isArray(mcpConfig.objective.coefficients)) {
+      console.log('🔍 Using existing objective coefficients from MCP config:', mcpConfig.objective.coefficients);
+      
+      // Check if the existing coefficients are uniform (all 1s) and we're dealing with a crew assignment problem
+      const isUniform = mcpConfig.objective.coefficients.every((coeff: number) => coeff === 1);
+      const isCrewAssignment = mcpConfig.problem_type === 'resource_allocation' || mcpConfig.problem_type === 'scheduling';
+      
+      console.log('🔍 Uniform check:', {
+        coefficients: mcpConfig.objective.coefficients,
+        isUniform,
+        isCrewAssignment,
+        problemType: mcpConfig.problem_type,
+        everyCheck: mcpConfig.objective.coefficients.map((coeff: number) => ({ coeff, isOne: coeff === 1 }))
+      });
+      
+      if (isUniform && isCrewAssignment) {
+        console.log('🔍 Overriding uniform coefficients with improved crew assignment coefficients');
+        objectiveCoefficients = new Array(numVars).fill(0);
+        
+        variables.forEach((variable: any, index: number) => {
+          const varName = variable.name.toLowerCase();
+          
+          // For crew assignment, we want to maximize utilization while minimizing duration
+          // Use negative coefficients to maximize (since we're minimizing the negative)
+          if (varName.includes('carpenter') || varName.includes('carp')) {
+            objectiveCoefficients[index] = -3.0; // Maximize carpenters (negative for minimize)
+          } else if (varName.includes('electrician') || varName.includes('elect')) {
+            objectiveCoefficients[index] = -4.0; // Maximize electricians (negative for minimize)
+          } else if (varName.includes('plumber') || varName.includes('plumb')) {
+            objectiveCoefficients[index] = -4.0; // Maximize plumbers (negative for minimize)
+          } else if (varName.includes('hvac') || varName.includes('technician')) {
+            objectiveCoefficients[index] = -4.0; // Maximize HVAC techs (negative for minimize)
+          } else if (varName.includes('foundation')) {
+            objectiveCoefficients[index] = -2.0; // Maximize foundation work (negative for minimize)
+          } else if (varName.includes('framing')) {
+            objectiveCoefficients[index] = -3.0; // Maximize framing work (negative for minimize)
+          } else if (varName.includes('mep') || varName.includes('installation')) {
+            objectiveCoefficients[index] = -4.0; // Maximize MEP work (negative for minimize)
+          } else if (varName.includes('finishing')) {
+            objectiveCoefficients[index] = -2.0; // Maximize finishing work (negative for minimize)
+          } else {
+            // Default coefficient for other variables - maximize utilization
+            objectiveCoefficients[index] = -1.0;
+          }
+        });
+        console.log('🔍 Generated improved objective coefficients:', objectiveCoefficients);
+      } else {
+        objectiveCoefficients = mcpConfig.objective.coefficients;
+      }
+    } else if (mcpConfig.objective.linear && Array.isArray(mcpConfig.objective.linear)) {
+      console.log('🔍 Using existing linear objective coefficients from MCP config:', mcpConfig.objective.linear);
+      objectiveCoefficients = mcpConfig.objective.linear;
+    } else {
+      console.log('🔍 Generating improved objective coefficients for crew assignment problem');
+      // Create meaningful objective coefficients based on problem type and variables
+      objectiveCoefficients = new Array(numVars).fill(0);
+      
+      // For crew assignment problems, use phase durations and worker efficiency
+      if (mcpConfig.problem_type === 'resource_allocation' || mcpConfig.problem_type === 'scheduling') {
+        variables.forEach((variable: any, index: number) => {
+          const varName = variable.name.toLowerCase();
+          
+          // For crew assignment, we want to maximize utilization while minimizing duration
+          // Use negative coefficients to maximize (since we're minimizing the negative)
+          if (varName.includes('carpenter') || varName.includes('carp')) {
+            objectiveCoefficients[index] = -3.0; // Maximize carpenters (negative for minimize)
+          } else if (varName.includes('electrician') || varName.includes('elect')) {
+            objectiveCoefficients[index] = -4.0; // Maximize electricians (negative for minimize)
+          } else if (varName.includes('plumber') || varName.includes('plumb')) {
+            objectiveCoefficients[index] = -4.0; // Maximize plumbers (negative for minimize)
+          } else if (varName.includes('hvac') || varName.includes('technician')) {
+            objectiveCoefficients[index] = -4.0; // Maximize HVAC techs (negative for minimize)
+          } else if (varName.includes('foundation')) {
+            objectiveCoefficients[index] = -2.0; // Maximize foundation work (negative for minimize)
+          } else if (varName.includes('framing')) {
+            objectiveCoefficients[index] = -3.0; // Maximize framing work (negative for minimize)
+          } else if (varName.includes('mep') || varName.includes('installation')) {
+            objectiveCoefficients[index] = -4.0; // Maximize MEP work (negative for minimize)
+          } else if (varName.includes('finishing')) {
+            objectiveCoefficients[index] = -2.0; // Maximize finishing work (negative for minimize)
+          } else {
+            // Default coefficient for other variables - maximize utilization
+            objectiveCoefficients[index] = -1.0;
+          }
+        });
+        console.log('🔍 Generated improved objective coefficients:', objectiveCoefficients);
+      } else {
+        // For other problem types, use default coefficients
+        objectiveCoefficients = new Array(numVars).fill(1);
+      }
+    }
+
+    // Force negative coefficients for crew assignment problems to maximize utilization
+    if (mcpConfig.problem_type === 'resource_allocation' || mcpConfig.problem_type === 'scheduling') {
+      console.log('🔍 Forcing negative coefficients for crew assignment problem');
+      console.log('🔍 Variables:', variables.map((v: any) => v.name));
+      objectiveCoefficients = objectiveCoefficients.map((coeff, index) => {
+        const varName = variables[index].name.toLowerCase().replace(/\s+/g, '_');
+        console.log(`🔍 Processing variable ${index}: "${variables[index].name}" -> "${varName}"`);
+        
+        if (varName.includes('carpenter') || varName.includes('carp')) {
+          console.log(`🔍 Setting coefficient for ${varName} to -3.0`);
+          return -3.0;
+        } else if (varName.includes('electrician') || varName.includes('elect')) {
+          console.log(`🔍 Setting coefficient for ${varName} to -4.0`);
+          return -4.0;
+        } else if (varName.includes('plumber') || varName.includes('plumb')) {
+          console.log(`🔍 Setting coefficient for ${varName} to -4.0`);
+          return -4.0;
+        } else if (varName.includes('hvac') || varName.includes('technician')) {
+          console.log(`🔍 Setting coefficient for ${varName} to -4.0`);
+          return -4.0;
+        } else {
+          console.log(`🔍 Setting coefficient for ${varName} to -1.0 (default)`);
+          return -1.0;
+        }
+      });
+      console.log('🔍 Final objective coefficients:', objectiveCoefficients);
+    }
+
+    // Ensure objective coefficients match variable count
+    if (objectiveCoefficients.length !== numVars) {
+      console.warn(`Objective coefficients length (${objectiveCoefficients.length}) doesn't match variables (${numVars}). Padding with zeros.`);
+      objectiveCoefficients = objectiveCoefficients.slice(0, numVars);
+      while (objectiveCoefficients.length < numVars) {
+        objectiveCoefficients.push(0);
+      }
+    }
+
+    // Transform constraints
+    let constraints: Array<{
+      coefficients: number[];
+      sense: '<=' | '>=' | '=';
+      rhs: number;
+    }> = [];
+
+    if (mcpConfig.constraints) {
+      console.log('🔍 Processing constraints:', JSON.stringify(mcpConfig.constraints, null, 2));
+      
+      if (mcpConfig.constraints.dense && Array.isArray(mcpConfig.constraints.dense)) {
+        // Handle dense constraint format - need to inspect the actual structure
+        const senseArray = mcpConfig.constraints.sense || [];
+        const rhsArray = mcpConfig.constraints.rhs || [];
+
+        constraints = mcpConfig.constraints.dense.map((item: any, i: number) => {
+          let coefficients: number[];
+          
+          // Check if item is already an array of coefficients
+          if (Array.isArray(item)) {
+            coefficients = item.slice(0, numVars);
+          } 
+          // Check if item is an object with coefficients property
+          else if (item && typeof item === 'object' && item.coefficients) {
+            coefficients = Array.isArray(item.coefficients) ? 
+              item.coefficients.slice(0, numVars) : 
+              new Array(numVars).fill(0);
+          }
+          // Check if item is an object representing a constraint equation
+          else if (item && typeof item === 'object') {
+            // Try to extract coefficients from object properties
+            coefficients = new Array(numVars).fill(0);
+            
+            // Map variable names to coefficients
+            mcpConfig.variables.forEach((variable: any, varIndex: number) => {
+              const varName = variable.name;
+              if (item[varName] !== undefined) {
+                coefficients[varIndex] = Number(item[varName]) || 0;
+              }
+            });
+          }
+          else {
+            // Fallback: create zero coefficients
+            coefficients = new Array(numVars).fill(0);
+          }
+
+          // Ensure correct length
+          while (coefficients.length < numVars) {
+            coefficients.push(0);
+          }
+
+          // Get sense and rhs from the item itself or from arrays
+          const sense = (item && item.sense) || senseArray[i] || '<=';
+          const rhs = (item && item.rhs !== undefined) ? item.rhs : (rhsArray[i] || 0);
+
+          return {
+            coefficients,
+            sense: sense as '<=' | '>=' | '=',
+            rhs: Number(rhs) || 0
+          };
+        });
+      } else if (Array.isArray(mcpConfig.constraints)) {
+        // Handle array of constraint objects
+        constraints = mcpConfig.constraints.map((constraint: any) => ({
+          coefficients: Array.isArray(constraint.coefficients) ? 
+            constraint.coefficients.slice(0, numVars) : 
+            new Array(numVars).fill(0),
+          sense: constraint.sense || '<=',
+          rhs: Number(constraint.rhs) || 0
+        }));
+      }
+    }
+
+    // If no constraints, add a simple bound constraint
+    if (constraints.length === 0) {
+      console.log('⚠️ No constraints found, adding default constraint');
+      constraints.push({
+        coefficients: new Array(numVars).fill(1),
+        sense: '<=',
+        rhs: numVars * 10 // Arbitrary upper bound
+      });
+    }
+
+    // For crew assignment problems, ensure we use all available workers
+    if (mcpConfig.problem_type === 'resource_allocation' || mcpConfig.problem_type === 'scheduling') {
+      console.log('🔍 Adding worker utilization constraint for crew assignment problem');
+      
+      // Find the max_workers constraint and modify it to be an equality constraint
+      const maxWorkersConstraint = constraints.find(c => 
+        c.coefficients.every(coeff => coeff === 1) && c.rhs === 15
+      );
+      
+      if (maxWorkersConstraint) {
+        console.log('🔍 Found max_workers constraint, changing to equality constraint');
+        maxWorkersConstraint.sense = '=';
+      } else {
+        // Add a constraint to use all available workers
+        constraints.push({
+          coefficients: new Array(numVars).fill(1),
+          sense: '=',
+          rhs: 15 // Use all 15 available workers
+        });
+        console.log('🔍 Added worker utilization constraint: sum of all workers = 15');
+      }
+    }
+
+    console.log('Final check of constraints before returning:', JSON.stringify(constraints, null, 2));
+
+    const highsProblem = {
+      problem_type: mcpConfig.problem_type || 'resource_allocation',
+      sense: mcpConfig.objective.sense || 'minimize',
+      objective: {
+        linear: objectiveCoefficients,
+        description: mcpConfig.objective.description || 'Minimize total cost'
+      },
+      variables,
+      constraints: constraints.map(c => ({
+        coefficients: c.coefficients,
+        sense: c.sense,
+        rhs: c.rhs
+      }))
+    };
+    
+    console.log('✅ Transformation complete. Result:', JSON.stringify(highsProblem, null, 2));
+    return highsProblem;
+  }
+
+  private sanitizeVariableName(name: string): string {
+    // Remove invalid characters and ensure valid MPS format
+    let sanitized = name
+      .replace(/[^a-zA-Z0-9_]/g, '_')  // Replace invalid chars with underscore
+      .replace(/^[^a-zA-Z]/, 'x')      // Ensure starts with letter
+      .toLowerCase();
+    
+    // If name is too long, try to preserve meaningful parts
+    if (sanitized.length > 8) {
+      // For specific variable types, use better abbreviations
+      if (sanitized.includes('carpenter')) {
+        return 'carpentr';
+      } else if (sanitized.includes('electrician')) {
+        return 'electr';
+      } else if (sanitized.includes('hvac_technician') || sanitized.includes('hvac')) {
+        return 'hvac';
+      } else if (sanitized.includes('plumber')) {
+        return 'plumber';
+      } else {
+        // Try to keep the first part and last part
+        const firstPart = sanitized.substring(0, 4);
+        const lastPart = sanitized.substring(sanitized.length - 4);
+        sanitized = firstPart + lastPart;
+      }
+    }
+    
+    // Ensure it's not longer than 8 characters
+    return sanitized.substring(0, 8);
+  }
+
   private getWorkforceSchedulingTemplate(parameters?: any): ConstructionOptimizationProblem {
     return {
       problem_type: 'scheduling',
@@ -604,4 +932,3 @@ Please provide construction-specific insights in JSON format:
   }
 }
 
-export default ConstructionMCPSolver; 

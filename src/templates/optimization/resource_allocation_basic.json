@@ -1,0 +1,84 @@
+{
+  "template_id": "resource_allocation_basic",
+  "name": "Basic Resource Allocation",
+  "description": "Optimize resource allocation across multiple projects",
+  "problem_type": "MIP",
+  "sense": "maximize",
+  "variables": [
+    {
+      "name": "project_a",
+      "type": "bin",
+      "category": "project",
+      "description": "Select Project A",
+      "bounds": {
+        "lower": 0,
+        "upper": 1
+      }
+    },
+    {
+      "name": "project_b",
+      "type": "bin", 
+      "category": "project",
+      "description": "Select Project B",
+      "bounds": {
+        "lower": 0,
+        "upper": 1
+      }
+    },
+    {
+      "name": "project_c",
+      "type": "bin",
+      "category": "project", 
+      "description": "Select Project C",
+      "bounds": {
+        "lower": 0,
+        "upper": 1
+      }
+    },
+    {
+      "name": "project_d",
+      "type": "bin",
+      "category": "project",
+      "description": "Select Project D", 
+      "bounds": {
+        "lower": 0,
+        "upper": 1
+      }
+    }
+  ],
+  "constraints": {
+    "dense": [
+      [5, 8, 3, 6],
+      [2, 3, 1, 2]
+    ],
+    "sense": ["<=", "<="],
+    "rhs": [20, 8],
+    "categories": ["budget", "timeline"],
+    "descriptions": [
+      "Budget constraint - total cost cannot exceed available budget",
+      "Time constraint - total time cannot exceed available time"
+    ]
+  },
+  "objective": {
+    "type": "maximize",
+    "target": "project_value",
+    "description": "Maximize total project value",
+    "linear": [100, 150, 80, 120]
+  },
+  "parameters": {
+    "budget_limit": 20,
+    "time_limit": 8,
+    "min_projects": 1,
+    "max_projects": 4
+  },
+  "solver_config": {
+    "time_limit": 300,
+    "gap_tolerance": 0.01,
+    "construction_heuristics": true
+  },
+  "metadata": {
+    "domain": "construction",
+    "complexity": "basic", 
+    "tags": ["resource", "allocation", "project_selection"]
+  }
+} 

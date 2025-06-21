@@ -12,6 +12,12 @@ export interface IntentResult {
   keywords: string[];
   primaryIntent: string;
   secondaryIntent?: string;
+  // Enhanced optimization classification
+  optimizationType?: string;
+  modelType?: 'LP' | 'MIP' | 'QP' | 'NLP';
+  problemComplexity?: 'basic' | 'intermediate' | 'advanced';
+  templateRecommendations?: string[];
+  extractedParameters?: Record<string, any>;
 }
 
 function isValidIntentResult(obj: any): obj is IntentResult {
@@ -35,7 +41,7 @@ export const agnoIntentAgent = {
    * @param sessionId Optional session ID for conversation continuity
    * @param modelProvider Optional model provider (anthropic or openai)
    * @param modelName Optional specific model name
-   * @returns { decisionType, confidence, reasoning, primaryIntent, secondaryIntent, keywords, ragQuery?, optimizationQuery? }
+   * @returns { decisionType, confidence, reasoning, primaryIntent, secondaryIntent, keywords, ragQuery?, optimizationQuery?, optimizationType?, modelType?, problemComplexity?, templateRecommendations?, extractedParameters? }
    */
   async analyzeIntent(
     userInput: string, 
@@ -44,8 +50,9 @@ export const agnoIntentAgent = {
     modelName?: string
   ): Promise<IntentResult> {
     try {
-      const prompt = `You are a construction domain expert. Your task is to analyze user requests and determine the best execution path:
+      const prompt = `You are a construction domain expert specializing in optimization problem classification. Your task is to analyze user requests and determine the best execution path and optimization problem characteristics.
 
+EXECUTION PATHS:
 1. RAG (Retrieval Augmented Generation)
    - For queries about regulations, standards, best practices
    - When user needs information from knowledge base
@@ -61,10 +68,31 @@ export const agnoIntentAgent = {
    - When context from knowledge base helps optimization
    - Example: "What are best practices for scheduling, then optimize our plan?"
 
+OPTIMIZATION PROBLEM TYPES:
+- crew_assignment: Workforce scheduling and crew allocation
+- resource_allocation: Equipment, material, and resource distribution
+- cost_optimization: Cost minimization and budget optimization
+- supply_chain: Supplier selection and logistics optimization
+- risk_management: Risk mitigation and safety optimization
+- project_scheduling: Task sequencing and timeline optimization
+- equipment_allocation: Equipment assignment and utilization
+- material_optimization: Material selection and quantity optimization
+
+MODEL TYPES:
+- LP (Linear Programming): Linear objective and constraints
+- MIP (Mixed Integer Programming): Some variables must be integers
+- QP (Quadratic Programming): Quadratic objective function
+- NLP (Non-Linear Programming): Non-linear objective or constraints
+
+PROBLEM COMPLEXITY:
+- basic: Simple problems with few variables and constraints
+- intermediate: Moderate complexity with realistic constraints
+- advanced: Complex problems with many variables and sophisticated constraints
+
 Analyze this request:
 "${userInput}"
 
-Please analyze the request carefully and provide a detailed response in JSON format:
+Please provide a detailed response in JSON format. IMPORTANT: If the "primaryIntent" is "knowledge_retrieval", you MUST return "null" for all optimization-related fields (optimizationQuery, optimizationType, modelType, problemComplexity, templateRecommendations, extractedParameters). If the "primaryIntent" is "optimization" or "hybrid_analysis", you MUST return "null" for "ragQuery".
 
 {
   "decisionType": "string (specific decision category)",
@@ -73,6 +101,17 @@ Please analyze the request carefully and provide a detailed response in JSON for
   "keywords": ["array", "of", "relevant", "keywords"],
   "ragQuery": "string (refined query for knowledge base, only if RAG needed)",
   "optimizationQuery": "string (optimization problem description, only if optimization needed)",
+  "optimizationType": "string (crew_assignment|resource_allocation|cost_optimization|supply_chain|risk_management|project_scheduling|equipment_allocation|material_optimization)",
+  "modelType": "string (LP|MIP|QP|NLP)",
+  "problemComplexity": "string (basic|intermediate|advanced)",
+  "templateRecommendations": ["array", "of", "template", "IDs"],
+  "extractedParameters": {
+    "budget_limit": "number (if mentioned)",
+    "time_limit": "number (if mentioned)",
+    "crew_types": ["array", "of", "crew", "types"],
+    "resource_types": ["array", "of", "resource", "types"],
+    "constraints": ["array", "of", "constraint", "descriptions"]
+  },
   "confidence": "number (0-1, confidence in the interpretation)",
   "reasoning": "string (explanation of the decision and path choice)"
 }
@@ -83,7 +122,7 @@ Consider construction industry best practices, regulatory requirements, and opti
         message: prompt,
         session_id: sessionId,
         model_provider: modelProvider,
-        model_name: modelName || (modelProvider === 'anthropic' ? 'claude-3-5-sonnet-20241022' : 'gpt-4-turbo-preview'),
+        model_name: modelName,
         context: {
           timestamp: new Date().toISOString(),
           inputType: 'intent_analysis',
@@ -93,27 +132,83 @@ Consider construction industry best practices, regulatory requirements, and opti
       };
 
       const response = await agnoClient.chat(request);
-      let result;
       
-      if (typeof response.response === 'string') {
-        try {
-          result = JSON.parse(response.response);
-        } catch (err) {
-          throw new Error('Invalid JSON response from intent agent');
-        }
-      } else {
-        result = response.response;
+      if (!response.response) {
+        throw new Error('No response content from Agno');
       }
 
-      // Validate response structure
-      if (!isValidIntentResult(result)) {
-        throw new Error('Invalid response structure from intent agent');
+      // Try to parse JSON response
+      let parsedResponse: any;
+      try {
+        if (typeof response.response === 'object' && response.response !== null) {
+          // If the response is already a JSON object, use it directly
+          parsedResponse = response.response;
+        } else if (typeof response.response === 'string') {
+          // Sanitize the string to remove control characters before parsing
+          const sanitizedString = response.response.replace(/[\\x00-\\x1F\\x7F-\\x9F]/g, '');
+          const jsonMatch = sanitizedString.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            parsedResponse = JSON.parse(jsonMatch[0]);
+          } else {
+            throw new Error('No JSON found in string response');
+          }
+        } else {
+          throw new Error('Response is not a string or a valid JSON object');
+        }
+      } catch (parseError) {
+        console.error('Failed to parse intent analysis response:', parseError);
+        console.log('Raw response:', response.response);
+        
+        // Return fallback response
+        return {
+          decisionType: 'resource-allocation',
+          primaryIntent: 'optimization',
+          keywords: ['optimization', 'construction'],
+          optimizationType: 'crew_assignment',
+          modelType: 'MIP',
+          problemComplexity: 'basic',
+          templateRecommendations: ['crew_assignment_basic'],
+          extractedParameters: {},
+          confidence: 0.5,
+          reasoning: 'Fallback response due to parsing error'
+        };
       }
+
+      // Validate and normalize response
+      const result: IntentResult = {
+        decisionType: parsedResponse.decisionType || 'resource-allocation',
+        primaryIntent: parsedResponse.primaryIntent || 'optimization',
+        secondaryIntent: parsedResponse.secondaryIntent,
+        keywords: Array.isArray(parsedResponse.keywords) ? parsedResponse.keywords : ['optimization'],
+        ragQuery: parsedResponse.ragQuery,
+        optimizationQuery: parsedResponse.optimizationQuery,
+        optimizationType: parsedResponse.optimizationType || 'crew_assignment',
+        modelType: parsedResponse.modelType || 'MIP',
+        problemComplexity: parsedResponse.problemComplexity || 'basic',
+        templateRecommendations: Array.isArray(parsedResponse.templateRecommendations) ? parsedResponse.templateRecommendations : [],
+        extractedParameters: parsedResponse.extractedParameters || {},
+        confidence: typeof parsedResponse.confidence === 'number' ? parsedResponse.confidence : 0.8,
+        reasoning: parsedResponse.reasoning || 'Intent analysis completed'
+      };
 
       return result;
-    } catch (err: any) {
-      console.error('Intent agent error:', err);
-      throw new Error(`Intent interpretation failed: ${err.message}`);
+
+    } catch (error) {
+      console.error('Error in intent analysis:', error);
+      
+      // Return fallback response
+      return {
+        decisionType: 'resource-allocation',
+        primaryIntent: 'optimization',
+        keywords: ['optimization', 'construction'],
+        optimizationType: 'crew_assignment',
+        modelType: 'MIP',
+        problemComplexity: 'basic',
+        templateRecommendations: ['crew_assignment_basic'],
+        extractedParameters: {},
+        confidence: 0.5,
+        reasoning: 'Fallback response due to error in intent analysis'
+      };
     }
   },
 
@@ -133,6 +228,48 @@ Consider construction industry best practices, regulatory requirements, and opti
   ): Promise<IntentResult> {
     // For backward compatibility, call analyzeIntent
     return this.analyzeIntent(userInput, sessionId, modelProvider, modelName);
+  },
+
+  /**
+   * Get template recommendations based on intent analysis
+   * @param intentResult The result from intent analysis
+   * @returns Array of recommended template IDs
+   */
+  getTemplateRecommendations(intentResult: IntentResult): string[] {
+    const recommendations: string[] = [];
+    
+    // Add recommendations based on optimization type
+    if (intentResult.optimizationType) {
+      switch (intentResult.optimizationType) {
+        case 'crew_assignment':
+          recommendations.push('crew_assignment_basic');
+          break;
+        case 'resource_allocation':
+          recommendations.push('resource_allocation_basic');
+          break;
+        case 'cost_optimization':
+          recommendations.push('cost_optimization_basic');
+          break;
+        case 'supply_chain':
+          recommendations.push('supply_chain_basic');
+          break;
+        case 'risk_management':
+          recommendations.push('risk_management_basic');
+          break;
+      }
+    }
+    
+    // Add recommendations based on model type
+    if (intentResult.modelType) {
+      // Could add model-type specific templates here
+    }
+    
+    // Add recommendations based on complexity
+    if (intentResult.problemComplexity) {
+      // Could add complexity-specific templates here
+    }
+    
+    return recommendations.length > 0 ? recommendations : ['crew_assignment_basic'];
   },
 
   /**
@@ -162,7 +299,12 @@ Your role is to analyze user requests and determine the appropriate execution pa
 2. Optimization for decision-making problems
 3. Hybrid for complex requests requiring both
 
-You must accurately classify each request and provide the appropriate parameters for the chosen path.`,
+You must accurately classify each request and provide the appropriate parameters for the chosen path, including:
+- Optimization problem type (crew_assignment, resource_allocation, etc.)
+- Model type (LP, MIP, QP, NLP)
+- Problem complexity (basic, intermediate, advanced)
+- Template recommendations
+- Extracted parameters`,
       model_provider: modelProvider,
       model_name: modelName,
       temperature: 0.1,

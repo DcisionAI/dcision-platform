@@ -1,0 +1,90 @@
+{
+  "template_id": "supply_chain_basic",
+  "name": "Basic Supply Chain Optimization",
+  "description": "Minimize transportation costs while meeting demand from multiple suppliers",
+  "problem_type": "LP",
+  "sense": "minimize",
+  "variables": [
+    {
+      "name": "supplier_a",
+      "type": "cont",
+      "category": "supplier",
+      "description": "Quantity from Supplier A",
+      "bounds": {
+        "lower": 0,
+        "upper": 300
+      }
+    },
+    {
+      "name": "supplier_b",
+      "type": "cont",
+      "category": "supplier",
+      "description": "Quantity from Supplier B", 
+      "bounds": {
+        "lower": 0,
+        "upper": 400
+      }
+    },
+    {
+      "name": "supplier_c",
+      "type": "cont",
+      "category": "supplier",
+      "description": "Quantity from Supplier C",
+      "bounds": {
+        "lower": 0,
+        "upper": 250
+      }
+    },
+    {
+      "name": "supplier_d",
+      "type": "cont",
+      "category": "supplier",
+      "description": "Quantity from Supplier D",
+      "bounds": {
+        "lower": 0,
+        "upper": 200
+      }
+    }
+  ],
+  "constraints": {
+    "dense": [
+      [1, 1, 1, 1],
+      [1, 0, 0, 0],
+      [0, 1, 0, 0],
+      [0, 0, 1, 0],
+      [0, 0, 0, 1]
+    ],
+    "sense": ["=", "<=", "<=", "<=", "<="],
+    "rhs": [1000, 300, 400, 250, 200],
+    "categories": ["demand", "capacity", "capacity", "capacity", "capacity"],
+    "descriptions": [
+      "Demand constraint - total quantity must equal demand",
+      "Supplier A capacity limit",
+      "Supplier B capacity limit", 
+      "Supplier C capacity limit",
+      "Supplier D capacity limit"
+    ]
+  },
+  "objective": {
+    "type": "minimize",
+    "target": "transportation_cost",
+    "description": "Minimize total transportation cost",
+    "linear": [10, 15, 12, 8]
+  },
+  "parameters": {
+    "total_demand": 1000,
+    "supplier_capacities": [300, 400, 250, 200],
+    "transportation_costs": [10, 15, 12, 8],
+    "quality_requirements": [0.9, 0.85, 0.95, 0.8]
+  },
+  "solver_config": {
+    "time_limit": 300,
+    "gap_tolerance": 0.01,
+    "construction_heuristics": false
+  },
+  "metadata": {
+    "domain": "construction",
+    "complexity": "basic",
+    "tags": ["supply_chain", "logistics", "suppliers", "transportation"]
+  }
+} 

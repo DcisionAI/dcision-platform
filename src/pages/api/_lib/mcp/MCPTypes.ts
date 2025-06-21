@@ -105,7 +105,7 @@ export interface MCP {
 export interface MCPConfig {
   variables: Array<{
     name: string;
-    type: 'continuous' | 'integer' | 'binary';
+    type: 'continuous' | 'int' | 'binary';
     lower_bound: number;
     upper_bound: number;
     description: string;

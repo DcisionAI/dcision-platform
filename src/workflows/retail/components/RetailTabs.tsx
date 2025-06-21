@@ -12,7 +12,7 @@ const retailTabs: TabConfig[] = [
     content: <KnowledgeBase domain="retail" />
   },
   {
-    id: 'chat',
+    id: 'ai-assistant',
     label: 'AI Assistant',
     icon: <ChatBubbleLeftRightIcon className="w-5 h-5" />,
     description: 'Your intelligent retail assistant',
@@ -38,7 +38,7 @@ const RetailTabs: React.FC = () => {
   return (
     <WorkflowTabs
       tabs={retailTabs}
-      defaultTabId="chat"
+      defaultTabId="ai-assistant"
       verticalName="Retail"
       tagline="Optimizing retail operations with intelligent decision-making"
     />

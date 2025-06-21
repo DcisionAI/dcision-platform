@@ -5,6 +5,7 @@ import { agnoExplainAgent } from './dcisionai-agents/explainAgent/agnoExplainAge
 import { ConstructionMCPSolver } from './ConstructionMCPSolver';
 import { constructionIndex, getEmbeddings } from '../../../lib/pinecone';
 import OpenAI from 'openai';
+import { generateMermaidFromMCP } from '../../../utils/mermaid.ts';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -18,6 +19,7 @@ export interface OrchestrationResult {
   ragResult?: any;
   optimizationResult?: any;
   explanation?: any;
+  mermaidDiagram?: string;
   status: 'success' | 'error';
   error?: {
     code: string;
@@ -170,7 +172,16 @@ export class AgentOrchestrator {
       });
       timestamps.explanationEnd = new Date().toISOString();
 
+      // The explanation from the agent is already wrapped in an "explanation" object.
+      // We need to destructure it to avoid double-wrapping.
+      const { explanation: explanationContent } = explanation;
+
       const endTime = new Date().toISOString();
+
+      // Attach diagram to the final result
+      if (optimizationResult?.mermaidDiagram) {
+        optimizationResult.mermaidDiagram = optimizationResult.mermaidDiagram;
+      }
 
       return {
         sessionId,
@@ -178,7 +189,8 @@ export class AgentOrchestrator {
         intentAnalysis,
         ragResult,
         optimizationResult,
-        explanation,
+        explanation: explanationContent, // Use the destructured content
+        mermaidDiagram: optimizationResult?.mermaidDiagram,
         status: 'success',
         timestamps: {
           start: startTime,
@@ -258,32 +270,44 @@ export class AgentOrchestrator {
     sessionId: string,
     onProgress?: (event: ProgressEvent) => void
   ): Promise<any> {
-    // Step 1: Data Enrichment
+    const timestamps: Record<string, string> = {};
+
     onProgress?.({
       step: 'data_enrichment',
       status: 'start',
       message: 'Enriching data...'
     });
-
-    const enrichedData = await agnoDataAgent.enrichData(customerData, intentAnalysis, sessionId);
     
+    // Pass userInput to the data agent
+    const enrichedData = await agnoDataAgent.enrichData(
+      customerData,
+      intentAnalysis,
+      sessionId,
+      'anthropic',
+      undefined,
+      userInput
+    );
+
     onProgress?.({
       step: 'data_enrichment',
       status: 'complete',
       message: 'Data enrichment complete',
       data: enrichedData
     });
+    timestamps.dataEnrichmentEnd = new Date().toISOString();
 
     // Step 2: Model Building
+    timestamps.modelBuildingStart = new Date().toISOString();
     onProgress?.({
       step: 'model_building',
       status: 'start',
       message: 'Building optimization model...'
     });
 
-    const mcpConfig = await agnoModelBuilderAgent.buildModel(
-      enrichedData.enrichedData, 
-      intentAnalysis, 
+    // Use the enrichedData from the previous step
+    const modelResult = await agnoModelBuilderAgent.buildModel(
+      enrichedData,
+      intentAnalysis,
       sessionId
     );
 
@@ -291,10 +315,15 @@ export class AgentOrchestrator {
       step: 'model_building',
       status: 'complete',
       message: 'Model building complete',
-      data: mcpConfig
+      data: modelResult,
     });
+    timestamps.modelBuildingEnd = new Date().toISOString();
 
-    // Step 3: Solve Optimization
+    // Generate Mermaid Diagram
+    const mermaidDiagram = generateMermaidFromMCP(modelResult.mcpConfig);
+
+    // Step 3: Solve the problem
+    timestamps.solvingStart = new Date().toISOString();
     onProgress?.({
       step: 'solving',
       status: 'start',
@@ -302,7 +331,7 @@ export class AgentOrchestrator {
     });
 
     await this.initialize();
-    const solution = await this.solver!.solveConstructionOptimization(mcpConfig);
+    const solution = await this.solver!.solveConstructionOptimization(modelResult);
 
     onProgress?.({
       step: 'solving',
@@ -310,12 +339,9 @@ export class AgentOrchestrator {
       message: 'Optimization solved',
       data: solution
     });
+    timestamps.solvingEnd = new Date().toISOString();
 
-    return {
-      problem: mcpConfig,
-      solution,
-      enrichedData
-    };
+    return { ...solution, mermaidDiagram, timestamps };
   }
 
   private async generateExplanation(

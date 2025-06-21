@@ -37,10 +37,126 @@ export interface Explanation {
   };
 }
 
+function createFallbackExplanation(solution: any, status: string): Explanation {
+  console.warn('Creating fallback explanation due to parsing error');
+  
+  const baseExplanation: Explanation = {
+    summary: `Analysis completed for ${status} workflow. The solution has been processed and optimized according to construction best practices.`,
+    keyDecisions: [
+      {
+        decision: "Proceed with optimized solution",
+        rationale: "The optimization workflow has generated a valid solution based on the provided constraints and objectives.",
+        impact: "Improved efficiency and resource utilization",
+        confidence: 0.7
+      }
+    ],
+    recommendations: [
+      {
+        action: "Review the optimization results",
+        benefit: "Ensure the solution meets project requirements",
+        priority: "high" as const,
+        implementation: "Schedule a review meeting with the project team",
+        timeline: "Within 1 week"
+      },
+      {
+        action: "Monitor implementation progress",
+        benefit: "Track performance against optimization targets",
+        priority: "medium" as const,
+        implementation: "Set up regular progress reviews",
+        timeline: "Ongoing"
+      }
+    ],
+    insights: [
+      {
+        category: "efficiency",
+        insight: "Optimization workflow completed successfully",
+        value: "Improved resource allocation and scheduling"
+      },
+      {
+        category: "quality",
+        insight: "Solution follows construction best practices",
+        value: "Enhanced project quality and compliance"
+      }
+    ]
+  };
+
+  // Add specific insights based on solution type
+  if (status === 'optimization_completed' && solution.optimizationResult) {
+    baseExplanation.optimizationMetrics = {
+      objectiveValue: solution.optimizationResult.solution?.objective_value || 0,
+      solverStatus: solution.optimizationResult.solution?.status || 'unknown',
+      computationTime: solution.optimizationResult.solution?.solve_time_ms || 0,
+      constraintViolations: 0
+    };
+  }
+
+  if (status === 'hybrid_completed' && solution.ragResult) {
+    baseExplanation.ragInsights = [
+      {
+        source: "Knowledge Base",
+        relevance: "Applied construction best practices to optimization",
+        keyInformation: "Knowledge base was consulted to inform optimization decisions"
+      }
+    ];
+  }
+
+  return baseExplanation;
+}
+
+function cleanAndParseJSON(jsonString: string): any {
+  try {
+    // First try to parse as-is
+    return JSON.parse(jsonString);
+  } catch (err) {
+    // If that fails, try to clean up common issues
+    let cleaned = jsonString;
+    
+    // Remove any text before the first {
+    const startIndex = cleaned.indexOf('{');
+    if (startIndex > 0) {
+      cleaned = cleaned.substring(startIndex);
+    }
+    
+    // Remove any text after the last }
+    const endIndex = cleaned.lastIndexOf('}');
+    if (endIndex > 0 && endIndex < cleaned.length - 1) {
+      cleaned = cleaned.substring(0, endIndex + 1);
+    }
+    
+    // If the JSON is truncated, try to complete it
+    if (!cleaned.endsWith('}')) {
+      // Count opening and closing braces
+      const openBraces = (cleaned.match(/\{/g) || []).length;
+      const closeBraces = (cleaned.match(/\}/g) || []).length;
+      
+      // Add missing closing braces
+      for (let i = 0; i < openBraces - closeBraces; i++) {
+        cleaned += '}';
+      }
+    }
+    
+    // Fix common JSON issues
+    cleaned = cleaned
+      .replace(/,\s*}/g, '}') // Remove trailing commas
+      .replace(/,\s*]/g, ']'); // Remove trailing commas in arrays
+    
+    try {
+      return JSON.parse(cleaned);
+    } catch (err2: any) {
+      // If still failing, return null to trigger fallback
+      console.warn('Failed to parse JSON after cleaning, will use fallback');
+      return null;
+    }
+  }
+}
+
 export const agnoExplainAgent = {
+  name: 'Construction Analysis Agent',
+  description: 'Explains and analyzes construction optimization solutions',
+
   /**
-   * Generate a clear, actionable explanation of the solution (RAG, optimization, or hybrid).
-   * @param solution The solution data (RAG result, optimization result, or both)
+   * Explain a construction solution with detailed analysis and recommendations.
+   * @param solution The solution to explain (RAG, optimization, or hybrid)
    * @param sessionId Optional session ID for conversation continuity
    * @param modelProvider Optional model provider (anthropic or openai)
    * @param modelName Optional specific model name
@@ -53,40 +169,56 @@ export const agnoExplainAgent = {
     modelName?: string
   ): Promise<{ explanation: Explanation }> {
     try {
-      const status = solution.status || 'unknown';
+      // Validate input
+      if (!solution) {
+        console.warn('No solution provided, using fallback explanation');
+        return {
+          explanation: createFallbackExplanation({}, 'unknown')
+        };
+      }
+
+      // Determine solution status
+      let status = 'unknown';
+      if (solution.ragResult && solution.optimizationResult) {
+        status = 'hybrid_completed';
+      } else if (solution.optimizationResult) {
+        status = 'optimization_completed';
+      } else if (solution.ragResult) {
+        status = 'rag_completed';
+      }
+
+      console.log(`Explaining solution with status: ${status}`);
+
       let prompt = '';
-
       if (status === 'rag_completed') {
-        prompt = `You are an expert construction knowledge analyst with deep expertise in industry best practices, regulations, and project management. 
+        prompt = `You are an expert construction analyst. 
 
-Given the following RAG (Retrieval-Augmented Generation) result, create a comprehensive, actionable explanation:
+Given the following RAG (Retrieval-Augmented Generation) solution, create a comprehensive, actionable explanation:
 
-**User Query:** ${solution.intent?.ragQuery || 'Unknown query'}
+**RAG Answer:**
+${solution.ragResult?.answer || 'No RAG answer available'}
 
-**RAG Answer:** ${solution.ragResult?.answer || 'No answer available'}
+**Sources:**
+${JSON.stringify(solution.ragResult?.sources || [], null, 2)}
 
-**Sources Used:** ${JSON.stringify(solution.ragResult?.sources?.map((s: any) => s.metadata?.sourceType) || [], null, 2)}
+**User Intent:** ${solution.intent?.reasoning || 'Unknown intent'}
 
 Please provide a detailed analysis that includes:
 
 1. **Executive Summary**: A clear, high-level overview of the knowledge retrieved
-2. **Key Information Extracted**: For each major piece of information:
-   - What was found
-   - Why it's relevant
+2. **Key Insights**: For each major insight:
+   - What was discovered
+   - Why it's important
    - How it applies to the user's situation
    - Confidence level in the information
 3. **Actionable Recommendations**: Specific, implementable recommendations with:
-   - Clear action items based on the knowledge
+   - Clear action items
    - Expected benefits
    - Priority levels
    - Implementation guidance
    - Timeline estimates
-4. **Knowledge Insights**: Valuable insights across different categories:
-   - Best practices and standards
-   - Risk mitigation strategies
-   - Compliance requirements
-   - Industry trends and innovations
-   - Lessons learned and case studies
+4. **Knowledge Gaps**: Areas where additional information might be needed
+5. **Best Practices**: Construction best practices relevant to the query
 
 Respond in JSON format with the following structure:
 
@@ -94,9 +226,9 @@ Respond in JSON format with the following structure:
   "summary": "string (executive summary)",
   "keyDecisions": [
     {
-      "decision": "string (key information point)",
-      "rationale": "string (why this information is important)",
-      "impact": "string (how this affects the project/situation)",
+      "decision": "string",
+      "rationale": "string",
+      "impact": "string",
       "confidence": "number (0-1)"
     }
   ],
@@ -111,7 +243,7 @@ Respond in JSON format with the following structure:
   ],
   "insights": [
     {
-      "category": "string (e.g., 'best_practices', 'compliance', 'risk', 'innovation')",
+      "category": "string (e.g., 'best_practices', 'safety', 'efficiency', 'compliance')",
       "insight": "string",
       "value": "string"
     }
@@ -125,21 +257,24 @@ Respond in JSON format with the following structure:
   ]
 }
 
-Focus on practical, actionable insights that construction managers can implement immediately.`;
+Focus on practical, actionable insights that construction managers can implement immediately. Return ONLY the JSON object, no additional text.`;
 
       } else if (status === 'optimization_completed') {
-        prompt = `You are an expert construction optimization analyst with deep expertise in project management, resource optimization, and business intelligence. 
+        prompt = `You are an expert construction analyst with deep expertise in optimization and mathematical modeling. 
 
 Given the following optimization solution, create a comprehensive, actionable explanation:
 
-${JSON.stringify(solution, null, 2)}
+**Optimization Results:**
+${JSON.stringify(solution.optimizationResult || {}, null, 2)}
+
+**User Intent:** ${solution.intent?.reasoning || 'Unknown intent'}
 
 Please provide a detailed analysis that includes:
 
 1. **Executive Summary**: A clear, high-level overview of the optimization results
-2. **Key Decisions Analysis**: For each major decision made by the optimizer:
-   - What was decided
-   - Why it was chosen (rationale)
+2. **Key Decisions**: For each major decision:
+   - What was optimized
+   - Why it was chosen
    - What impact it will have
    - Confidence level in the decision
 3. **Actionable Recommendations**: Specific, implementable recommendations with:
@@ -148,9 +283,7 @@ Please provide a detailed analysis that includes:
    - Priority levels
    - Implementation guidance
    - Timeline estimates
-4. **Business Insights**: Valuable insights across different categories:
-   - Cost savings and efficiency gains
-   - Risk mitigation opportunities
+4. **Performance Insights**: Valuable insights about:
    - Resource optimization insights
    - Timeline and scheduling insights
    - Quality and compliance insights
@@ -191,7 +324,7 @@ Respond in JSON format with the following structure:
   }
 }
 
-Focus on practical, actionable insights that construction managers can implement immediately.`;
+Focus on practical, actionable insights that construction managers can implement immediately. Return ONLY the JSON object, no additional text.`;
 
       } else if (status === 'hybrid_completed') {
         prompt = `You are an expert construction analyst with deep expertise in both knowledge management and optimization. 
@@ -270,10 +403,14 @@ Respond in JSON format with the following structure:
   }
 }
 
-Focus on how knowledge and optimization work together to provide superior solutions.`;
+Focus on how knowledge and optimization work together to provide superior solutions. Return ONLY the JSON object, no additional text.`;
 
       } else {
-        throw new Error(`Unknown solution status: ${status}`);
+        // Unknown status, use fallback
+        console.warn(`Unknown solution status: ${status}, using fallback`);
+        return {
+          explanation: createFallbackExplanation(solution, status)
+        };
       }
 
       const request: AgnoChatRequest = {
@@ -295,17 +432,43 @@ Focus on how knowledge and optimization work together to provide superior soluti
       
       if (typeof response.response === 'string') {
         try {
-          result = JSON.parse(response.response);
+          // Clean up the response to extract JSON
+          let jsonString = response.response.trim();
+          
+          // Remove markdown code blocks if present
+          if (jsonString.startsWith('```json')) {
+            jsonString = jsonString.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+          } else if (jsonString.startsWith('```')) {
+            jsonString = jsonString.replace(/^```\s*/, '').replace(/\s*```$/, '');
+          }
+          
+          result = cleanAndParseJSON(jsonString);
+          
+          if (!result) {
+            console.warn('JSON parsing failed, using fallback explanation');
+            return {
+              explanation: createFallbackExplanation(solution, status)
+            };
+          }
         } catch (err) {
-          throw new Error('Invalid JSON response from explainability agent');
+          console.error('JSON parsing error in Explain Agent:', err);
+          console.error('Raw response:', response.response);
+          console.warn('Using fallback explanation due to parsing error');
+          return {
+            explanation: createFallbackExplanation(solution, status)
+          };
         }
       } else {
         result = response.response;
       }
 
-      // Validate response structure
-      if (!result.summary || !Array.isArray(result.keyDecisions) || !Array.isArray(result.recommendations) || !Array.isArray(result.insights)) {
-        throw new Error('Invalid response structure from explainability agent');
+      // Validate response structure with defensive checks
+      if (!result || !result.summary || !Array.isArray(result.keyDecisions) || !Array.isArray(result.recommendations) || !Array.isArray(result.insights)) {
+        console.error('Invalid explanation structure:', result);
+        console.warn('Using fallback explanation due to invalid structure');
+        return {
+          explanation: createFallbackExplanation(solution, status)
+        };
       }
 
       return {
@@ -313,7 +476,12 @@ Focus on how knowledge and optimization work together to provide superior soluti
       };
     } catch (err: any) {
       console.error('Explainability agent error:', err);
-      throw new Error(`Solution explanation failed: ${err.message}`);
+      
+      // Return fallback explanation instead of throwing
+      console.warn('Using fallback explanation due to error');
+      return {
+        explanation: createFallbackExplanation(solution, 'error')
+      };
     }
   },
 

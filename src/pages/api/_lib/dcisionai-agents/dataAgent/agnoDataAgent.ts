@@ -1,5 +1,5 @@
 // Agno-based Data Agent for DcisionAI
-// Now uses the real Agno Python backend for advanced AI capabilities
+// This version simplifies the data enrichment to be more robust.
 
 import { agnoClient, AgnoChatRequest } from '../../agno-client';
 
@@ -13,296 +13,121 @@ export interface EnrichedData {
   };
 }
 
-function isValidEnrichedData(obj: any): obj is EnrichedData {
-  return (
-    obj &&
-    typeof obj === 'object' &&
-    'resources' in obj &&
-    'timeline' in obj &&
-    'costs' in obj &&
-    'quality' in obj &&
-    'risks' in obj
-  );
-}
-
-function cleanAndParseJSON(jsonString: string): any {
-  try {
-    // First try to parse as-is
-    return JSON.parse(jsonString);
-  } catch (err) {
-    // If that fails, try to clean up common issues
-    let cleaned = jsonString;
-    
-    // Remove any text before the first {
-    const startIndex = cleaned.indexOf('{');
-    if (startIndex > 0) {
-      cleaned = cleaned.substring(startIndex);
-    }
-    
-    // Remove any text after the last }
-    const endIndex = cleaned.lastIndexOf('}');
-    if (endIndex > 0 && endIndex < cleaned.length - 1) {
-      cleaned = cleaned.substring(0, endIndex + 1);
-    }
-    
-    // If the JSON is truncated, try to complete it
-    if (!cleaned.endsWith('}')) {
-      // Count opening and closing braces
-      const openBraces = (cleaned.match(/\{/g) || []).length;
-      const closeBraces = (cleaned.match(/\}/g) || []).length;
-      
-      // Add missing closing braces
-      for (let i = 0; i < openBraces - closeBraces; i++) {
-        cleaned += '}';
-      }
-      
-      // If we have incomplete arrays, close them
-      const openBrackets = (cleaned.match(/\[/g) || []).length;
-      const closeBrackets = (cleaned.match(/\]/g) || []).length;
-      
-      for (let i = 0; i < openBrackets - closeBrackets; i++) {
-        cleaned += ']';
-      }
-    }
-    
-    // Fix common JSON issues
-    cleaned = cleaned
-      .replace(/(\d+)\s+"([^"]+)"/g, '$1, "$2"') // Fix: 50 "cubic yards" -> 50, "cubic yards"
-      .replace(/(\d+)\s+([a-zA-Z]+)/g, '$1, "$2"') // Fix: 50 cubic yards -> 50, "cubic yards"
-      .replace(/,\s*}/g, '}') // Remove trailing commas
-      .replace(/,\s*]/g, ']'); // Remove trailing commas in arrays
-    
-    try {
-      return JSON.parse(cleaned);
-    } catch (err2: any) {
-      // If still failing, create a comprehensive fallback structure
-      console.warn('Failed to parse JSON, creating comprehensive fallback structure');
-      return createComprehensiveFallbackStructure();
-    }
+/**
+ * Parses the AI's response to extract a JSON object.
+ * @param response The raw string response from the AI.
+ * @returns A parsed JSON object, or an empty object if parsing fails.
+ */
+function parseEnrichmentResponse(response: string | object): any {
+  // If the response is already a parsed object, just return it.
+  if (typeof response === 'object' && response !== null) {
+    return response;
   }
-}
 
-function createComprehensiveFallbackStructure(): any {
-  return {
-    resources: {
-      crews: [
-        {
-          id: "default_crew",
-          name: "General Construction Crew",
-          skills: ["general_construction"],
-          size: 10,
-          availability: "full_time"
-        }
-      ],
-      equipment: [
-        {
-          id: "default_equipment",
-          name: "Basic Construction Equipment",
-          type: "general",
-          availability: "available"
-        }
-      ],
-      materials: [
-        {
-          id: "default_materials",
-          name: "Standard Construction Materials",
-          type: "general",
-          quantity: "as_needed"
-        }
-      ]
-    },
-    timeline: {
-      tasks: [
-        {
-          id: "default_task",
-          name: "General Construction Task",
-          duration: 30,
-          dependencies: [],
-          resources: ["default_crew"]
-        }
-      ],
-      dependencies: [],
-      milestones: [
-        {
-          id: "default_milestone",
-          name: "Project Completion",
-          date: "project_end",
-          tasks: ["default_task"]
-        }
-      ]
-    },
-    costs: {
-      labor: {
-        hourly_rate: 50,
-        overtime_rate: 75,
-        total_budget: 1000000
-      },
-      equipment: {
-        rental_rate: 1000,
-        total_budget: 200000
-      },
-      materials: {
-        unit_cost: 100,
-        total_budget: 500000
-      },
-      overhead: {
-        percentage: 15,
-        total_budget: 300000
-      }
-    },
-    quality: {
-      standards: [
-        {
-          id: "default_standard",
-          name: "Industry Standard",
-          description: "Standard construction quality requirements"
-        }
-      ],
-      inspections: [
-        {
-          id: "default_inspection",
-          name: "Quality Inspection",
-          frequency: "weekly",
-          requirements: ["compliance_check"]
-        }
-      ],
-      requirements: [
-        {
-          id: "default_requirement",
-          name: "Quality Compliance",
-          description: "Meet all industry quality standards"
-        }
-      ]
-    },
-    risks: {
-      identified: [
-        {
-          id: "default_risk",
-          name: "General Project Risk",
-          probability: "medium",
-          impact: "medium",
-          mitigation: "standard_procedures"
-        }
-      ],
-      mitigations: [
-        {
-          id: "default_mitigation",
-          name: "Standard Risk Mitigation",
-          description: "Follow standard construction safety and quality procedures"
-        }
-      ],
-      impacts: [
-        {
-          id: "default_impact",
-          name: "Schedule Impact",
-          description: "Potential schedule delays",
-          severity: "medium"
-        }
-      ]
+  // If it's not a string, we can't parse it.
+  if (typeof response !== 'string') {
+    console.warn('Data Agent: Response is not a string or object, cannot parse.', { response });
+    return {};
+  }
+
+  try {
+    const startIndex = response.indexOf('{');
+    const endIndex = response.lastIndexOf('}');
+    if (startIndex === -1 || endIndex === -1) {
+      console.warn('Data Agent: No JSON object found in AI response.');
+      return {};
     }
-  };
+    const jsonString = response.substring(startIndex, endIndex + 1);
+    return JSON.parse(jsonString);
+  } catch (error) {
+    console.error('Data Agent: Failed to parse enriched data JSON from AI response.', {
+      error,
+      response,
+    });
+    return {}; // Return empty object on failure
+  }
 }
 
 export const agnoDataAgent = {
   name: 'Construction Data Analysis Agent',
-  description: 'Analyzes and enriches construction project data',
+  description: 'Analyzes and enriches construction project data from natural language.',
 
   /**
-   * Enrich customer data with construction-specific constraints and validations.
-   * @param customerData The raw data uploaded by the customer
-   * @param intent The intent or purpose of the data
-   * @param sessionId Optional session ID for conversation continuity
-   * @param modelProvider Optional model provider (anthropic or openai)
-   * @param modelName Optional specific model name
-   * @returns { enrichedData, constraints }
+   * Enrich customer data by extracting entities from natural language.
    */
   async enrichData(
-    customerData: any,
+    customerData: any, // This may be empty
     intent: any,
     sessionId?: string,
     modelProvider: 'anthropic' | 'openai' = 'anthropic',
-    modelName?: string
+    modelName?: string,
+    userInput?: string
   ): Promise<EnrichedData> {
-    try {
-      const prompt = `You are a construction data analysis expert. Your task is to analyze and enrich the provided data for optimization.
+    const prompt = `
+You are a data extraction expert for the construction industry. Your task is to analyze the user's request and extract key entities into a simple, valid JSON object.
 
-Customer Data:
-${JSON.stringify(customerData, null, 2)}
+User Input:
+"""
+${userInput || 'No user input provided.'}
+"""
 
-Intent Analysis:
-${JSON.stringify(intent, null, 2)}
+Based on the user's input, extract the following information:
+- "crews": A list of worker types and their available counts (e.g., { "type": "carpenters", "count": 5 }).
+- "tasks_or_phases": A list of project tasks or phases and their durations (e.g., { "name": "foundation", "duration": "2 weeks" }).
+- "constraints": Any specific constraints mentioned (e.g., { "type": "max_workers", "limit": 15 }).
+- "objective": The primary goal of the optimization (e.g., "Minimize project duration").
 
-Please analyze the data and provide enriched information in VALID JSON format. IMPORTANT: Ensure all string values are properly quoted and the JSON is complete and valid.
+IMPORTANT:
+- Produce ONLY a valid JSON object.
+- Do not include any other text, explanations, or markdown formatting like \`\`\`json.
+- If a piece of information is not present in the user input, omit the key from the JSON.
 
+Example of a valid response:
 {
-  "resources": {
-    "crews": [],
-    "equipment": [],
-    "materials": []
-  },
-  "timeline": {
-    "tasks": [],
-    "dependencies": [],
-    "milestones": []
-  },
-  "costs": {
-    "labor": {},
-    "equipment": {},
-    "materials": {},
-    "overhead": {}
-  },
-  "quality": {
-    "standards": [],
-    "inspections": [],
-    "requirements": []
-  },
-  "risks": {
-    "identified": [],
-    "mitigations": [],
-    "impacts": []
-  }
+  "crews": [
+    { "type": "carpenters", "count": 5 },
+    { "type": "electricians", "count": 5 }
+  ],
+  "tasks_or_phases": [
+    { "name": "foundation", "duration": "2 weeks" }
+  ],
+  "constraints": [
+    { "type": "max_workers", "limit": 15 }
+  ],
+  "objective": "Minimize project duration"
 }
+`;
 
-Consider construction industry best practices, regulatory requirements, and optimization principles in your analysis. Return ONLY the JSON object, no additional text.`;
-
-      const request: AgnoChatRequest = {
+    try {
+      const aiResponse = await agnoClient.chat({
         message: prompt,
         session_id: sessionId,
         model_provider: modelProvider,
-        model_name: modelName || (modelProvider === 'anthropic' ? 'claude-3-5-sonnet-20241022' : 'gpt-4-turbo-preview'),
-        context: {
-          timestamp: new Date().toISOString(),
-          inputType: 'data_enrichment',
-          dataSize: JSON.stringify(customerData).length,
-          agentType: 'construction_data_analyzer'
-        }
+        model_name: modelName,
+      });
+
+      const enrichedDataPayload = parseEnrichmentResponse(aiResponse.response);
+
+      return {
+        enrichedData: enrichedDataPayload,
+        constraints: enrichedDataPayload.constraints || [],
+        metadata: {
+          sourceType: 'natural_language_extraction',
+          enrichmentLevel: 'shallow',
+          confidence: Object.keys(enrichedDataPayload).length > 0 ? 0.85 : 0.2,
+        },
       };
-
-      const response = await agnoClient.chat(request);
-      let result;
-      
-      if (typeof response.response === 'string') {
-        try {
-          result = cleanAndParseJSON(response.response);
-        } catch (err) {
-          console.error('JSON parsing error:', err);
-          console.error('Raw response:', response.response);
-          throw new Error('Invalid JSON response from data agent');
-        }
-      } else {
-        result = response.response;
-      }
-
-      // Validate response structure
-      if (!isValidEnrichedData(result)) {
-        console.error('Invalid response structure:', result);
-        throw new Error('Invalid response structure from data agent');
-      }
-
-      return result;
-    } catch (err: any) {
-      console.error('Data agent error:', err);
-      throw new Error(`Data enrichment failed: ${err.message}`);
+    } catch (error) {
+      console.error('An error occurred in the Data Agent:', error);
+      return {
+        enrichedData: { error: 'Data enrichment failed.' },
+        constraints: [],
+        metadata: {
+          sourceType: 'error',
+          enrichmentLevel: 'none',
+          confidence: 0,
+        },
+      };
     }
   },
 

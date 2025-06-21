@@ -1,0 +1,84 @@
+{
+  "template_id": "risk_management_basic",
+  "name": "Basic Risk Management",
+  "description": "Minimize risk exposure while staying within budget constraints",
+  "problem_type": "QP",
+  "sense": "minimize",
+  "variables": [
+    {
+      "name": "risk_mitigation_a",
+      "type": "cont",
+      "category": "risk",
+      "description": "Risk mitigation investment A",
+      "bounds": {
+        "lower": 0,
+        "upper": 100
+      }
+    },
+    {
+      "name": "risk_mitigation_b",
+      "type": "cont",
+      "category": "risk",
+      "description": "Risk mitigation investment B",
+      "bounds": {
+        "lower": 0,
+        "upper": 100
+      }
+    },
+    {
+      "name": "risk_mitigation_c",
+      "type": "cont",
+      "category": "risk",
+      "description": "Risk mitigation investment C",
+      "bounds": {
+        "lower": 0,
+        "upper": 100
+      }
+    }
+  ],
+  "constraints": {
+    "dense": [
+      [1, 1, 1],
+      [0.8, 0.6, 0.9]
+    ],
+    "sense": ["<=", ">="],
+    "rhs": [100, 50],
+    "categories": ["budget", "safety"],
+    "descriptions": [
+      "Budget constraint - total risk mitigation investment cannot exceed budget",
+      "Safety requirement - minimum risk reduction must be achieved"
+    ]
+  },
+  "objective": {
+    "type": "minimize",
+    "target": "risk_exposure",
+    "description": "Minimize total risk exposure",
+    "quadratic": {
+      "dense": [
+        [0.1, 0.02, 0.01],
+        [0.02, 0.15, 0.03],
+        [0.01, 0.03, 0.08]
+      ]
+    }
+  },
+  "parameters": {
+    "risk_budget": 100,
+    "min_risk_reduction": 50,
+    "risk_correlation_matrix": [
+      [0.1, 0.02, 0.01],
+      [0.02, 0.15, 0.03], 
+      [0.01, 0.03, 0.08]
+    ],
+    "effectiveness_rates": [0.8, 0.6, 0.9]
+  },
+  "solver_config": {
+    "time_limit": 300,
+    "gap_tolerance": 0.01,
+    "construction_heuristics": false
+  },
+  "metadata": {
+    "domain": "construction",
+    "complexity": "basic",
+    "tags": ["risk", "management", "mitigation", "safety"]
+  }
+} 

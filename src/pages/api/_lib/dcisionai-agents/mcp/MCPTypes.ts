@@ -1,7 +1,7 @@
 export interface MCPConfig {
   variables: Array<{
     name: string;
-    type: 'continuous' | 'integer' | 'binary';
+    type: 'continuous' | 'int' | 'binary';
     lower_bound: number;
     upper_bound: number;
     description: string;
@@ -29,4 +29,5 @@ export interface MCPConfig {
     gap_tolerance: number;
     construction_heuristics: boolean;
   };
+  problem_type: 'resource_allocation' | 'scheduling' | 'cost_optimization' | 'risk_management' | 'supply_chain';
 } 

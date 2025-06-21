@@ -1,0 +1,86 @@
+{
+  "template_id": "cost_optimization_basic",
+  "name": "Basic Cost Optimization",
+  "description": "Minimize total cost while meeting quality requirements",
+  "problem_type": "LP",
+  "sense": "minimize",
+  "variables": [
+    {
+      "name": "material_a",
+      "type": "cont",
+      "category": "material",
+      "description": "Material A quantity",
+      "bounds": {
+        "lower": 0,
+        "upper": 1000
+      }
+    },
+    {
+      "name": "material_b",
+      "type": "cont",
+      "category": "material", 
+      "description": "Material B quantity",
+      "bounds": {
+        "lower": 0,
+        "upper": 1000
+      }
+    },
+    {
+      "name": "equipment_a",
+      "type": "int",
+      "category": "equipment",
+      "description": "Equipment A units",
+      "bounds": {
+        "lower": 0,
+        "upper": 50
+      }
+    },
+    {
+      "name": "equipment_b",
+      "type": "int",
+      "category": "equipment",
+      "description": "Equipment B units",
+      "bounds": {
+        "lower": 0,
+        "upper": 50
+      }
+    }
+  ],
+  "constraints": {
+    "dense": [
+      [1, 1, 0, 0],
+      [0, 0, 1, 1],
+      [2, 1, 1, 2]
+    ],
+    "sense": [">=", ">=", ">="],
+    "rhs": [100, 10, 50],
+    "categories": ["capacity", "capacity", "quality"],
+    "descriptions": [
+      "Material requirement - minimum total material needed",
+      "Equipment requirement - minimum total equipment needed", 
+      "Quality constraint - quality score must meet minimum threshold"
+    ]
+  },
+  "objective": {
+    "type": "minimize",
+    "target": "total_cost",
+    "description": "Minimize total cost",
+    "linear": [50, 75, 40, 60]
+  },
+  "parameters": {
+    "min_material": 100,
+    "min_equipment": 10,
+    "min_quality": 50,
+    "budget_limit": 10000
+  },
+  "solver_config": {
+    "time_limit": 300,
+    "gap_tolerance": 0.01,
+    "construction_heuristics": false
+  },
+  "metadata": {
+    "domain": "construction",
+    "complexity": "basic",
+    "tags": ["cost", "optimization", "materials", "equipment"]
+  }
+} 

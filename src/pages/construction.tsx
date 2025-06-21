@@ -2,7 +2,7 @@ import React from 'react';
 import WorkflowTabs, { TabConfig } from '@/components/WorkflowTabs';
 import ApiInterfaceConstruction from '@/workflows/construction/components/ApiInterfaceConstruction';
 import AgentChat from '@/components/AgentChat';
-import OrchestratedAgentChat from '@/components/OrchestratedAgentChat';
+import EnhancedAgentChat from '@/components/EnhancedAgentChat';
 import ScenarioAnalysis from '@/components/ScenarioAnalysis';
 import KnowledgeBase from '@/components/KnowledgeBase';
 import { DocumentTextIcon, ChatBubbleLeftRightIcon, ChartPieIcon, CommandLineIcon, CogIcon } from '@heroicons/react/24/outline';
@@ -18,18 +18,11 @@ const ConstructionPage: React.FC = () => {
       content: <KnowledgeBase domain="construction" />
     },
     {
-      id: 'chat',
+      id: 'ai-assistant',
       label: 'AI Assistant',
       icon: <ChatBubbleLeftRightIcon className="w-5 h-5" />,
-      description: 'Your intelligent construction assistant',
-      content: <AgentChat apiEndpoint="/api/dcisionai/construction/chat" showSmartPrompts={true} />
-    },
-    {
-      id: 'orchestrated-chat',
-      label: 'Full Orchestration',
-      icon: <CogIcon className="w-5 h-5" />,
-      description: 'Complete agent workflow with progress tracking',
-      content: <OrchestratedAgentChat showSmartPrompts={true} useOrchestration={true} />
+      description: 'Your intelligent construction assistant with full orchestration',
+      content: <EnhancedAgentChat showSmartPrompts={true} useOrchestration={true} />
     },
     {
       id: 'scenario-analysis',
@@ -52,7 +45,7 @@ const ConstructionPage: React.FC = () => {
       <HeroSection title="DcisionAI" tagline="Optimizing construction workflows with intelligent decision-making" />
       <WorkflowTabs
         tabs={tabConfig}
-        defaultTabId="orchestrated-chat"
+        defaultTabId="ai-assistant"
         verticalName="Construction"
         tagline=""
       />

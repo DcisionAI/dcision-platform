@@ -43,19 +43,31 @@ interface ResponseTabsProps {
     solution?: any;
     summary?: string;
     rag?: string;
-    optimization?: string;
-  };
+    optimization?: any;
+    explanation?: any;
+  } | string;
 }
 
 const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
   const [activeTab, setActiveTab] = useState('analysis');
   const { theme } = useTheme();
 
+  if (typeof content === 'string') {
+    return (
+      <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
+        <pre className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">
+          {content}
+        </pre>
+      </div>
+    );
+  }
+
   // Determine content type and available tabs
   const getContentType = () => {
+    if (typeof content === 'string') return 'general';
     if (content.rag && content.optimization) return 'hybrid';
-    if (content.rag || typeof content === 'string') return 'rag';
-    if (content.problem && content.solution) return 'optimization';
+    if (content.rag) return 'rag';
+    if (content.solution || content.optimization) return 'optimization';
     return 'general';
   };
 
@@ -550,7 +562,78 @@ const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
     );
   };
 
+  const renderOptimizationContent = () => {
+    const solution = content.solution || content.optimization?.solution;
+    const summary = content.summary || content.optimization?.summary;
+    const explanation = content.explanation || content.optimization?.explanation;
+
+    if (!solution) {
+      return (
+        <div className="p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg">
+          Solution data is not available.
+        </div>
+      );
+    }
+    
+    // Fallback for when explanation is a string
+    if (typeof explanation === 'string') {
+      return (
+        <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+           <ReactMarkdown>{explanation}</ReactMarkdown>
+        </div>
+      )
+    }
+
+    return (
+      <div className="space-y-6 p-4">
+        {/* Summary */}
+        {summary && (
+          <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+            <h3 className="text-xl font-bold mb-4">Summary</h3>
+            <ReactMarkdown>{summary}</ReactMarkdown>
+          </div>
+        )}
+        
+        {/* Key Decisions */}
+        {explanation?.keyDecisions && (
+          <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+            <h3 className="text-xl font-bold mb-4">Key Decisions</h3>
+            <ul className="space-y-4">
+              {explanation.keyDecisions.map((decision: {decision: string, rationale: string}, index: number) => (
+                <li key={index} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <p className="font-semibold">{decision.decision}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">{decision.rationale}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Solution */}
+        <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+          <h3 className="text-xl font-bold mb-4">Solution</h3>
+          <ul className="space-y-2">
+            {solution.map((item: {variable_name: string, value: number}, index: number) => (
+              <li key={index} className="p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                <span className="font-mono">{item.variable_name}:</span> {item.value}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = () => {
+    if (typeof content === 'string') {
+      return (
+        <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
+          <pre className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">
+            {content}
+          </pre>
+        </div>
+      );
+    }
     switch (activeTab) {
       case 'overview':
         return renderHybridOverview();
