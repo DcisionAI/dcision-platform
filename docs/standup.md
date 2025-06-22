@@ -1,5 +1,19 @@
 # Standup Log
 
+## 2025-06-22
+
+### HiGHS Solver Solution Parsing Fix
+- **Duplicate Solution Entries**: Identified and fixed a critical issue in the HiGHS solution parser where both primal and dual solution values were being included in the solution array, causing duplicate entries and incorrect results.
+- **Solution File Format**: The HiGHS solver outputs solution files containing both primal solution values (actual variable assignments) and dual solution values (shadow prices/reduced costs). The parser was incorrectly reading both sections.
+- **Parser Enhancement**: Updated the `parseHiGHSOutput` method in `src/pages/api/_lib/solvers/highs.ts` to properly distinguish between primal and dual solution sections, ensuring only the correct primal values are extracted.
+- **Testing & Validation**: Created and ran a comprehensive test to verify the fix works correctly, confirming that only 4 variables are now returned instead of 8 duplicate entries.
+- **Documentation Update**: Updated the HiGHS Integration Guide to document the solution parsing behavior and added a section explaining the primal vs dual solution distinction.
+
+### Technical Details
+- **Root Cause**: The parser was using a simple `inColumnsSection` flag that didn't distinguish between primal and dual sections in the HiGHS solution file.
+- **Fix Implementation**: Added proper section detection with `inPrimalColumnsSection` and `inDualSection` flags to ensure only primal solution values are parsed.
+- **Impact**: This fix ensures that optimization results are accurate and don't contain confusing duplicate entries, improving the reliability of the construction optimization workflow.
+
 ## 2025-06-21
 
 ### Enhanced AI Assistant UI/UX

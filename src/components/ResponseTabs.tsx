@@ -369,23 +369,39 @@ const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
     );
   };
   const renderSummary = () => {
-    if (!content.summary) {
-        return <div className="text-gray-500 dark:text-gray-400 text-center py-8">No summary available.</div>
-    }
-    return (
-        <div className="bg-gray-100/50 dark:bg-gray-800/50 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Summary</h3>
-          <ReactMarkdown
-            components={{
-              p: ({ children }) => <p className="text-gray-700 dark:text-gray-300 mb-3">{children}</p>,
-              ul: ({ children }) => <ul className="list-disc list-inside space-y-1 mb-3">{children}</ul>,
-              li: ({ children }) => <li className="text-gray-700 dark:text-gray-300">{children}</li>,
-              strong: ({ children }) => <strong className="font-semibold text-gray-900 dark:text-gray-100">{children}</strong>,
-            }}
-          >
-            {content.summary}
-          </ReactMarkdown>
+    // Prioritize the detailed explanation object.
+    const explanation = content.explanation;
+    const summary = explanation?.summary || content.summary;
+
+    if (!summary) {
+      return (
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          No summary is available for this response.
         </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Executive Summary</h3>
+          <ReactMarkdown className="prose dark:prose-invert max-w-none">{summary}</ReactMarkdown>
+        </div>
+
+        {explanation?.tradeoffs && (
+          <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Trade-offs Considered</h3>
+            <ReactMarkdown className="prose dark:prose-invert max-w-none">{explanation.tradeoffs}</ReactMarkdown>
+          </div>
+        )}
+
+        {explanation?.alternatives && (
+          <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Alternatives Explored</h3>
+            <ReactMarkdown className="prose dark:prose-invert max-w-none">{explanation.alternatives}</ReactMarkdown>
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -480,84 +496,76 @@ const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
   };
 
   const renderDetails = () => {
-    const { solution, problem } = content;
-
-    if (!solution || !problem) {
-      return <div className="text-center text-gray-500 dark:text-gray-400 py-8">Solution data is not available.</div>;
+    const solution = content.solution;
+    if (!solution || !Array.isArray(solution.solution) || solution.solution.length === 0) {
+      return <div className="text-center py-8 text-gray-500 dark:text-gray-400">Solution data is not available.</div>;
     }
+
+    const { objective_value, status, solver_name, solve_time_ms, solution: solutionArray } = solution;
     
     const StatCard = ({ title, value,bgColor = 'bg-gray-100/50 dark:bg-gray-800/50' }: { title: string, value: string | number, bgColor?: string }) => (
-      <div className={`rounded-lg p-4 ${bgColor}`}>
+      <div className={`p-4 rounded-lg shadow ${bgColor}`}>
         <p className="text-sm text-gray-500 dark:text-gray-400">{title}</p>
-        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{value}</p>
+        <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
       </div>
     );
 
     const VariableCard = ({ variable }: { variable: { name?: string, variable_name?: string, value: number, category?: string, description?: string } }) => (
         <div className="bg-gray-100/50 dark:bg-gray-800/50 rounded-lg p-4">
-            <div className="flex justify-between items-center">
-                <p className="text-md font-semibold text-gray-900 dark:text-gray-100">{variable.name || variable.variable_name}</p>
-                <p className="text-lg font-bold text-[#FF7F50]">{variable.value}</p>
-            </div>
-            {variable.description && <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{variable.description}</p>}
-            {variable.category && <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 uppercase">{variable.category}</p>}
+            <p className="text-sm text-gray-500 dark:text-gray-400">{variable.category || 'Variable'}</p>
+            <p className="text-md font-semibold text-gray-900 dark:text-gray-100">{variable.name || variable.variable_name}</p>
+            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{variable.value}</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">{variable.description}</p>
         </div>
     );
     
     const ConstraintCard = ({ description, category, sense, rhs }: { description: string, category: string, sense: string, rhs: number }) => (
-        <div className="bg-gray-100/50 dark:bg-gray-800/50 rounded-lg p-3">
-            <div className="flex justify-between items-center">
-                <p className="text-sm text-gray-900 dark:text-gray-100">{description}</p>
-                <p className="text-sm font-mono text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700/50 rounded px-2 py-1">{sense} {rhs}</p>
-            </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 uppercase">{category}</p>
+      <div className="bg-gray-100/50 dark:bg-gray-800/50 rounded-lg p-4 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{description}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{category}</p>
         </div>
+        <div className="text-md font-mono text-gray-800 dark:text-gray-200">
+          {`value ${sense} ${rhs}`}
+        </div>
+      </div>
     );
 
-    // Normalize solution data - solver returns "name", agent returns "variable_name"
-    const normalizedSolution = solution.solution?.map((s: any) => ({
-      ...s,
-      name: s.name || s.variable_name,
-    }));
-
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left column: Solution */}
-        <div className="space-y-4">
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Solution</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <StatCard title="Status" value={solution.status} bgColor={solution.status === 'optimal' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-yellow-100 dark:bg-yellow-900/30'} />
-            <StatCard title="Objective Value" value={solution.objective_value} />
-          </div>
-          <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 pt-2">Assigned Resources</h4>
-          <div className="grid grid-cols-1 gap-4">
-            {normalizedSolution?.map((variable: any, index: number) => (
-              <VariableCard key={index} variable={variable} />
+      <div className="space-y-6">
+        {/* Top-level stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard title="Status" value={status} />
+          <StatCard title="Objective Value" value={Number(objective_value).toFixed(2)} />
+          <StatCard title="Solver" value={solver_name} />
+          <StatCard title="Solve Time" value={`${solve_time_ms} ms`} />
+        </div>
+
+        {/* Solution Variables */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 p-4 border-b border-gray-200 dark:border-gray-700">
+            Optimal Assignments
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+            {solutionArray.map((variable: any, index: number) => (
+                <VariableCard key={index} variable={variable} />
             ))}
           </div>
         </div>
-        
-        {/* Right column: Problem Definition */}
-        <div className="space-y-4">
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Problem</h3>
-           <div className="bg-gray-100/50 dark:bg-gray-800/50 rounded-lg p-4">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Objective</p>
-              <p className="text-md font-semibold text-gray-900 dark:text-gray-100">{problem.objective?.description}</p>
+
+        {/* Constraints (if available) */}
+        {solution.constraints && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 p-4 border-b border-gray-200 dark:border-gray-700">
+              Constraints
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+              {solution.constraints.map((constraint: any, index: number) => (
+                <ConstraintCard key={index} {...constraint} />
+              ))}
             </div>
-            
-          <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 pt-2">Key Constraints</h4>
-          <div className="grid grid-cols-1 gap-4">
-            {problem.constraints?.descriptions?.map((desc: string, index: number) => (
-               <ConstraintCard 
-                key={index} 
-                description={desc} 
-                category={problem.constraints.categories[index]}
-                sense={problem.constraints.sense[index]}
-                rhs={problem.constraints.rhs[index]}
-              />
-            ))}
           </div>
-        </div>
+        )}
       </div>
     );
   };
@@ -650,17 +658,15 @@ const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
       case 'details':
         return renderDetails();
       case 'visualization':
-        return content.visualization ? (
-          <div className="w-full">
-            <div className="overflow-x-auto bg-gray-100/50 dark:bg-gray-800/50 rounded-lg">
-              <MermaidChart content={content.visualization} />
+        const diagram = content.visualization;
+        if (!diagram) {
+          return (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              No visualization available for this solution.
             </div>
-          </div>
-        ) : (
-          <div className="text-gray-500 dark:text-gray-400 text-center py-8">
-            No visualization available for this solution.
-          </div>
-        );
+          );
+        }
+        return <MermaidChart content={diagram} />;
       default:
         return null;
     }

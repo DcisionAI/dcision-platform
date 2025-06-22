@@ -47,7 +47,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Format response based on execution path
       let responseContent: any = {
         intentAgentAnalysis: result.intentAnalysis,
-        summary: `Orchestrated workflow completed successfully via ${result.executionPath} path.`,
         progressEvents,
         timestamps: result.timestamps
       };
@@ -59,23 +58,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           break;
 
         case 'optimization':
-          responseContent.problem = result.optimizationResult?.problem;
-          responseContent.solution = result.optimizationResult?.solution;
-          responseContent.enrichedData = result.optimizationResult?.enrichedData;
+          // Pass the entire optimizationResult object to the frontend
+          responseContent.solution = result.optimizationResult;
           break;
 
         case 'hybrid':
           responseContent.rag = result.ragResult?.answer;
           responseContent.sources = result.ragResult?.sources;
-          responseContent.problem = result.optimizationResult?.problem;
-          responseContent.solution = result.optimizationResult?.solution;
-          responseContent.enrichedData = result.optimizationResult?.enrichedData;
+          // Pass the entire optimizationResult object to the frontend
+          responseContent.solution = result.optimizationResult;
           break;
       }
 
-      // Add explanation if available
+      // Add explanation and visualization if available
       if (result.explanation) {
         responseContent.explanation = result.explanation;
+      }
+      if (result.mermaidDiagram) {
+        responseContent.visualization = result.mermaidDiagram;
       }
 
       console.log(`✅ Orchestration completed successfully for session: ${sessionId}`);

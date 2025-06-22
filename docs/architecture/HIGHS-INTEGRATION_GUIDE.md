@@ -271,7 +271,30 @@ try {
 }
 ```
 
-### 2. Fallback Behavior
+### 2. Solution Parsing
+
+The HiGHS solver outputs both primal and dual solution values in its solution file. The integration automatically filters out dual solution values to avoid duplicate entries:
+
+```typescript
+// HiGHS solution file format:
+# Primal solution values
+# Columns 4
+carpentr 5
+electr 5
+plumbers 3
+hvac 2
+
+# Dual solution values  
+# Columns 4
+carpentr -3
+electr -4
+plumbers -4
+hvac -4
+```
+
+The parser correctly extracts only the primal solution values (the actual variable assignments) and ignores the dual values (shadow prices/reduced costs).
+
+### 3. Fallback Behavior
 
 If HiGHS is not available, the system automatically falls back to a simple solver for testing:
 

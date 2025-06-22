@@ -172,10 +172,8 @@ export class AgentOrchestrator {
       });
       timestamps.explanationEnd = new Date().toISOString();
 
-      // The explanation from the agent is already wrapped in an "explanation" object.
-      // We need to destructure it to avoid double-wrapping.
-      const { explanation: explanationContent } = explanation;
-
+      // The explanation from the agent is already the content we need.
+      // No need to destructure, as that was causing it to be undefined.
       const endTime = new Date().toISOString();
 
       // Attach diagram to the final result
@@ -189,7 +187,7 @@ export class AgentOrchestrator {
         intentAnalysis,
         ragResult,
         optimizationResult,
-        explanation: explanationContent, // Use the destructured content
+        explanation: explanation, // Use the explanation object directly
         mermaidDiagram: optimizationResult?.mermaidDiagram,
         status: 'success',
         timestamps: {

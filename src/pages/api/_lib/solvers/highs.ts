@@ -198,21 +198,40 @@ export class HiGHSMCPSolver {
       try {
         const solutionContent = readFileSync(solutionFile, 'utf8');
         const solutionLines = solutionContent.split('\n');
-        let inColumnsSection = false;
+        let inPrimalColumnsSection = false;
+        let inDualSection = false;
 
         for (const line of solutionLines) {
           const trimmedLine = line.trim();
 
-          if (trimmedLine.startsWith('# Columns')) {
-            inColumnsSection = true;
+          // Check for primal solution section
+          if (trimmedLine.startsWith('# Primal solution values')) {
+            inPrimalColumnsSection = false;
+            inDualSection = false;
             continue;
           }
-          if (trimmedLine.startsWith('# Rows')) {
-            inColumnsSection = false;
+          
+          // Check for dual solution section
+          if (trimmedLine.startsWith('# Dual solution values')) {
+            inPrimalColumnsSection = false;
+            inDualSection = true;
             continue;
           }
 
-          if (inColumnsSection && trimmedLine && !trimmedLine.startsWith('#')) {
+          // Check for Columns section - only parse if we're not in dual section
+          if (trimmedLine.startsWith('# Columns') && !inDualSection) {
+            inPrimalColumnsSection = true;
+            continue;
+          }
+          
+          // Check for Rows section (marks end of Columns section)
+          if (trimmedLine.startsWith('# Rows')) {
+            inPrimalColumnsSection = false;
+            continue;
+          }
+
+          // Only parse lines in the primal Columns section
+          if (inPrimalColumnsSection && trimmedLine && !trimmedLine.startsWith('#')) {
             const parts = trimmedLine.split(/\s+/);
             if (parts.length >= 2) {
               const varName = parts[0];
