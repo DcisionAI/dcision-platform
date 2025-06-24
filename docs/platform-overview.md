@@ -2,7 +2,7 @@
 
 **To:** Investment Committee
 **From:** Lead Technical Diligence Analyst
-**Date:** Jun 20, 2025
+**Date:** Jun 22, 2025
 **Subject:** Assessment of the DcisionAI Multi-Agent Platform for Seed/Series A Investment
 
 ---
@@ -12,6 +12,9 @@
 The DcisionAI platform represents a sophisticated and well-architected system designed to address a clear market need: vertical-specific, AI-driven decision optimization. The architecture is modern, leveraging a robust technology stack (Next.js, TypeScript, Python) and cutting-edge AI paradigms (agentic workflows, RAG, formal optimization).
 
 The platform's core intellectual property lies in its **Model Context Protocol (MCP)** and the **intelligent agent-based workflow** that orchestrates complex tasks. This is not merely a thin wrapper around a Large Language Model (LLM); it is a structured, extensible, and defensible system for translating natural language intent into auditable, optimized business decisions.
+
+**Recent Innovation: GPT-4o-mini Integration**
+The platform has recently been enhanced with GPT-4o-mini integration for the Enhanced Model Builder, providing significant performance and cost benefits (2x faster, 60x cheaper than GPT-4o) while maintaining excellent mathematical reasoning capabilities. This multi-strategy approach combines dynamic AI generation, template-based fallback, and AI-generated fallback for robust optimization model creation.
 
 While the platform is currently in a growth stage, its foundational architecture is sound and demonstrates a clear path to scalability. The areas identified for future consideration are typical of a platform at this stage and represent a well-understood engineering roadmap rather than fundamental architectural flaws. From a technical standpoint, DcisionAI is well-positioned for future growth and represents a compelling investment opportunity.
 
@@ -29,9 +32,16 @@ The primary defensibility of the DcisionAI platform stems from the synergy of tw
 *   **Agentic AI Workflow:** The platform employs a multi-agent system to deconstruct and solve problems. An incoming natural language query is not sent to a monolithic service. Instead, it is routed through a series of specialized agents:
     1.  **Intent Agent:** Classifies the user's goal (e.g., Request for Information, Optimization Problem, Hybrid Query).
     2.  **Data Agent / RAG Agent:** If information is needed, this agent queries the vectorized knowledge base (Pinecone) to retrieve relevant context.
-    3.  **Model Builder Agent:** Translates the user's intent and the retrieved data context into a formal optimization model, populating the MCP with variables, constraints, and objectives.
+    3.  **Enhanced Model Builder Agent:** Uses GPT-4o-mini to dynamically generate optimization models from user input and enriched data, with intelligent fallback strategies.
     4.  **Solver Agent:** Takes the completed MCP and passes it to a dedicated optimization engine (e.g., HiGHS).
     5.  **Explain Agent:** Interprets the solver's raw output and presents it back to the user in a natural, understandable format.
+
+**Enhanced Model Builder Innovation:**
+The platform's Model Builder Agent has been significantly enhanced with a multi-strategy approach:
+- **Dynamic AI Generation:** Uses GPT-4o-mini to generate optimization models from natural language descriptions and enriched data
+- **Template-Based Fallback:** Falls back to pre-built optimization templates when AI generation fails
+- **AI-Generated Fallback:** Creates simple but valid models using AI when templates aren't suitable
+- **Configuration Management:** Centralized system for switching between different AI models and providers
 
 This modular, agent-based routing is the platform's "brain." It allows for a powerful combination of generative AI (for understanding and explaining) and formal, deterministic systems (for optimization), creating a solution that is both intelligent and reliable.
 

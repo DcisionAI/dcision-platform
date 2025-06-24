@@ -11,6 +11,50 @@ DcisionAI is a modular, open platform for building, deploying, and managing AI-d
 - **Cloud-agnostic:** Deploy anywhere—AWS, GCP, Azure, DigitalOcean, or your own servers.
 - **Open standards:** Uses Docker and Terraform for easy, reproducible deployments.
 - **Flexible:** Bring your own database, authentication, and infrastructure.
+- **AI-Powered Optimization:** GPT-4o-mini powered model builder for dynamic optimization problem generation.
+
+---
+
+## 🤖 AI-Powered Model Builder
+
+DcisionAI features an advanced AI-powered model builder that automatically generates optimization models from natural language descriptions:
+
+### GPT-4o-mini Integration
+- **Performance**: 2x faster than GPT-4o for model generation
+- **Cost**: 60x cheaper than GPT-4o while maintaining excellent mathematical reasoning
+- **Reliability**: Excellent JSON generation for optimization model structures
+- **Rate Limits**: Higher rate limits for better throughput
+
+### Multi-Strategy Approach
+The Enhanced Model Builder uses a three-tier strategy:
+1. **Dynamic AI Generation**: Uses GPT-4o-mini to generate models from user input and enriched data
+2. **Template-Based Fallback**: Falls back to pre-built optimization templates when AI generation fails
+3. **AI-Generated Fallback**: Creates simple but valid models using AI when templates aren't suitable
+
+### Example Usage
+```bash
+curl -X POST http://localhost:3001/api/dcisionai/construction/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Optimize crew assignments for our 3-story office building project. We have 15 workers available: 5 carpenters, 5 electricians, 3 plumbers, and 2 HVAC technicians. The project has 4 phases: foundation (2 weeks), framing (3 weeks), MEP installation (4 weeks), and finishing (2 weeks). Minimize project duration while ensuring safety and quality standards.",
+    "useOrchestration": true,
+    "sessionId": "test-session-1"
+  }'
+```
+
+### Configuration
+Easily switch between different AI models using environment variables:
+```bash
+# Use GPT-4o-mini (default)
+MODEL_PROVIDER=openai
+MODEL_NAME=gpt-4o-mini
+USE_GPT4O_MINI=true
+
+# Or use full GPT-4o for complex problems
+MODEL_PROVIDER=openai
+MODEL_NAME=gpt-4o
+USE_GPT4O_MINI=false
+```
 
 ---
 

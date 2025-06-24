@@ -1,6 +1,7 @@
 import { agnoIntentAgent } from './dcisionai-agents/intentAgent/agnoIntentAgent';
 import { agnoDataAgent } from './dcisionai-agents/dataAgent/agnoDataAgent';
 import { agnoModelBuilderAgent } from './dcisionai-agents/modelBuilderAgent/agnoModelBuilderAgent';
+import { enhancedModelBuilder } from './dcisionai-agents/modelBuilderAgent/enhancedModelBuilder';
 import { agnoExplainAgent } from './dcisionai-agents/explainAgent/agnoExplainAgent';
 import { ConstructionMCPSolver } from './ConstructionMCPSolver';
 import { constructionIndex, getEmbeddings } from '../../../lib/pinecone';
@@ -302,12 +303,20 @@ export class AgentOrchestrator {
       message: 'Building optimization model...'
     });
 
-    // Use the enrichedData from the previous step
-    const modelResult = await agnoModelBuilderAgent.buildModel(
+    // Use enhanced model builder with GPT-4o-mini for better performance
+    const modelResult = await enhancedModelBuilder.buildModel(
+      userInput, // Pass user input for dynamic generation
       enrichedData,
-      intentAnalysis,
-      sessionId
+      intentAnalysis
     );
+
+    console.log('Model Builder Result:', {
+      approach: modelResult.approach,
+      confidence: modelResult.confidence,
+      modelType: modelResult.modelType,
+      problemComplexity: modelResult.problemComplexity,
+      reasoning: modelResult.reasoning
+    });
 
     onProgress?.({
       step: 'model_building',

@@ -699,12 +699,16 @@ export const agnoModelBuilderAgent = {
     enrichedData: any, 
     intent: any, 
     sessionId?: string,
-    modelProvider: 'anthropic' | 'openai' = 'anthropic',
+    modelProvider: 'anthropic' | 'openai' = 'openai',
     modelName?: string
   ): Promise<ModelBuilderResult> {
     try {
       console.log('Model Builder: Received enriched data:', enrichedData);
       console.log('Model Builder: Received intent:', intent);
+
+      // Use GPT-4o-mini by default for better performance and cost-effectiveness
+      const defaultModelName = modelName || (modelProvider === 'openai' ? 'gpt-4o-mini' : 'claude-3-5-sonnet-20241022');
+      console.log(`Model Builder: Using ${modelProvider} with model ${defaultModelName}`);
 
       // --- Primary Strategy: Compose model directly from enriched data ---
       if (enrichedData && Object.keys(enrichedData).length > 0) {
@@ -808,7 +812,7 @@ export const agnoModelBuilderAgent = {
    * @returns Agent ID
    */
   async createSpecializedAgent(
-    modelProvider: 'anthropic' | 'openai' = 'anthropic',
+    modelProvider: 'anthropic' | 'openai' = 'openai',
     modelName?: string
   ): Promise<string> {
     const config = {
@@ -825,7 +829,7 @@ export const agnoModelBuilderAgent = {
 
 Your role is to translate construction management requirements into precise mathematical optimization models that can be solved efficiently using OR-Tools.`,
       model_provider: modelProvider,
-      model_name: modelName,
+      model_name: modelName || (modelProvider === 'openai' ? 'gpt-4o-mini' : 'claude-3-5-sonnet-20241022'),
       temperature: 0.1,
       markdown: true
     };
