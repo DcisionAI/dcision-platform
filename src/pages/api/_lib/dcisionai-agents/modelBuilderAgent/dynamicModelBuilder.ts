@@ -24,6 +24,70 @@ export interface DynamicModelBuilderResult {
   };
 }
 
+/**
+ * Robust JSON parsing function that handles various response formats
+ */
+function cleanAndParseJSON(jsonString: string): any {
+  try {
+    // First try to parse as-is
+    return JSON.parse(jsonString);
+  } catch (err) {
+    // If that fails, try to clean up common issues
+    let cleaned = jsonString;
+    
+    // Remove markdown code blocks if present
+    if (cleaned.startsWith('```json')) {
+      cleaned = cleaned.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+    
+    // Remove any text before the first {
+    const startIndex = cleaned.indexOf('{');
+    if (startIndex > 0) {
+      cleaned = cleaned.substring(startIndex);
+    }
+    
+    // Remove any text after the last }
+    const endIndex = cleaned.lastIndexOf('}');
+    if (endIndex > 0 && endIndex < cleaned.length - 1) {
+      cleaned = cleaned.substring(0, endIndex + 1);
+    }
+    
+    // If the JSON is truncated, try to complete it
+    if (!cleaned.endsWith('}')) {
+      // Count opening and closing braces
+      const openBraces = (cleaned.match(/\{/g) || []).length;
+      const closeBraces = (cleaned.match(/\}/g) || []).length;
+      
+      // Add missing closing braces
+      for (let i = 0; i < openBraces - closeBraces; i++) {
+        cleaned += '}';
+      }
+    }
+    
+    // Fix common JSON issues
+    cleaned = cleaned
+      .replace(/,\s*}/g, '}') // Remove trailing commas
+      .replace(/,\s*]/g, ']') // Remove trailing commas in arrays
+      .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // Remove control characters
+      .replace(/\n/g, ' ') // Replace newlines with spaces
+      .replace(/\r/g, '') // Remove carriage returns
+      .replace(/\t/g, ' ') // Replace tabs with spaces
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
+    
+    try {
+      return JSON.parse(cleaned);
+    } catch (err2: any) {
+      // If still failing, return null to trigger fallback
+      console.warn('Failed to parse JSON after cleaning, will use fallback');
+      console.log('Cleaned JSON string:', cleaned);
+      return null;
+    }
+  }
+}
+
 export class DynamicModelBuilder {
   private modelProvider: 'anthropic' | 'openai';
   private modelName: string;
@@ -102,8 +166,16 @@ IMPORTANT REQUIREMENTS:
 6. Ensure all constraints are mathematically consistent
 7. Provide detailed reasoning for your model design
 
+CRITICAL: You MUST respond with ONLY a valid JSON object. Do not include any markdown formatting, code blocks, or additional text. The JSON must be properly formatted and complete.
+
+IMPORTANT RULES:
+1. All string values must be properly quoted.
+2. All arrays must be properly formatted with square brackets.
+3. All numbers must not be quoted.
+4. Return ONLY the JSON structure below, no additional text.
+
 RESPONSE FORMAT:
-Return a JSON object with the following structure:
+Return ONLY this JSON structure:
 {
   "modelType": "LP|MIP|QP|NLP",
   "problemComplexity": "basic|intermediate|advanced",
@@ -138,21 +210,42 @@ Return a JSON object with the following structure:
     };
 
     const response = await agnoClient.chat(request);
-    const content = response.response;
+    
+    // Log response details for debugging
+    console.log('Dynamic Model Builder response received:');
+    console.log('Response type:', typeof response.response);
+    console.log('Response length:', typeof response.response === 'string' ? response.response.length : 'N/A');
+    
+    if (typeof response.response === 'string' && response.response.length > 200) {
+      console.log('Response preview:', response.response.substring(0, 200) + '...');
+    } else {
+      console.log('Full response:', response.response);
+    }
     
     try {
-      // Extract JSON from response
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON found in response');
+      let modelStructure: any;
+      
+      if (typeof response.response === 'object' && response.response !== null) {
+        console.log('Response is already an object, using directly');
+        modelStructure = response.response;
+      } else if (typeof response.response === 'string') {
+        console.log('Attempting to parse string response...');
+        modelStructure = cleanAndParseJSON(response.response);
+        
+        if (!modelStructure) {
+          throw new Error('Failed to parse JSON after cleaning');
+        }
+        console.log('Successfully parsed JSON response');
+      } else {
+        throw new Error('Response is not a string or a valid JSON object');
       }
       
-      const modelStructure = JSON.parse(jsonMatch[0]);
       console.log('✅ Generated model structure:', modelStructure);
       return modelStructure;
       
     } catch (parseError: any) {
       console.error('❌ Failed to parse model structure:', parseError);
+      console.error('Raw response:', response.response);
       throw new Error(`Failed to parse AI-generated model: ${parseError.message}`);
     }
   }
@@ -220,25 +313,45 @@ If the model is valid, return it unchanged with confidence 0.9+.
 If the model has issues, fix them and return the corrected version with confidence 0.7+.
 If the model is fundamentally flawed, create a new valid model with confidence 0.5+.
 
+CRITICAL: You MUST respond with ONLY a valid JSON object. Do not include any markdown formatting, code blocks, or additional text. The JSON must be properly formatted and complete.
+
 Return the validated model in the same JSON format.`
       }
     };
 
     const response = await agnoClient.chat(request);
-    const content = response.response;
+    
+    // Log response details for debugging
+    console.log('Model validation response received:');
+    console.log('Response type:', typeof response.response);
+    console.log('Response length:', typeof response.response === 'string' ? response.response.length : 'N/A');
     
     try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON found in validation response');
+      let validatedModel: any;
+      
+      if (typeof response.response === 'object' && response.response !== null) {
+        console.log('Validation response is already an object, using directly');
+        validatedModel = response.response;
+      } else if (typeof response.response === 'string') {
+        console.log('Attempting to parse validation response...');
+        validatedModel = cleanAndParseJSON(response.response);
+        
+        if (!validatedModel) {
+          console.warn('Failed to parse validation response, returning original model');
+          return modelStructure;
+        }
+        console.log('Successfully parsed validation response');
+      } else {
+        console.warn('Unexpected validation response type, returning original model');
+        return modelStructure;
       }
       
-      const validatedModel = JSON.parse(jsonMatch[0]);
       console.log('✅ Validated model:', validatedModel);
       return validatedModel;
       
     } catch (parseError: any) {
       console.error('❌ Failed to parse validated model:', parseError);
+      console.error('Raw validation response:', response.response);
       // Return original model if validation fails
       return modelStructure;
     }

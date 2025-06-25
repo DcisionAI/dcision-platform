@@ -31,6 +31,70 @@ function isValidIntentResult(obj: any): obj is IntentResult {
   );
 }
 
+/**
+ * Robust JSON parsing function that handles various response formats
+ */
+function cleanAndParseJSON(jsonString: string): any {
+  try {
+    // First try to parse as-is
+    return JSON.parse(jsonString);
+  } catch (err) {
+    // If that fails, try to clean up common issues
+    let cleaned = jsonString;
+    
+    // Remove markdown code blocks if present
+    if (cleaned.startsWith('```json')) {
+      cleaned = cleaned.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+    
+    // Remove any text before the first {
+    const startIndex = cleaned.indexOf('{');
+    if (startIndex > 0) {
+      cleaned = cleaned.substring(startIndex);
+    }
+    
+    // Remove any text after the last }
+    const endIndex = cleaned.lastIndexOf('}');
+    if (endIndex > 0 && endIndex < cleaned.length - 1) {
+      cleaned = cleaned.substring(0, endIndex + 1);
+    }
+    
+    // If the JSON is truncated, try to complete it
+    if (!cleaned.endsWith('}')) {
+      // Count opening and closing braces
+      const openBraces = (cleaned.match(/\{/g) || []).length;
+      const closeBraces = (cleaned.match(/\}/g) || []).length;
+      
+      // Add missing closing braces
+      for (let i = 0; i < openBraces - closeBraces; i++) {
+        cleaned += '}';
+      }
+    }
+    
+    // Fix common JSON issues
+    cleaned = cleaned
+      .replace(/,\s*}/g, '}') // Remove trailing commas
+      .replace(/,\s*]/g, ']') // Remove trailing commas in arrays
+      .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // Remove control characters
+      .replace(/\n/g, ' ') // Replace newlines with spaces
+      .replace(/\r/g, '') // Remove carriage returns
+      .replace(/\t/g, ' ') // Replace tabs with spaces
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
+    
+    try {
+      return JSON.parse(cleaned);
+    } catch (err2: any) {
+      // If still failing, return null to trigger fallback
+      console.warn('Failed to parse JSON after cleaning, will use fallback');
+      console.log('Cleaned JSON string:', cleaned);
+      return null;
+    }
+  }
+}
+
 export const agnoIntentAgent = {
   name: 'Construction Intent Analysis Agent',
   description: 'Analyzes user input to determine the appropriate execution path and decision type',
@@ -92,8 +156,17 @@ PROBLEM COMPLEXITY:
 Analyze this request:
 "${userInput}"
 
-Please provide a detailed response in JSON format. IMPORTANT: If the "primaryIntent" is "knowledge_retrieval", you MUST return "null" for all optimization-related fields (optimizationQuery, optimizationType, modelType, problemComplexity, templateRecommendations, extractedParameters). If the "primaryIntent" is "optimization" or "hybrid_analysis", you MUST return "null" for "ragQuery".
+CRITICAL: You MUST respond with ONLY a valid JSON object. Do not include any markdown formatting, code blocks, or additional text. The JSON must be properly formatted and complete.
 
+IMPORTANT RULES:
+1. If the "primaryIntent" is "knowledge_retrieval", you MUST return "null" for all optimization-related fields (optimizationQuery, optimizationType, modelType, problemComplexity, templateRecommendations, extractedParameters).
+2. If the "primaryIntent" is "optimization" or "hybrid_analysis", you MUST return "null" for "ragQuery".
+3. All string values must be properly quoted.
+4. All arrays must be properly formatted with square brackets.
+5. All numbers must not be quoted.
+6. The confidence value must be a number between 0 and 1.
+
+Respond with ONLY this JSON structure:
 {
   "decisionType": "string (specific decision category)",
   "primaryIntent": "knowledge_retrieval|optimization|hybrid_analysis",
@@ -137,27 +210,40 @@ Consider construction industry best practices, regulatory requirements, and opti
         throw new Error('No response content from Agno');
       }
 
-      // Try to parse JSON response
+      // Log response details for debugging
+      console.log('Intent analysis response received:');
+      console.log('Response type:', typeof response.response);
+      console.log('Response length:', typeof response.response === 'string' ? response.response.length : 'N/A');
+      
+      if (typeof response.response === 'string' && response.response.length > 200) {
+        console.log('Response preview:', response.response.substring(0, 200) + '...');
+      } else {
+        console.log('Full response:', response.response);
+      }
+
+      // Try to parse JSON response with improved error handling
       let parsedResponse: any;
       try {
         if (typeof response.response === 'object' && response.response !== null) {
           // If the response is already a JSON object, use it directly
+          console.log('Response is already an object, using directly');
           parsedResponse = response.response;
         } else if (typeof response.response === 'string') {
-          // Sanitize the string to remove control characters before parsing
-          const sanitizedString = response.response.replace(/[\\x00-\\x1F\\x7F-\\x9F]/g, '');
-          const jsonMatch = sanitizedString.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            parsedResponse = JSON.parse(jsonMatch[0]);
-          } else {
-            throw new Error('No JSON found in string response');
+          // Use the robust JSON parsing function
+          console.log('Attempting to parse string response...');
+          parsedResponse = cleanAndParseJSON(response.response);
+          
+          if (!parsedResponse) {
+            throw new Error('Failed to parse JSON after cleaning');
           }
+          console.log('Successfully parsed JSON response');
         } else {
           throw new Error('Response is not a string or a valid JSON object');
         }
       } catch (parseError) {
         console.error('Failed to parse intent analysis response:', parseError);
         console.log('Raw response:', response.response);
+        console.log('Response type:', typeof response.response);
         
         // Return fallback response
         return {
@@ -174,7 +260,7 @@ Consider construction industry best practices, regulatory requirements, and opti
         };
       }
 
-      // Validate and normalize response
+      // Validate and normalize response with better error handling
       const result: IntentResult = {
         decisionType: parsedResponse.decisionType || 'resource-allocation',
         primaryIntent: parsedResponse.primaryIntent || 'optimization',
@@ -190,6 +276,23 @@ Consider construction industry best practices, regulatory requirements, and opti
         confidence: typeof parsedResponse.confidence === 'number' ? parsedResponse.confidence : 0.8,
         reasoning: parsedResponse.reasoning || 'Intent analysis completed'
       };
+
+      // Additional validation to ensure we have a valid result
+      if (!isValidIntentResult(result)) {
+        console.warn('Parsed response failed validation, using fallback');
+        return {
+          decisionType: 'resource-allocation',
+          primaryIntent: 'optimization',
+          keywords: ['optimization', 'construction'],
+          optimizationType: 'crew_assignment',
+          modelType: 'MIP',
+          problemComplexity: 'basic',
+          templateRecommendations: ['crew_assignment_basic'],
+          extractedParameters: {},
+          confidence: 0.5,
+          reasoning: 'Fallback response due to validation error'
+        };
+      }
 
       return result;
 
@@ -313,5 +416,16 @@ You must accurately classify each request and provide the appropriate parameters
 
     const result = await agnoClient.createAgent(config);
     return result.agent_id;
+  },
+
+  /**
+   * Test function to validate JSON parsing logic
+   * This can be used for debugging parsing issues
+   */
+  testJsonParsing(testResponse: string): any {
+    console.log('Testing JSON parsing with:', testResponse);
+    const result = cleanAndParseJSON(testResponse);
+    console.log('Parsing result:', result);
+    return result;
   }
 }; 

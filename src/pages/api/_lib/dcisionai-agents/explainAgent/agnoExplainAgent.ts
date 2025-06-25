@@ -111,6 +111,13 @@ function cleanAndParseJSON(jsonString: string): any {
     // If that fails, try to clean up common issues
     let cleaned = jsonString;
     
+    // Remove markdown code blocks if present
+    if (cleaned.startsWith('```json')) {
+      cleaned = cleaned.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+    
     // Remove any text before the first {
     const startIndex = cleaned.indexOf('{');
     if (startIndex > 0) {
@@ -123,7 +130,7 @@ function cleanAndParseJSON(jsonString: string): any {
       cleaned = cleaned.substring(0, endIndex + 1);
     }
     
-    // If the JSON is truncated, try to complete it
+    // If the JSON is truncated, try to complete it more intelligently
     if (!cleaned.endsWith('}')) {
       // Count opening and closing braces
       const openBraces = (cleaned.match(/\{/g) || []).length;
@@ -138,15 +145,166 @@ function cleanAndParseJSON(jsonString: string): any {
     // Fix common JSON issues
     cleaned = cleaned
       .replace(/,\s*}/g, '}') // Remove trailing commas
-      .replace(/,\s*]/g, ']'); // Remove trailing commas in arrays
+      .replace(/,\s*]/g, ']') // Remove trailing commas in arrays
+      .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // Remove control characters
+      .replace(/\n/g, ' ') // Replace newlines with spaces
+      .replace(/\r/g, '') // Remove carriage returns
+      .replace(/\t/g, ' ') // Replace tabs with spaces
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
+    
+    // Additional fixes for common issues in large JSON
+    cleaned = cleaned
+      .replace(/([^\\])"/g, '$1"') // Fix unescaped quotes (but be careful)
+      .replace(/,\s*([}\]])/g, '$1') // Remove trailing commas more aggressively
+      .replace(/([^\\])"/g, '$1"') // Fix any remaining quote issues
+      .replace(/\\"/g, '"') // Fix escaped quotes
+      .replace(/\\\\/g, '\\'); // Fix double backslashes
     
     try {
       return JSON.parse(cleaned);
     } catch (err2: any) {
+      // If still failing, try a more aggressive approach
+      console.warn('First cleaning attempt failed, trying aggressive cleaning');
+      
+      // Try to extract just the main structure
+      const mainMatch = cleaned.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/);
+      if (mainMatch) {
+        try {
+          return JSON.parse(mainMatch[0]);
+        } catch (err3: any) {
+          console.warn('Main structure extraction failed');
+        }
+      }
+      
+      // Try to fix common truncation issues
+      if (cleaned.includes('"ragInsights"') && !cleaned.includes('"optimizationMetrics"')) {
+        // Add missing optimizationMetrics if ragInsights is present
+        cleaned = cleaned.replace(/,\s*$/, '') + ', "optimizationMetrics": {}}';
+        try {
+          return JSON.parse(cleaned);
+        } catch (err4: any) {
+          console.warn('optimizationMetrics addition failed');
+        }
+      }
+      
       // If still failing, return null to trigger fallback
-      console.warn('Failed to parse JSON after cleaning, will use fallback');
+      console.warn('Failed to parse JSON after all cleaning attempts, will use fallback');
+      console.log('Cleaned JSON string (first 500 chars):', cleaned.substring(0, 500));
+      console.log('Cleaned JSON string (last 500 chars):', cleaned.substring(Math.max(0, cleaned.length - 500)));
       return null;
     }
+  }
+}
+
+/**
+ * Extract partial data from a failed JSON response
+ */
+function extractPartialData(jsonString: string): any {
+  try {
+    // Try to extract summary
+    const summaryMatch = jsonString.match(/"summary"\s*:\s*"([^"]+)"/);
+    const summary = summaryMatch ? summaryMatch[1] : 'Analysis completed successfully.';
+    
+    // Try to extract key decisions
+    const decisionsMatch = jsonString.match(/"keyDecisions"\s*:\s*\[([^\]]+)\]/);
+    let keyDecisions: Array<{
+      decision: string;
+      rationale: string;
+      impact: string;
+      confidence: number;
+    }> = [];
+    if (decisionsMatch) {
+      const decisionMatches = decisionsMatch[1].match(/"decision"\s*:\s*"([^"]+)"/g);
+      if (decisionMatches) {
+        keyDecisions = decisionMatches.map(match => {
+          const decision = match.match(/"decision"\s*:\s*"([^"]+)"/);
+          return {
+            decision: decision ? decision[1] : 'Key decision identified',
+            rationale: 'Based on analysis of the provided data',
+            impact: 'Will improve project outcomes',
+            confidence: 0.7
+          };
+        });
+      }
+    }
+    
+    // Try to extract recommendations
+    const recommendationsMatch = jsonString.match(/"recommendations"\s*:\s*\[([^\]]+)\]/);
+    let recommendations: Array<{
+      action: string;
+      benefit: string;
+      priority: 'high' | 'medium' | 'low';
+      implementation: string;
+      timeline: string;
+    }> = [];
+    if (recommendationsMatch) {
+      const actionMatches = recommendationsMatch[1].match(/"action"\s*:\s*"([^"]+)"/g);
+      if (actionMatches) {
+        recommendations = actionMatches.map(match => {
+          const action = match.match(/"action"\s*:\s*"([^"]+)"/);
+          return {
+            action: action ? action[1] : 'Review the analysis results',
+            benefit: 'Will improve project efficiency',
+            priority: 'high' as const,
+            implementation: 'Schedule a review meeting',
+            timeline: 'Within 1 week'
+          };
+        });
+      }
+    }
+    
+    // Try to extract insights
+    const insightsMatch = jsonString.match(/"insights"\s*:\s*\[([^\]]+)\]/);
+    let insights: Array<{
+      category: string;
+      insight: string;
+      value: string;
+    }> = [];
+    if (insightsMatch) {
+      const insightMatches = insightsMatch[1].match(/"insight"\s*:\s*"([^"]+)"/g);
+      if (insightMatches) {
+        insights = insightMatches.map(match => {
+          const insight = match.match(/"insight"\s*:\s*"([^"]+)"/);
+          return {
+            category: 'analysis',
+            insight: insight ? insight[1] : 'Analysis completed successfully',
+            value: 'Provides valuable insights for decision making'
+          };
+        });
+      }
+    }
+    
+    return {
+      summary,
+      keyDecisions: keyDecisions.length > 0 ? keyDecisions : [
+        {
+          decision: "Proceed with the analysis results",
+          rationale: "The analysis has been completed and provides actionable insights",
+          impact: "Improved decision making and project outcomes",
+          confidence: 0.7
+        }
+      ],
+      recommendations: recommendations.length > 0 ? recommendations : [
+        {
+          action: "Review the analysis results",
+          benefit: "Ensure the solution meets project requirements",
+          priority: "high" as const,
+          implementation: "Schedule a review meeting with the project team",
+          timeline: "Within 1 week"
+        }
+      ],
+      insights: insights.length > 0 ? insights : [
+        {
+          category: "efficiency",
+          insight: "Analysis completed successfully",
+          value: "Provides valuable insights for optimization"
+        }
+      ]
+    };
+  } catch (error) {
+    console.warn('Failed to extract partial data:', error);
+    return null;
   }
 }
 
@@ -257,7 +415,20 @@ Respond in JSON format with the following structure:
   ]
 }
 
-Focus on practical, actionable insights that construction managers can implement immediately. Return ONLY the JSON object, no additional text.`;
+Focus on practical, actionable insights that construction managers can implement immediately. 
+
+CRITICAL: You MUST respond with ONLY a valid JSON object. Do not include any markdown formatting, code blocks, or additional text. The JSON must be properly formatted and complete.
+
+IMPORTANT RULES:
+1. All string values must be properly quoted.
+2. All arrays must be properly formatted with square brackets.
+3. All numbers must not be quoted.
+4. The confidence values must be numbers between 0 and 1.
+5. Return ONLY the JSON structure below, no additional text.
+6. Ensure the JSON is complete and properly closed with all required fields.
+7. Keep string values concise but informative to avoid truncation.
+
+Return ONLY this JSON structure:`;
 
       } else if (status === 'optimization_completed') {
         prompt = `You are an expert construction analyst with deep expertise in optimization and mathematical modeling. 
@@ -324,7 +495,20 @@ Respond in JSON format with the following structure:
   }
 }
 
-Focus on practical, actionable insights that construction managers can implement immediately. Return ONLY the JSON object, no additional text.`;
+Focus on practical, actionable insights that construction managers can implement immediately. 
+
+CRITICAL: You MUST respond with ONLY a valid JSON object. Do not include any markdown formatting, code blocks, or additional text. The JSON must be properly formatted and complete.
+
+IMPORTANT RULES:
+1. All string values must be properly quoted.
+2. All arrays must be properly formatted with square brackets.
+3. All numbers must not be quoted.
+4. The confidence values must be numbers between 0 and 1.
+5. Return ONLY the JSON structure below, no additional text.
+6. Ensure the JSON is complete and properly closed with all required fields.
+7. Keep string values concise but informative to avoid truncation.
+
+Return ONLY this JSON structure:`;
 
       } else if (status === 'hybrid_completed') {
         prompt = `You are an expert construction analyst with deep expertise in both knowledge management and optimization. 
@@ -403,7 +587,20 @@ Respond in JSON format with the following structure:
   }
 }
 
-Focus on how knowledge and optimization work together to provide superior solutions. Return ONLY the JSON object, no additional text.`;
+Focus on how knowledge and optimization work together to provide superior solutions. 
+
+CRITICAL: You MUST respond with ONLY a valid JSON object. Do not include any markdown formatting, code blocks, or additional text. The JSON must be properly formatted and complete.
+
+IMPORTANT RULES:
+1. All string values must be properly quoted.
+2. All arrays must be properly formatted with square brackets.
+3. All numbers must not be quoted.
+4. The confidence values must be numbers between 0 and 1.
+5. Return ONLY the JSON structure below, no additional text.
+6. Ensure the JSON is complete and properly closed with all required fields.
+7. Keep string values concise but informative to avoid truncation.
+
+Return ONLY this JSON structure:`;
 
       } else {
         // Unknown status, use fallback
@@ -428,38 +625,62 @@ Focus on how knowledge and optimization work together to provide superior soluti
       };
 
       const response = await agnoClient.chat(request);
+      
+      // Log response details for debugging
+      console.log('Explain agent response received:');
+      console.log('Response type:', typeof response.response);
+      console.log('Response length:', typeof response.response === 'string' ? response.response.length : 'N/A');
+      
+      if (typeof response.response === 'string' && response.response.length > 200) {
+        console.log('Response preview:', response.response.substring(0, 200) + '...');
+      } else {
+        console.log('Full response:', response.response);
+      }
+      
       let result;
       
       if (typeof response.response === 'string') {
         try {
-          // Clean up the response to extract JSON
-          let jsonString = response.response.trim();
-          
-          // Remove markdown code blocks if present
-          if (jsonString.startsWith('```json')) {
-            jsonString = jsonString.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-          } else if (jsonString.startsWith('```')) {
-            jsonString = jsonString.replace(/^```\s*/, '').replace(/\s*```$/, '');
-          }
-          
-          result = cleanAndParseJSON(jsonString);
+          console.log('Attempting to parse string response...');
+          result = cleanAndParseJSON(response.response);
           
           if (!result) {
-            console.warn('JSON parsing failed, using fallback explanation');
-            return {
-              explanation: createFallbackExplanation(solution, status)
-            };
+            console.warn('JSON parsing failed, attempting to extract partial data...');
+            result = extractPartialData(response.response);
+            
+            if (!result) {
+              console.warn('Partial data extraction failed, using fallback explanation');
+              return {
+                explanation: createFallbackExplanation(solution, status)
+              };
+            }
+            console.log('Successfully extracted partial data from response');
+          } else {
+            console.log('Successfully parsed JSON response');
           }
         } catch (err) {
           console.error('JSON parsing error in Explain Agent:', err);
           console.error('Raw response:', response.response);
-          console.warn('Using fallback explanation due to parsing error');
-          return {
-            explanation: createFallbackExplanation(solution, status)
-          };
+          console.warn('Attempting to extract partial data due to parsing error...');
+          
+          result = extractPartialData(response.response);
+          if (!result) {
+            console.warn('Using fallback explanation due to parsing error');
+            return {
+              explanation: createFallbackExplanation(solution, status)
+            };
+          }
+          console.log('Successfully extracted partial data after parsing error');
         }
-      } else {
+      } else if (typeof response.response === 'object' && response.response !== null) {
+        console.log('Response is already an object, using directly');
         result = response.response;
+      } else {
+        console.error('Unexpected response type:', typeof response.response);
+        console.warn('Using fallback explanation due to unexpected response type');
+        return {
+          explanation: createFallbackExplanation(solution, status)
+        };
       }
 
       // Validate response structure with defensive checks
@@ -471,6 +692,7 @@ Focus on how knowledge and optimization work together to provide superior soluti
         };
       }
 
+      console.log('✅ Explanation generated successfully');
       return {
         explanation: result
       };

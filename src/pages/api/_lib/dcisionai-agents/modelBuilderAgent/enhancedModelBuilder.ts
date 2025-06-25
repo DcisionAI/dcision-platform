@@ -16,6 +16,70 @@ export interface EnhancedModelBuilderResult {
   customizations?: Record<string, any>;
 }
 
+/**
+ * Robust JSON parsing function that handles various response formats
+ */
+function cleanAndParseJSON(jsonString: string): any {
+  try {
+    // First try to parse as-is
+    return JSON.parse(jsonString);
+  } catch (err) {
+    // If that fails, try to clean up common issues
+    let cleaned = jsonString;
+    
+    // Remove markdown code blocks if present
+    if (cleaned.startsWith('```json')) {
+      cleaned = cleaned.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+    
+    // Remove any text before the first {
+    const startIndex = cleaned.indexOf('{');
+    if (startIndex > 0) {
+      cleaned = cleaned.substring(startIndex);
+    }
+    
+    // Remove any text after the last }
+    const endIndex = cleaned.lastIndexOf('}');
+    if (endIndex > 0 && endIndex < cleaned.length - 1) {
+      cleaned = cleaned.substring(0, endIndex + 1);
+    }
+    
+    // If the JSON is truncated, try to complete it
+    if (!cleaned.endsWith('}')) {
+      // Count opening and closing braces
+      const openBraces = (cleaned.match(/\{/g) || []).length;
+      const closeBraces = (cleaned.match(/\}/g) || []).length;
+      
+      // Add missing closing braces
+      for (let i = 0; i < openBraces - closeBraces; i++) {
+        cleaned += '}';
+      }
+    }
+    
+    // Fix common JSON issues
+    cleaned = cleaned
+      .replace(/,\s*}/g, '}') // Remove trailing commas
+      .replace(/,\s*]/g, ']') // Remove trailing commas in arrays
+      .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // Remove control characters
+      .replace(/\n/g, ' ') // Replace newlines with spaces
+      .replace(/\r/g, '') // Remove carriage returns
+      .replace(/\t/g, ' ') // Replace tabs with spaces
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
+    
+    try {
+      return JSON.parse(cleaned);
+    } catch (err2: any) {
+      // If still failing, return null to trigger fallback
+      console.warn('Failed to parse JSON after cleaning, will use fallback');
+      console.log('Cleaned JSON string:', cleaned);
+      return null;
+    }
+  }
+}
+
 export class EnhancedModelBuilder {
   private modelConfig: ModelConfig;
 
@@ -187,7 +251,41 @@ Create a basic optimization model with:
 - A clear objective function
 - Proper bounds and coefficients
 
-Return as JSON with variables, constraints, and objective.`;
+CRITICAL: You MUST respond with ONLY a valid JSON object. Do not include any markdown formatting, code blocks, or additional text. The JSON must be properly formatted and complete.
+
+IMPORTANT RULES:
+1. All string values must be properly quoted.
+2. All arrays must be properly formatted with square brackets.
+3. All numbers must not be quoted.
+4. Return ONLY the JSON structure below, no additional text.
+
+Return ONLY this JSON structure:
+{
+  "variables": [
+    {
+      "name": "variable_name",
+      "type": "continuous|integer|binary",
+      "description": "What this variable represents",
+      "bounds": {"lower": 0, "upper": 100}
+    }
+  ],
+  "constraints": [
+    {
+      "name": "constraint_name",
+      "description": "What this constraint enforces",
+      "coefficients": [1, 2, 3],
+      "variables": ["var1", "var2", "var3"],
+      "operator": "<=|>=|=",
+      "rhs": 10
+    }
+  ],
+  "objective": {
+    "type": "minimize|maximize",
+    "description": "What we're optimizing for",
+    "coefficients": [1, 2, 3],
+    "variables": ["var1", "var2", "var3"]
+  }
+}`;
 
     const request: AgnoChatRequest = {
       message: prompt,
@@ -200,33 +298,68 @@ Return as JSON with variables, constraints, and objective.`;
 
     try {
       const response = await agnoClient.chat(request);
-      const content = response.response;
       
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const model = JSON.parse(jsonMatch[0]);
-        const mcpConfig = this.convertToMCPFormat(model);
+      // Log response details for debugging
+      console.log('Fallback model generation response received:');
+      console.log('Response type:', typeof response.response);
+      console.log('Response length:', typeof response.response === 'string' ? response.response.length : 'N/A');
+      
+      if (typeof response.response === 'string' && response.response.length > 200) {
+        console.log('Response preview:', response.response.substring(0, 200) + '...');
+      } else {
+        console.log('Full response:', response.response);
+      }
+      
+      let model: any;
+      
+      if (typeof response.response === 'object' && response.response !== null) {
+        console.log('Fallback response is already an object, using directly');
+        model = response.response;
+      } else if (typeof response.response === 'string') {
+        console.log('Attempting to parse fallback response...');
+        model = cleanAndParseJSON(response.response);
         
+        if (!model) {
+          console.warn('Failed to parse fallback response, using simple fallback model');
+          return {
+            mcpConfig: this.createSimpleFallbackModel(),
+            confidence: 0.2,
+            reasoning: 'Using simple fallback model due to parsing error',
+            modelType: 'MIP',
+            problemComplexity: 'basic'
+          };
+        }
+        console.log('Successfully parsed fallback response');
+      } else {
+        console.warn('Unexpected fallback response type, using simple fallback model');
         return {
-          mcpConfig,
-          confidence: 0.4,
-          reasoning: 'Generated basic fallback model using AI',
+          mcpConfig: this.createSimpleFallbackModel(),
+          confidence: 0.2,
+          reasoning: 'Using simple fallback model due to unexpected response type',
           modelType: 'MIP',
           problemComplexity: 'basic'
         };
       }
+      
+      const mcpConfig = this.convertToMCPFormat(model);
+      
+      return {
+        mcpConfig,
+        confidence: 0.4,
+        reasoning: 'Generated basic fallback model using AI',
+        modelType: 'MIP',
+        problemComplexity: 'basic'
+      };
     } catch (error) {
       console.error('Fallback generation failed:', error);
+      return {
+        mcpConfig: this.createSimpleFallbackModel(),
+        confidence: 0.2,
+        reasoning: 'Using simple fallback model due to error',
+        modelType: 'MIP',
+        problemComplexity: 'basic'
+      };
     }
-
-    // Ultimate fallback: return a simple crew assignment model
-    return {
-      mcpConfig: this.createSimpleFallbackModel(),
-      confidence: 0.2,
-      reasoning: 'Using simple fallback model',
-      modelType: 'MIP',
-      problemComplexity: 'basic'
-    };
   }
 
   /**
