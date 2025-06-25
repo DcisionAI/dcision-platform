@@ -29,11 +29,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     let solution;
 
-    // Solver selection - currently only HiGHS is implemented
+    // Solver selection - use remote solver service
     switch (solver.toLowerCase()) {
       case 'highs':
-        // ✅ HiGHS is implemented (currently returns mock solutions)
-        solution = await solveWithHiGHS(problem);
+        // ✅ Use remote HiGHS solver service
+        solution = await solveWithRemoteSolver(problem, 'highs');
         break;
         
       case 'or-tools':
@@ -78,39 +78,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-// ✅ HiGHS Solver Implementation (real integration)
-async function solveWithHiGHS(problem: any) {
+// ✅ Remote Solver Service Implementation
+async function solveWithRemoteSolver(problem: any, solver: string) {
   try {
-    console.log('Solving with HiGHS:', JSON.stringify(problem, null, 2));
+    console.log(`Solving with remote ${solver} solver:`, JSON.stringify(problem, null, 2));
     
-    // Import and use the real HiGHS solver
-    const { HiGHSMCPSolver } = await import('@/pages/api/_lib/solvers/highs');
-    const solver = new HiGHSMCPSolver();
+    const solverServiceUrl = process.env.SOLVER_SERVICE_URL || 'https://solver.dcisionai.com';
     
-    // Initialize solver
-    await solver.initialize();
+    // Call the remote solver service
+    const response = await fetch(`${solverServiceUrl}/solve`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        problem,
+        solver
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Remote solver service error: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json();
     
-    // Solve the problem
-    const result = await solver.solve(problem);
+    console.log('Remote solver response:', result);
     
-    // Cleanup
-    await solver.shutdown();
-    
-    // Convert to expected format
-    return {
-      status: result.status,
-      objectiveValue: result.objective_value,
-      variables: result.solution.reduce((acc: any, sol: any) => {
-        acc[sol.name] = sol.value;
-        return acc;
-      }, {}),
-      solveTime: result.solve_time_ms / 1000, // Convert to seconds
-      iterations: result.iterations,
-      solver: 'highs',
-      message: 'Real HiGHS solution'
-    };
+    return result;
   } catch (error) {
-    console.error('Error solving with HiGHS:', error);
+    console.error(`Error solving with remote ${solver} solver:`, error);
     throw error;
   }
 } 

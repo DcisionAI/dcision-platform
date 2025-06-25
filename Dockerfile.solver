@@ -1,0 +1,241 @@
+# Solver Service Dockerfile
+FROM node:20-alpine AS base
+
+# Install system dependencies
+RUN apk add --no-cache \
+    python3 \
+    py3-pip \
+    build-base \
+    python3-dev \
+    gcc \
+    g++ \
+    make \
+    cmake \
+    git \
+    curl \
+    wget \
+    bash
+
+# Install HiGHS from source
+RUN cd /tmp && \
+    wget https://github.com/ERGO-Code/HiGHS/archive/refs/tags/v1.11.0.tar.gz && \
+    tar -xzf v1.11.0.tar.gz && \
+    cd HiGHS-1.11.0 && \
+    mkdir build && \
+    cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release && \
+    make -j$(nproc) && \
+    make install && \
+    cd /tmp && \
+    rm -rf HiGHS-1.11.0 v1.11.0.tar.gz
+
+# Install OR-Tools using system package manager (safer approach)
+RUN apk add --no-cache py3-ortools || \
+    (echo "OR-Tools not available in Alpine repos, will install manually" && \
+     pip3 install --break-system-packages --no-cache-dir ortools)
+
+# Verify installations
+RUN highs --version && \
+    python3 -c "import ortools; print('OR-Tools version:', ortools.__version__)" 2>/dev/null || \
+    echo "OR-Tools not available - will be implemented later"
+
+# Production stage
+FROM node:20-alpine AS production
+
+# Install runtime dependencies
+RUN apk add --no-cache python3 py3-pip bash
+
+# Copy HiGHS binary and libraries
+COPY --from=base /usr/local/bin/highs /usr/local/bin/highs
+COPY --from=base /usr/local/lib/libhighs* /usr/local/lib/
+
+# Try to install OR-Tools runtime (optional)
+RUN apk add --no-cache py3-ortools 2>/dev/null || \
+    (pip3 install --break-system-packages --no-cache-dir ortools 2>/dev/null || \
+     echo "OR-Tools not available in production")
+
+WORKDIR /app
+
+# Create package.json for the solver service
+RUN echo '{"name":"solver-service","version":"1.0.0","description":"Optimization solver service for dcisionai","main":"server.js","scripts":{"start":"node server.js","dev":"node server.js"},"dependencies":{"express":"^4.18.2","cors":"^2.8.5"},"engines":{"node":">=18.0.0"}}' > package.json
+
+# Install Express dependencies
+RUN npm install
+
+# Create solver service entry point
+RUN echo '#!/bin/bash' > /app/start-solver.sh && \
+    echo 'echo "Starting Solver Service..."' >> /app/start-solver.sh && \
+    echo 'echo "HiGHS version:" && highs --version' >> /app/start-solver.sh && \
+    echo 'echo "OR-Tools available:" && python3 -c "import ortools; print(\"✓ OR-Tools\", ortools.__version__)" 2>/dev/null || echo "OR-Tools not available"' >> /app/start-solver.sh && \
+    echo 'echo "Starting Node.js solver service..."' >> /app/start-solver.sh && \
+    echo 'exec node server.js' >> /app/start-solver.sh && \
+    chmod +x /app/start-solver.sh
+
+# Create Express server for solver service
+RUN echo 'const express = require("express");' > /app/server.js && \
+    echo 'const cors = require("cors");' >> /app/server.js && \
+    echo 'const { spawn } = require("child_process");' >> /app/server.js && \
+    echo 'const fs = require("fs");' >> /app/server.js && \
+    echo 'const path = require("path");' >> /app/server.js && \
+    echo '' >> /app/server.js && \
+    echo 'const app = express();' >> /app/server.js && \
+    echo 'app.use(cors());' >> /app/server.js && \
+    echo 'app.use(express.json({ limit: "50mb" }));' >> /app/server.js && \
+    echo '' >> /app/server.js && \
+    echo '// Health check endpoint' >> /app/server.js && \
+    echo 'app.get("/health", (req, res) => {' >> /app/server.js && \
+    echo '  res.json({' >> /app/server.js && \
+    echo '    status: "healthy",' >> /app/server.js && \
+    echo '    solvers: {' >> /app/server.js && \
+    echo '      highs: true,' >> /app/server.js && \
+    echo '      orTools: false' >> /app/server.js && \
+    echo '    },' >> /app/server.js && \
+    echo '    timestamp: new Date().toISOString()' >> /app/server.js && \
+    echo '  });' >> /app/server.js && \
+    echo '});' >> /app/server.js && \
+    echo '' >> /app/server.js && \
+    echo '// Convert problem to MPS format' >> /app/server.js && \
+    echo 'function convertToMPS(problem) {' >> /app/server.js && \
+    echo '  const { objective, constraints, variables } = problem;' >> /app/server.js && \
+    echo '  let mps = "NAME          PROBLEM\\n";' >> /app/server.js && \
+    echo '  mps += "ROWS\\n";' >> /app/server.js && \
+    echo '  mps += " N  OBJ\\n";' >> /app/server.js && \
+    echo '  constraints.forEach((constraint, i) => {' >> /app/server.js && \
+    echo '    const sense = constraint.sense === "<=" ? "L" : constraint.sense === ">=" ? "G" : "E";' >> /app/server.js && \
+    echo '    mps += ` ${sense}  R${i + 1}\\n`;' >> /app/server.js && \
+    echo '  });' >> /app/server.js && \
+    echo '  mps += "COLUMNS\\n";' >> /app/server.js && \
+    echo '  variables.forEach((variable, i) => {' >> /app/server.js && \
+    echo '    if (objective.coefficients[i] !== 0) {' >> /app/server.js && \
+    echo '      mps += `    X${i + 1}        OBJ        ${objective.coefficients[i]}\\n`;' >> /app/server.js && \
+    echo '    }' >> /app/server.js && \
+    echo '  });' >> /app/server.js && \
+    echo '  constraints.forEach((constraint, rowIndex) => {' >> /app/server.js && \
+    echo '    constraint.coefficients.forEach((coeff, colIndex) => {' >> /app/server.js && \
+    echo '      if (coeff !== 0) {' >> /app/server.js && \
+    echo '        mps += `    X${colIndex + 1}        R${rowIndex + 1}        ${coeff}\\n`;' >> /app/server.js && \
+    echo '      }' >> /app/server.js && \
+    echo '    });' >> /app/server.js && \
+    echo '  });' >> /app/server.js && \
+    echo '  mps += "RHS\\n";' >> /app/server.js && \
+    echo '  constraints.forEach((constraint, i) => {' >> /app/server.js && \
+    echo '    mps += `    RHS1        R${i + 1}        ${constraint.rhs}\\n`;' >> /app/server.js && \
+    echo '  });' >> /app/server.js && \
+    echo '  mps += "BOUNDS\\n";' >> /app/server.js && \
+    echo '  variables.forEach((variable, i) => {' >> /app/server.js && \
+    echo '    if (variable.lowerBound !== undefined) {' >> /app/server.js && \
+    echo '      mps += ` LO BND1        X${i + 1}        ${variable.lowerBound}\\n`;' >> /app/server.js && \
+    echo '    }' >> /app/server.js && \
+    echo '    if (variable.upperBound !== undefined) {' >> /app/server.js && \
+    echo '      mps += ` UP BND1        X${i + 1}        ${variable.upperBound}\\n`;' >> /app/server.js && \
+    echo '    }' >> /app/server.js && \
+    echo '  });' >> /app/server.js && \
+    echo '  mps += "ENDATA\\n";' >> /app/server.js && \
+    echo '  return mps;' >> /app/server.js && \
+    echo '}' >> /app/server.js && \
+    echo '' >> /app/server.js && \
+    echo '// Parse HiGHS solution' >> /app/server.js && \
+    echo 'function parseHighsSolution(solutionText) {' >> /app/server.js && \
+    echo '  const lines = solutionText.split("\\n");' >> /app/server.js && \
+    echo '  const solution = {' >> /app/server.js && \
+    echo '    status: "unknown",' >> /app/server.js && \
+    echo '    objective_value: 0,' >> /app/server.js && \
+    echo '    solution: [],' >> /app/server.js && \
+    echo '    solve_time_ms: 0,' >> /app/server.js && \
+    echo '    iterations: 0' >> /app/server.js && \
+    echo '  };' >> /app/server.js && \
+    echo '  let inSolutionSection = false;' >> /app/server.js && \
+    echo '  for (const line of lines) {' >> /app/server.js && \
+    echo '    if (line.includes("Model status")) {' >> /app/server.js && \
+    echo '      if (line.includes("Optimal")) {' >> /app/server.js && \
+    echo '        solution.status = "optimal";' >> /app/server.js && \
+    echo '      } else if (line.includes("Infeasible")) {' >> /app/server.js && \
+    echo '        solution.status = "infeasible";' >> /app/server.js && \
+    echo '      } else if (line.includes("Unbounded")) {' >> /app/server.js && \
+    echo '        solution.status = "unbounded";' >> /app/server.js && \
+    echo '      }' >> /app/server.js && \
+    echo '    } else if (line.includes("Objective value")) {' >> /app/server.js && \
+    echo '      const match = line.match(/Objective value\\s+([-+]?\\d*\\.?\\d+)/);' >> /app/server.js && \
+    echo '      if (match) {' >> /app/server.js && \
+    echo '        solution.objective_value = parseFloat(match[1]);' >> /app/server.js && \
+    echo '      }' >> /app/server.js && \
+    echo '    } else if (line.includes("Solution")) {' >> /app/server.js && \
+    echo '      inSolutionSection = true;' >> /app/server.js && \
+    echo '    } else if (inSolutionSection && line.trim() && !line.includes("---")) {' >> /app/server.js && \
+    echo '      const parts = line.trim().split(/\\s+/);' >> /app/server.js && \
+    echo '      if (parts.length >= 2 && parts[0].startsWith("X")) {' >> /app/server.js && \
+    echo '        const varName = parts[0];' >> /app/server.js && \
+    echo '        const value = parseFloat(parts[1]);' >> /app/server.js && \
+    echo '      solution.solution.push({ name: varName, value: value });' >> /app/server.js && \
+    echo '      }' >> /app/server.js && \
+    echo '    } else if (line.includes("Time")) {' >> /app/server.js && \
+    echo '      const match = line.match(/Time\\s+([-+]?\\d*\\.?\\d+)/);' >> /app/server.js && \
+    echo '      if (match) {' >> /app/server.js && \
+    echo '        solution.solve_time_ms = parseFloat(match[1]) * 1000;' >> /app/server.js && \
+    echo '      }' >> /app/server.js && \
+    echo '    } else if (line.includes("Iterations")) {' >> /app/server.js && \
+    echo '      const match = line.match(/Iterations\\s+(\\d+)/);' >> /app/server.js && \
+    echo '      if (match) {' >> /app/server.js && \
+    echo '        solution.iterations = parseInt(match[1]);' >> /app/server.js && \
+    echo '      }' >> /app/server.js && \
+    echo '    }' >> /app/server.js && \
+    echo '  }' >> /app/server.js && \
+    echo '  return solution;' >> /app/server.js && \
+    echo '}' >> /app/server.js && \
+    echo '' >> /app/server.js && \
+    echo '// Solver endpoint' >> /app/server.js && \
+    echo 'app.post("/solve", async (req, res) => {' >> /app/server.js && \
+    echo '  try {' >> /app/server.js && \
+    echo '    const { problem, solver = "highs" } = req.body;' >> /app/server.js && \
+    echo '    if (solver === "highs") {' >> /app/server.js && \
+    echo '      const mpsContent = convertToMPS(problem);' >> /app/server.js && \
+    echo '      const mpsFile = "/tmp/problem.mps";' >> /app/server.js && \
+    echo '      const solFile = "/tmp/problem.sol";' >> /app/server.js && \
+    echo '      fs.writeFileSync(mpsFile, mpsContent);' >> /app/server.js && \
+    echo '      const startTime = Date.now();' >> /app/server.js && \
+    echo '      const highsProcess = spawn("highs", [mpsFile, "--solution", solFile]);' >> /app/server.js && \
+    echo '      let stdout = "";' >> /app/server.js && \
+    echo '      let stderr = "";' >> /app/server.js && \
+    echo '      highsProcess.stdout.on("data", (data) => { stdout += data.toString(); });' >> /app/server.js && \
+    echo '      highsProcess.stderr.on("data", (data) => { stderr += data.toString(); });' >> /app/server.js && \
+    echo '      await new Promise((resolve, reject) => {' >> /app/server.js && \
+    echo '        highsProcess.on("close", (code) => {' >> /app/server.js && \
+    echo '          if (code === 0) { resolve(); } else { reject(new Error(`HiGHS exited with code ${code}: ${stderr}`)); }' >> /app/server.js && \
+    echo '        });' >> /app/server.js && \
+    echo '      });' >> /app/server.js && \
+    echo '      let solutionText = "";' >> /app/server.js && \
+    echo '      if (fs.existsSync(solFile)) { solutionText = fs.readFileSync(solFile, "utf8"); }' >> /app/server.js && \
+    echo '      const solveTime = Date.now() - startTime;' >> /app/server.js && \
+    echo '      const result = parseHighsSolution(stdout + "\\n" + solutionText);' >> /app/server.js && \
+    echo '      result.solve_time_ms = solveTime;' >> /app/server.js && \
+    echo '      try { fs.unlinkSync(mpsFile); if (fs.existsSync(solFile)) { fs.unlinkSync(solFile); } } catch (e) {}' >> /app/server.js && \
+    echo '      res.json({' >> /app/server.js && \
+    echo '        status: result.status,' >> /app/server.js && \
+    echo '        objectiveValue: result.objective_value,' >> /app/server.js && \
+    echo '        variables: result.solution.reduce((acc, sol) => { acc[sol.name] = sol.value; return acc; }, {}),' >> /app/server.js && \
+    echo '        solveTime: result.solve_time_ms / 1000,' >> /app/server.js && \
+    echo '        iterations: result.iterations,' >> /app/server.js && \
+    echo '        solver: "highs",' >> /app/server.js && \
+    echo '        message: "HiGHS solver solution"' >> /app/server.js && \
+    echo '      });' >> /app/server.js && \
+    echo '    } else {' >> /app/server.js && \
+    echo '      res.status(501).json({ error: `${solver} solver not yet implemented`, availableSolvers: ["highs"] });' >> /app/server.js && \
+    echo '    }' >> /app/server.js && \
+    echo '  } catch (error) {' >> /app/server.js && \
+    echo '    console.error("Solver error:", error);' >> /app/server.js && \
+    echo '    res.status(500).json({ error: "Internal solver error", message: error.message });' >> /app/server.js && \
+    echo '  }' >> /app/server.js && \
+    echo '});' >> /app/server.js && \
+    echo '' >> /app/server.js && \
+    echo 'const PORT = process.env.PORT || 8080;' >> /app/server.js && \
+    echo 'app.listen(PORT, () => { console.log(`Solver service running on port ${PORT}`); });' >> /app/server.js
+
+ENV NODE_ENV=production
+ENV PORT=8080
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
+
+CMD ["/app/start-solver.sh"] 

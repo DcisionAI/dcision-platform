@@ -1,0 +1,88 @@
+{
+  "template_id": "crew_assignment_corrected",
+  "name": "Corrected Crew Assignment",
+  "description": "Optimize crew allocation with proper minimum requirements and cost minimization",
+  "problem_type": "MIP",
+  "sense": "minimize",
+  "variables": [
+    {
+      "name": "carpenters",
+      "type": "int",
+      "category": "worker",
+      "description": "Number of carpenters",
+      "bounds": {
+        "lower": 5,
+        "upper": 10
+      }
+    },
+    {
+      "name": "electricians", 
+      "type": "int",
+      "category": "worker",
+      "description": "Number of electricians",
+      "bounds": {
+        "lower": 3,
+        "upper": 8
+      }
+    },
+    {
+      "name": "plumbers",
+      "type": "int", 
+      "category": "worker",
+      "description": "Number of plumbers",
+      "bounds": {
+        "lower": 2,
+        "upper": 6
+      }
+    },
+    {
+      "name": "hvac_technicians",
+      "type": "int", 
+      "category": "worker",
+      "description": "Number of HVAC technicians",
+      "bounds": {
+        "lower": 2,
+        "upper": 5
+      }
+    }
+  ],
+  "constraints": {
+    "dense": [
+      [1, 1, 1, 1]
+    ],
+    "sense": ["="],
+    "rhs": [15],
+    "categories": ["total_crew"],
+    "descriptions": [
+      "Total crew constraint - must use exactly 15 workers"
+    ]
+  },
+  "objective": {
+    "type": "minimize",
+    "target": "total_labor_cost",
+    "description": "Minimize total labor cost",
+    "linear": [25, 30, 28, 32]
+  },
+  "parameters": {
+    "carpenter_rate": 25,
+    "electrician_rate": 30,
+    "plumber_rate": 28,
+    "hvac_rate": 32,
+    "min_carpenters": 5,
+    "min_electricians": 3,
+    "min_plumbers": 2,
+    "min_hvac": 2,
+    "total_crew_limit": 15,
+    "overtime_rate": 1.5
+  },
+  "solver_config": {
+    "time_limit": 300,
+    "gap_tolerance": 0.01,
+    "construction_heuristics": true
+  },
+  "metadata": {
+    "domain": "construction",
+    "complexity": "intermediate",
+    "tags": ["workforce", "scheduling", "crew", "cost_optimization"]
+  }
+} 

@@ -23,7 +23,14 @@
     "verify:highs-mcp": "node scripts/verify-highs-mcp.js",
     "verify:single-service": "node scripts/verify-single-service.js",
     "start:dev": "npm run dev",
-    "deploy": "./scripts/deploy.sh"
+    "deploy": "./scripts/deploy.sh",
+    "deploy:platform": "./scripts/deploy-platform.sh",
+    "deploy:solver": "./scripts/deploy-solver.sh",
+    "build:solver": "docker build -f Dockerfile.solver -t solver-service .",
+    "run:solver": "docker run -p 8081:8080 solver-service",
+    "solver:local": "docker-compose -f docker-compose.solver.yml up",
+    "solver:test": "curl -X POST http://localhost:8081/solve -H \"Content-Type: application/json\" -d '{\"problem\":{\"objective\":{\"sense\":\"minimize\",\"linear\":[1,1]},\"variables\":[{\"name\":\"x\",\"type\":\"cont\",\"lb\":0,\"ub\":10},{\"name\":\"y\",\"type\":\"cont\",\"lb\":0,\"ub\":10}],\"constraints\":[{\"coefficients\":[1,1],\"sense\":\">=\",\"rhs\":1}]},\"solver\":\"highs\"}'",
+    "test:solver": "./scripts/test-solver-service.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.54.0",

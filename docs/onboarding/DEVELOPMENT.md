@@ -74,4 +74,19 @@ This command executes the `scripts/deploy.sh` script, which triggers a Cloud Bui
 
 ### Manual Deployment Steps
 
-For a detailed understanding of the deployment process, refer to the `cloudbuild.yaml` file. 
+For a detailed understanding of the deployment process, refer to the `cloudbuild.yaml` file.
+
+## Agent Backend (Agno) Service
+
+The platform uses a dedicated agent backend (Agno) service for intent analysis, data enrichment, model building, and explainability agents.
+
+- **Local Development:**
+  - By default, agent requests use `http://localhost:8000` if `AGNO_BACKEND_URL` is not set.
+  - You can run the agno-backend locally for full agent functionality.
+- **Production:**
+  - The agent backend is deployed to Cloud Run and mapped to `https://agents.dcisionai.com`.
+  - Set `AGNO_BACKEND_URL=https://agents.dcisionai.com` in your Cloud Run environment variables.
+
+### Troubleshooting
+- If agent flows fail with `ECONNREFUSED 127.0.0.1:8000` in production, check that `AGNO_BACKEND_URL` is set and points to the correct domain.
+- For SSL issues, wait for certificate provisioning after DNS is set for `agents.dcisionai.com`. 

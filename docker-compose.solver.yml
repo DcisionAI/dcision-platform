@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  solver-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.solver
+      target: production
+    ports:
+      - "8081:8080"
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - SOLVER_TIMEOUT=300
+      - HIGHS_THREADS=4
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2'
+        reservations:
+          memory: 1G
+          cpus: '1' 

@@ -76,4 +76,18 @@
     - Renaming the test file from `.js` to `.ts`.
     - Adding explicit type annotations to satisfy strict type checking.
     - Updating `tsconfig.json` to set `"allowImportingTsExtensions": true`.
-    - Correcting import paths to include the `.ts` extension where needed. 
+    - Correcting import paths to include the `.ts` extension where needed.
+
+## 2025-06-25
+
+### Agent Backend (Agno) Service: Cloud Run Productionization
+- **Deployed agno-backend** as a separate Cloud Run service for agent flows (intent, data, model builder, explainability).
+- **Mapped custom domain**: agents.dcisionai.com → agno-backend (Cloud Run, us-central1).
+- **DNS configuration**: Added CNAME agents → ghs.googlehosted.com for SSL provisioning.
+- **Platform integration**: Set AGNO_BACKEND_URL=https://agents.dcisionai.com in Cloud Run env vars for platform-dcisionai.
+- **Troubleshooting**:
+  - Identified ECONNREFUSED 127.0.0.1:8000 errors due to missing AGNO_BACKEND_URL in prod.
+  - Fixed by deploying agno-backend and updating env vars.
+  - Waited for SSL cert to provision; tested with Cloud Run URL until DNS/SSL ready.
+- **Documentation**: Updated deployment and development guides to reflect new agent backend architecture, environment variables, and troubleshooting steps.
+- **No impact on local development**: Local .env and Docker Compose unchanged; local agent flows use localhost. 
