@@ -5,8 +5,9 @@ import AgentChat from '@/components/AgentChat';
 import EnhancedAgentChat from '@/components/EnhancedAgentChat';
 import ScenarioAnalysis from '@/components/ScenarioAnalysis';
 import KnowledgeBase from '@/components/KnowledgeBase';
-import { DocumentTextIcon, ChatBubbleLeftRightIcon, ChartPieIcon, CommandLineIcon, CogIcon } from '@heroicons/react/24/outline';
+import { DocumentTextIcon, ChatBubbleLeftRightIcon, ChartPieIcon, CommandLineIcon, CogIcon, BeakerIcon, ChartBarIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import HeroSection from "@/components/HeroSection";
+import ExperimentalAIAssistant from '@/components/ExperimentalAIAssistant';
 
 const ConstructionPage: React.FC = () => {
   const tabConfig: TabConfig[] = [
@@ -18,11 +19,11 @@ const ConstructionPage: React.FC = () => {
       content: <KnowledgeBase domain="construction" />
     },
     {
-      id: 'ai-assistant',
-      label: 'AI Assistant',
-      icon: <ChatBubbleLeftRightIcon className="w-5 h-5" />,
-      description: 'Your intelligent construction assistant with full orchestration',
-      content: <EnhancedAgentChat showSmartPrompts={true} useOrchestration={true} />
+      id: 'experimental',
+      label: 'Dcision Flow',
+      icon: <BeakerIcon className="w-5 h-5" />,
+      description: 'Advanced real-time visualizations and experimental features',
+      content: <ExperimentalAIAssistant />
     },
     {
       id: 'scenario-analysis',
@@ -45,7 +46,7 @@ const ConstructionPage: React.FC = () => {
       <HeroSection title="DcisionAI" tagline="Optimizing construction workflows with intelligent decision-making" />
       <WorkflowTabs
         tabs={tabConfig}
-        defaultTabId="ai-assistant"
+        defaultTabId="knowledge"
         verticalName="Construction"
         tagline=""
       />

@@ -5,6 +5,7 @@ import { agnoClient, AgnoChatRequest } from '../../agno-client';
 import type { MCPConfig } from '../mcp/MCPTypes';
 import { templateLoader } from '../../../../../templates/optimization';
 import { OptimizationTemplate, Variable } from '../../../../../templates/optimization/types';
+import { messageBus } from '@/agent/MessageBus';
 
 export interface ModelBuilderResult {
   mcpConfig: MCPConfig;
@@ -837,4 +838,109 @@ Your role is to translate construction management requirements into precise math
     const result = await agnoClient.createAgent(config);
     return result.agent_id;
   }
-}; 
+};
+
+// Subscribe to call_model_builder events
+messageBus.subscribe('call_model_builder', async (msg: any) => {
+  console.log(`🏗️ Model Builder processing request for session: ${msg.correlationId}`);
+  console.log(`🏗️ Intent type: ${msg.payload.intent.primaryIntent}`);
+  
+  if (msg.payload.intent.primaryIntent === 'knowledge_retrieval') {
+    // Handle knowledge retrieval requests with RAG model
+    console.log(`🏗️ Building RAG model for knowledge retrieval`);
+    const ragModel = {
+      mcpConfig: {
+        name: 'knowledge_retrieval',
+        description: 'RAG-based knowledge retrieval model',
+        variables: [],
+        constraints: [],
+        objective: {
+          type: 'minimize',
+          expression: '0' // No optimization for RAG
+        },
+        metadata: {
+          modelType: 'rag',
+          query: msg.payload.intent.ragQuery,
+          keywords: msg.payload.intent.keywords
+        }
+      },
+      confidence: 0.9,
+      reasoning: 'Built RAG model for knowledge retrieval request',
+      modelType: 'rag'
+    };
+    console.log(`✅ RAG model built for knowledge retrieval: ${msg.correlationId}`);
+    messageBus.publish({ type: 'model_built', payload: ragModel, correlationId: msg.correlationId });
+  } else if (msg.payload.intent.primaryIntent === 'hybrid_analysis') {
+    // Handle hybrid requests with combined RAG + optimization model
+    console.log(`🏗️ Building hybrid model for hybrid analysis`);
+    
+    // Safely access ragData with fallbacks
+    const ragData = msg.payload.enrichedData?.ragData || {};
+    const optimizationData = msg.payload.enrichedData?.optimizationData || {};
+    
+    // Create hybrid model that combines RAG and optimization
+    const hybridModel = {
+      mcpConfig: {
+        name: 'hybrid_rag_optimization',
+        description: 'Hybrid model combining RAG knowledge retrieval with optimization',
+        variables: optimizationData?.variables || [],
+        constraints: optimizationData?.constraints || [],
+        objective: {
+          type: 'minimize',
+          expression: '0' // Will be enhanced with RAG context
+        },
+        metadata: {
+          modelType: 'hybrid',
+          ragQuery: ragData.query || 'Unknown query',
+          keywords: ragData.keywords || [],
+          optimizationType: msg.payload.intent.optimizationType,
+          problemComplexity: msg.payload.intent.problemComplexity
+        }
+      },
+      confidence: 0.85,
+      reasoning: 'Built hybrid model combining RAG knowledge retrieval with optimization',
+      modelType: 'hybrid',
+      ragData: ragData,
+      optimizationData: optimizationData
+    };
+    console.log(`✅ Hybrid model built for hybrid analysis: ${msg.correlationId}`);
+    messageBus.publish({ type: 'model_built', payload: hybridModel, correlationId: msg.correlationId });
+  } else {
+    // Handle optimization requests with full model building
+    console.log(`🏗️ Building optimization model`);
+    const model = await agnoModelBuilderAgent.buildModel(
+      msg.payload.enrichedData,
+      msg.payload.intent,
+      msg.payload.sessionId
+    );
+    console.log(`✅ Optimization model built: ${msg.correlationId}`);
+    messageBus.publish({ type: 'model_built', payload: model, correlationId: msg.correlationId });
+  }
+});
+
+// Subscribe to debate challenges
+messageBus.subscribe('debate_response_model_built', async (msg: any) => {
+  const challenge = msg.payload.challenge;
+  const originalOutput = msg.payload.originalOutput;
+  
+  const defensePrompt = `You are the Model Builder Agent defending your model construction. 
+  
+Original Model: ${JSON.stringify(originalOutput)}
+Challenge: ${challenge}
+
+Provide a strong defense of your model building approach. Address the challenge directly and explain your design decisions.`;
+
+  const defense = await agnoClient.chat({
+    message: defensePrompt
+  });
+
+  messageBus.publish({
+    type: 'debate_response_model_built',
+    payload: {
+      debateId: msg.payload.debateId,
+      response: defense.response,
+      originalOutput: originalOutput
+    },
+    correlationId: msg.correlationId
+  });
+}); 

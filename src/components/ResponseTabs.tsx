@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTheme } from './layout/ThemeContext';
 import MermaidChart from './ui/MermaidChart';
 import ReactMarkdown from 'react-markdown';
+import AgentCollaborationVisualization from './AgentCollaborationVisualization';
 
 interface SubIntent {
   name: string;
@@ -35,6 +36,7 @@ interface IntentAgentAnalysis {
 
 interface ResponseTabsProps {
   content: {
+    // Legacy fields
     intentAnalysis?: IntentAnalysis;
     intentAgentAnalysis?: IntentAgentAnalysis;
     visualization?: string;
@@ -45,6 +47,18 @@ interface ResponseTabsProps {
     rag?: string;
     optimization?: any;
     explanation?: any;
+    
+    // Agentic response fields
+    intent?: IntentAgentAnalysis;
+    enrichedData?: any;
+    model?: any;
+    progressEvents?: any[];
+    agentInteractions?: any[];
+    debateResults?: any[];
+    sessionId?: string;
+    workflowType?: string;
+    timestamps?: any;
+    ragInsights?: any[];
   } | string;
 }
 
@@ -65,6 +79,12 @@ const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
   // Determine content type and available tabs
   const getContentType = () => {
     if (typeof content === 'string') return 'general';
+    
+    // Check for agentic response format
+    if (content.workflowType === 'agentic' || content.intent || content.solution) {
+      return 'agentic';
+    }
+    
     if (content.rag && content.optimization) return 'hybrid';
     if (content.rag) return 'rag';
     if (content.solution || content.optimization) return 'optimization';
@@ -74,11 +94,18 @@ const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
   const contentType = getContentType();
 
   const getTabs = () => {
-    const baseTabs = [
-      { id: 'analysis', label: 'Analysis' },
+    const baseTabs: { id: string; label: string }[] = [
+      // Removed 'analysis' tab as per requirements
     ];
 
     switch (contentType) {
+      case 'agentic':
+        return [
+          ...baseTabs,
+          { id: 'agent-response', label: 'Agent Response' },
+          { id: 'solution-details', label: 'Solution Details' },
+          { id: 'explanation', label: 'Explanation' },
+        ];
       case 'hybrid':
         return [
           ...baseTabs,
@@ -89,20 +116,19 @@ const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
       case 'rag':
         return [
           ...baseTabs,
-          { id: 'content', label: 'Search Results' }
+          { id: 'content', label: 'Agent Response' } // Changed from 'Search Results' to 'Agent Response'
         ];
       case 'optimization':
         return [
           ...baseTabs,
           { id: 'details', label: 'Solution Details' },
-          { id: 'summary', label: 'Summary' },
           { id: 'visualization', label: 'Visualization' },
         ];
       default:
         // Fallback for general or unknown content
         return [
           ...baseTabs,
-          { id: 'content', label: 'Response' }
+          { id: 'content', label: 'Agent Response' } // Changed from 'Response' to 'Agent Response'
         ];
     }
   };
@@ -110,7 +136,7 @@ const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
   const tabs = getTabs();
 
   useState(() => {
-    if (tabs.length > 0 && tabs[0].id !== activeTab) {
+    if (tabs.length > 0 && !tabs.find(tab => tab.id === activeTab)) {
       setActiveTab(tabs[0].id);
     }
   });
@@ -610,7 +636,7 @@ const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
               {explanation.keyDecisions.map((decision: {decision: string, rationale: string}, index: number) => (
                 <li key={index} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <p className="font-semibold">{decision.decision}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">{decision.rationale}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{decision.rationale}</p>
                 </li>
               ))}
             </ul>
@@ -632,6 +658,208 @@ const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
     );
   };
 
+  // Agentic response rendering functions
+  const renderAgentResponse = () => {
+    // PATCH: Support both {explanation: {...}} and {explanation: {explanation: {...}}}
+    const explanation = content.explanation?.explanation || content.explanation;
+    if (
+      explanation ||
+      content.summary ||
+      (content.ragInsights && content.ragInsights.length > 0)
+    ) {
+      return (
+        <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+          {explanation && explanation.summary && (
+            <div className="mb-4">
+              <h3 className="font-semibold text-lg mb-2">Summary</h3>
+              <div>{explanation.summary}</div>
+            </div>
+          )}
+          {explanation && explanation.keyDecisions && explanation.keyDecisions.length > 0 && (
+            <div className="mb-4">
+              <h3 className="font-semibold text-lg mb-2">Key Decisions</h3>
+              <ul>
+                {explanation.keyDecisions.map((d: any, idx: number) => (
+                  <li key={idx} className="mb-2">
+                    <strong>{d.decision}</strong> <span className="text-xs text-gray-500">({Math.round((d.confidence || 0) * 100)}% confidence)</span>
+                    <div className="text-sm text-gray-700">{d.rationale}</div>
+                    <div className="text-xs text-gray-500">{d.impact}</div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {explanation && explanation.recommendations && explanation.recommendations.length > 0 && (
+            <div className="mb-4">
+              <h3 className="font-semibold text-lg mb-2">Recommendations</h3>
+              <ul>
+                {explanation.recommendations.map((r: any, idx: number) => (
+                  <li key={idx} className="mb-2">
+                    <strong>{r.action}</strong> <span className="text-xs text-gray-500">({r.priority})</span>
+                    <div className="text-sm text-gray-700">{r.benefit}</div>
+                    <div className="text-xs text-gray-500">{r.implementation} | {r.timeline}</div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {explanation && explanation.insights && explanation.insights.length > 0 && (
+            <div className="mb-4">
+              <h3 className="font-semibold text-lg mb-2">Insights</h3>
+              <ul>
+                {explanation.insights.map((insight: any, idx: number) => (
+                  <li key={idx} className="mb-2">
+                    <strong>{insight.category}:</strong> {insight.insight} <span className="text-xs text-gray-500">{insight.value}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {content.ragInsights && content.ragInsights.length > 0 && (
+            <div>
+              <h3 className="font-semibold text-lg mb-2">Knowledge Insights</h3>
+              <ul>
+                {content.ragInsights.map((insight: any, idx: number) => (
+                  <li key={idx} className="mb-2">
+                    <strong>{insight.source}:</strong> {insight.keyInformation}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Fallback message
+    return (
+      <div className="text-gray-500 dark:text-gray-400 text-center py-8">
+        No agent response available. Submit a query to see results.
+      </div>
+    );
+  };
+
+  const renderAgentCollaboration = () => {
+    const progressEvents = content.progressEvents || [];
+    const agentInteractions = content.agentInteractions || [];
+    const debateResults = content.debateResults || [];
+    const intent = content.intent;
+    const sessionId = content.sessionId;
+    const timestamps = content.timestamps;
+
+    // PATCH: Always show D3 visualization if intent exists
+    if (intent) {
+      return (
+        <AgentCollaborationVisualization
+          sessionId={sessionId}
+          agentInteractions={agentInteractions}
+          progressEvents={progressEvents}
+          timestamps={timestamps}
+          intent={intent}
+        />
+      );
+    }
+
+    // Fallback message
+    return (
+      <div className="text-gray-500 dark:text-gray-400 text-center py-8">
+        No agent analysis available for this query.
+      </div>
+    );
+  };
+
+  const renderSolutionDetails = () => {
+    return renderDetails();
+  };
+
+  const renderExplanation = () => {
+    const explanation = content.explanation;
+    
+    if (!explanation) {
+      return (
+        <div className="p-4 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-lg">
+          Explanation is not available for this response.
+        </div>
+      );
+    }
+
+    const explanationData = explanation.explanation || explanation;
+
+    return (
+      <div className="space-y-6">
+        {/* Summary */}
+        {explanationData.summary && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              📋 Summary
+            </h3>
+            <ReactMarkdown className="prose dark:prose-invert max-w-none">
+              {explanationData.summary}
+            </ReactMarkdown>
+          </div>
+        )}
+
+        {/* Key Decisions */}
+        {explanationData.keyDecisions && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              🎯 Key Decisions
+            </h3>
+            <div className="space-y-4">
+              {explanationData.keyDecisions.map((decision: any, index: number) => (
+                <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">{decision.decision}</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{decision.rationale}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-500">Impact: {decision.impact}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-500">Confidence: {(decision.confidence * 100).toFixed(0)}%</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Recommendations */}
+        {explanationData.recommendations && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              💡 Recommendations
+            </h3>
+            <div className="space-y-4">
+              {explanationData.recommendations.map((rec: any, index: number) => (
+                <div key={index} className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">{rec.action}</h4>
+                  <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">{rec.benefit}</p>
+                  <div className="flex items-center space-x-4 text-xs text-blue-600 dark:text-blue-400">
+                    <span>Priority: {rec.priority}</span>
+                    <span>Timeline: {rec.timeline}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Insights */}
+        {explanationData.insights && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              🔍 Insights
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {explanationData.insights.map((insight: any, index: number) => (
+                <div key={index} className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <p className="text-sm text-green-600 dark:text-green-400 font-medium">{insight.category}</p>
+                  <p className="text-sm text-green-900 dark:text-green-100 font-semibold">{insight.insight}</p>
+                  <p className="text-xs text-green-700 dark:text-green-300">{insight.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderContent = () => {
     if (typeof content === 'string') {
       return (
@@ -643,6 +871,12 @@ const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
       );
     }
     switch (activeTab) {
+      case 'agent-response':
+        return renderAgentResponse();
+      case 'solution-details':
+        return renderSolutionDetails();
+      case 'explanation':
+        return renderExplanation();
       case 'overview':
         return renderHybridOverview();
       case 'rag':
@@ -651,10 +885,6 @@ const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
         return renderHybridOptimization();
       case 'content':
         return renderRAGContent();
-      case 'summary':
-        return renderSummary();
-      case 'analysis':
-        return renderIntentAnalysis();
       case 'details':
         return renderDetails();
       case 'visualization':

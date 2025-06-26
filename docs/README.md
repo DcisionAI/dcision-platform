@@ -1,227 +1,282 @@
-# DcisionAI Platform
+# DcisionAI Platform Documentation
 
-An AgenticAI platform for AI-powered decision making and optimization.  
-Deployable on any cloud, on-premises, or local infrastructure using Docker and Terraform.
+## Overview
 
----
+DcisionAI is building the **world's first horizontal agentic AI platform for enterprise decision support**, using construction optimization as a strategic wedge to expand into multiple industries. Our platform combines sophisticated multi-agent AI with mathematical optimization to solve complex business problems.
 
-## 🚀 What is DcisionAI?
+## Platform Architecture
 
-DcisionAI is a modular, open platform for building, deploying, and managing AI-driven decision and optimization workflows.  
-- **Cloud-agnostic:** Deploy anywhere—AWS, GCP, Azure, DigitalOcean, or your own servers.
-- **Open standards:** Uses Docker and Terraform for easy, reproducible deployments.
-- **Flexible:** Bring your own database, authentication, and infrastructure.
-- **AI-Powered Optimization:** GPT-4o-mini powered model builder for dynamic optimization problem generation.
+### Agentic AI Layer
 
----
+Our platform features a **true agentic multi-agent system** with **event-driven communication** via a message bus:
 
-## 🤖 AI-Powered Model Builder
+- **Core Decision Agents**: Intent, Data, Model Builder, Solver, Explain
+- **Advanced Agentic Agents**: Critique, Debate, Coordinator
+- **Message Bus System**: Event-driven communication between agents (publish/subscribe)
+- **LLM-Powered Coordination**: Dynamic routing and decision making
+- **Agent Debate & Critique**: Agents can debate, critique, and collaborate
+- **UI/UX**: Palantir-style tabs for Agent Response, Collaboration, Solution, and Explanation
 
-DcisionAI features an advanced AI-powered model builder that automatically generates optimization models from natural language descriptions:
+### Current Agentic Level: 2.5/5 (Agentic-Ready)
 
-### GPT-4o-mini Integration
-- **Performance**: 2x faster than GPT-4o for model generation
-- **Cost**: 60x cheaper than GPT-4o while maintaining excellent mathematical reasoning
-- **Reliability**: Excellent JSON generation for optimization model structures
-- **Rate Limits**: Higher rate limits for better throughput
+**✅ Implemented:**
+- Multi-agent architecture
+- Event-driven message bus
+- LLM-powered coordination
+- Agent debate and critique
+- Modular UI with agentic tabs
 
-### Multi-Strategy Approach
-The Enhanced Model Builder uses a three-tier strategy:
-1. **Dynamic AI Generation**: Uses GPT-4o-mini to generate models from user input and enriched data
-2. **Template-Based Fallback**: Falls back to pre-built optimization templates when AI generation fails
-3. **AI-Generated Fallback**: Creates simple but valid models using AI when templates aren't suitable
+**🔄 In Progress:**
+- Agent memory and learning
+- Dynamic workflow adaptation
+- Self-assessment capabilities
 
-### Example Usage
-```bash
-curl -X POST http://localhost:3001/api/dcisionai/construction/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message": "Optimize crew assignments for our 3-story office building project. We have 15 workers available: 5 carpenters, 5 electricians, 3 plumbers, and 2 HVAC technicians. The project has 4 phases: foundation (2 weeks), framing (3 weeks), MEP installation (4 weeks), and finishing (2 weeks). Minimize project duration while ensuring safety and quality standards.",
-    "useOrchestration": true,
-    "sessionId": "test-session-1"
-  }'
-```
+**❌ Planned:**
+- True agent autonomy
+- Self-improvement mechanisms
+- Emergent behaviors
 
-### Configuration
-Easily switch between different AI models using environment variables:
-```bash
-# Use GPT-4o-mini (default)
-MODEL_PROVIDER=openai
-MODEL_NAME=gpt-4o-mini
-USE_GPT4O_MINI=true
+## Key Features
 
-# Or use full GPT-4o for complex problems
-MODEL_PROVIDER=openai
-MODEL_NAME=gpt-4o
-USE_GPT4O_MINI=false
-```
+### 1. Agentic AI System
+- **Event-Driven Communication**: Agents publish and subscribe to events via the message bus
+- **Dynamic Routing**: LLM-powered message routing between agents
+- **Agent Debates & Collaboration**: Structured multi-agent discussions, critique, and consensus
+- **Quality Assurance**: Built-in critique and validation system
+- **UI/UX**: Agent Response, Collaboration, Solution, and Explanation tabs
 
----
+### 2. MCP (Model Context Protocol)
+- **Standardized Optimization**: Universal protocol across industries
+- **HiGHS Solver Integration**: Production-grade mathematical optimization
+- **Rich Context Management**: Comprehensive problem context and metadata
+- **Extensible Design**: Easy to add new solvers and domains
 
-## 🏠 On-Premises / Local Deployment
+### 3. Horizontal Platform Strategy
+- **Construction Wedge**: $1.6T market with proven ROI
+- **Horizontal Expansion**: Manufacturing, logistics, energy, healthcare, finance, retail
 
-1. **Clone the repository:**
-   ```sh
-   git clone https://github.com/DcisionAI/dcision-platform.git
-   cd dcision-platform
-   ```
+## API & UI Integration
 
-2. **Copy and configure environment variables:**
-   ```sh
-   cp config.example.env .env
-   ```
-   Edit `.env` to set your database, Supabase, and other secrets.
+- **Agentic Chat API**: `/api/dcisionai/agentic/chat` (returns agentic response format)
+- **UI Tabs**: Agent Response, Agent Collaboration, Solution Details, Explanation
+- **Real-Time Progress**: Live workflow and agent status updates
 
-3. **Start the platform:**
-   ```sh
-   docker compose -f docker-compose.prod.yml up -d
-   ```
+## Use Cases
 
-4. **Access the platform:**  
-   Open your browser to `http://localhost:3000` (or your server's IP/domain).
+### Construction (Primary Wedge)
+- Resource allocation optimization
+- Project scheduling and risk management
+- Cost optimization and quality control
+- Multi-stakeholder decision support
 
----
+### Adjacent Markets
+- **Manufacturing**: Supply chain and production optimization
+- **Logistics**: Route optimization and fleet management
+- **Energy**: Grid optimization and renewable energy planning
+- **Healthcare**: Resource allocation and patient scheduling
+- **Finance**: Portfolio optimization and risk management
 
-## ☁️ Cloud Deployment (Terraform)
+## Technical Documentation
 
-DcisionAI provides a cloud-agnostic Terraform module for automated deployment.  
-**Terraform code is located in [`/terraform`](https://github.com/DcisionAI/dcision-platform/tree/main/terraform).**
+### Architecture
+- [Platform Architecture](./architecture/architecture.md) - System design and components
+- [MCP Overview](./architecture/mcp-overview.md) - Model Context Protocol implementation
+- [HiGHS Integration](./architecture/HIGHS-INTEGRATION_GUIDE.md) - Solver integration guide
+- [Adding New Solvers](./architecture/adding-new-solvers.md) - Extending solver capabilities
 
-### Steps:
-
-1. **Configure your infrastructure variables:**  
-   Edit `terraform/variables.tf` and/or create a `terraform.tfvars` file with your settings (Postgres host, Docker host, etc).
-
-2. **Initialize and apply Terraform:**
-   ```sh
-   cd terraform
-   terraform init
-   terraform plan
-   terraform apply
-   ```
-   This will provision infrastructure and deploy DcisionAI using Docker.
-
-3. **Access the platform:**  
-   The output will provide the URL or IP address for your deployment.
-
----
-
-## 🛠️ Requirements
-
-- Docker and Docker Compose
-- [Terraform](https://www.terraform.io/downloads.html)
-- A PostgreSQL database (self-hosted, managed, or cloud)
-- (Optional) Supabase project for authentication and storage
-
----
-
-## 📦 Updating
-
-To update, simply pull the latest image and restart:
-```sh
-docker pull ghcr.io/dcisionai/dcision-platform:latest
-docker compose -f docker-compose.prod.yml up -d
-```
-
----
-
-## 📚 Documentation
-
-- [Terraform deployment code](https://github.com/DcisionAI/dcision-platform/tree/main/terraform)
-- [Full documentation](https://github.com/DcisionAI/dcision-platform)
-
----
-
-## 🆘 Support
-
-For help, open an issue on [GitHub Issues](https://github.com/DcisionAI/dcision-platform/issues).
-
-# DcisionAI Documentation
-
-Welcome to the DcisionAI platform documentation. This guide will help you understand the architecture, APIs, and development workflows.
-
-## 📚 Documentation Structure
-
-### Architecture & Design
-
-- **[Architecture Overview](architecture/architecture.md)** - System architecture and component overview
-- **[MCP Overview](architecture/mcp-overview.md)** - Model Context Protocol framework and implementation
-- **[Solver Status](architecture/solver-status.md)** - Current implementation status of optimization solvers
-- **[Adding New Solvers](architecture/adding-new-solvers.md)** - Comprehensive guide for implementing new solvers
-- **[HiGHS Integration](architecture/HIGHS_MCP_INTEGRATION_GUIDE.md)** - HiGHS solver integration details
-
-### API Documentation
-
-- **[API Reference](api/README.md)** - Complete API documentation
-- **[Authentication](api/authentication.md)** - API key authentication
-- **[Rate Limiting](api/rate-limiting.md)** - Rate limiting policies
-- **[Webhooks](api/webhooks.md)** - Webhook integration
-- **[SDK](api/sdk.md)** - Client SDK documentation
-
-### Development
-
-- **[Development Guide](onboarding/DEVELOPMENT.md)** - Local development setup
-- **[Environment Setup](onboarding/environment-setup.md)** - Environment configuration
-- **[Codebase Overview](onboarding/codebase-overview.md)** - Project structure and organization
-- **[Contributing Guidelines](onboarding/CONTRIBUTING.md)** - How to contribute to the project
-
-### Deployment
-
-- **[Cloud Run Deployment](deployment/CLOUD_RUN_DEPLOYMENT_GUIDE.md)** - Google Cloud Run deployment
-- **[Single Service Deployment](SINGLE_SERVICE_DEPLOYMENT_GUIDE.md)** - Single-service deployment guide
+### Agentic AI
+- [Orchestration Improvements](./ORCHESTRATION_IMPROVEMENTS.md) - Message bus and agentic architecture
+- [Intent Agent Routing](./INTENT_AGENT_ROUTING_GUIDE.md) - Dynamic agent routing
+- [Model Builder Improvements](./MODEL_BUILDER_IMPROVEMENTS.md) - Enhanced model generation
+- [Explain Agent Improvements](./EXPLAIN_AGENT_IMPROVEMENTS.md) - Solution explanation capabilities
+- [Agentic Testing Guide](./AGENTIC_TESTING_GUIDE.md) - Comprehensive testing procedures for all use cases
 
 ### Platform Features
+- [GPT-4o-mini Integration](./GPT4O_MINI_INTEGRATION.md) - LLM integration and optimization
+- [Robust Flow Improvements](./ROBUST_FLOW_IMPROVEMENTS.md) - Error handling and reliability
+- [Static Dashboard](./static-dashboard.md) - Dashboard capabilities
+- [Code Hygiene](./CodeHygiene.md) - Development standards and practices
 
-- **[Platform Overview](platform/platform-overview.md)** - Platform features and capabilities
-- **[Agents System](platform/dcisionai-agents.md)** - AI agent architecture
-- **[Mathematical Optimization](platform/mathematical-optimization.md)** - Optimization capabilities
-- **[Persistence Layer](platform/persistencelayer.md)** - Data persistence and storage
+## Business Documentation
 
-## 🚀 Quick Start
+### Investment & Strategy
+- [VC Due Diligence Report](./VC_DUE_DILIGENCE_REPORT.md) - Comprehensive investment assessment
+- [Investment Thesis](./dcision-investment-thesis.md) - Business strategy and market opportunity
+- [Market Analysis](./dcision-market-analysis.md) - Market size and competitive landscape
+- [409A Valuation](./409A.md) - Company valuation analysis
 
-1. **Setup Development Environment**: [Environment Setup](onboarding/environment-setup.md)
-2. **Understand Architecture**: [Architecture Overview](architecture/architecture.md)
-3. **Explore APIs**: [API Reference](api/README.md)
-4. **Deploy to Production**: [Cloud Run Deployment](deployment/CLOUD_RUN_DEPLOYMENT_GUIDE.md)
+### Platform Overview
+- [Platform Overview](./platform-overview.md) - High-level platform description
+- [Deployment Guide](./DEPLOYMENT.md) - Platform deployment instructions
+- [Platform Deployment](./DEPLOYMENT-PLATFORM.md) - Production deployment guide
 
-## 🔧 Solver System
+## API Documentation
 
-The DcisionAI platform includes a comprehensive optimization solver system:
+### Core APIs
+- [API Reference](./api/README.md) - Complete API documentation
+- [Authentication](./api/authentication.md) - API authentication and security
+- [Rate Limiting](./api/rate-limiting.md) - API usage limits and quotas
+- [Webhooks](./api/webhooks.md) - Real-time event notifications
+- [SDK Documentation](./api/sdk.md) - Client library documentation
 
-- **Current Status**: [Solver Status](architecture/solver-status.md)
-- **Adding New Solvers**: [Implementation Guide](architecture/adding-new-solvers.md)
-- **HiGHS Integration**: [Integration Details](architecture/HIGHS_MCP_INTEGRATION_GUIDE.md)
+### SDK
+- [JavaScript SDK](./sdk/README.md) - JavaScript/TypeScript client library
+- [SDK Examples](./sdk/) - Code examples and integration guides
 
-### Supported Solvers
+## Development Documentation
 
-| Solver | Status | License | Use Case |
-|--------|--------|---------|----------|
-| **HiGHS** | ✅ Implemented | Open Source | Linear and mixed-integer programming |
-| **OR-Tools** | 🔄 Placeholder | Open Source | Constraint programming, routing |
-| **Gurobi** | 🔄 Placeholder | Commercial | High-performance optimization |
-| **CPLEX** | 🔄 Placeholder | Commercial | Enterprise optimization |
+### Onboarding
+- [Development Guide](./onboarding/DEVELOPMENT.md) - Development environment setup
+- [Onboarding Guide](./onboarding/ONBOARDING.md) - New team member onboarding
 
-## 📖 Additional Resources
+### Architecture Guides
+- [MCP Overview](./architecture/mcp-overview.md) - Model Context Protocol
+- [Solver Service Deployment](./architecture/SOLVER-SERVICE-DEPLOYMENT.md) - Solver deployment
+- [Solver Status](./architecture/solver-status.md) - Solver monitoring and health
 
-- **[Technology Stack](onboarding/technology-stack.md)** - Technologies and frameworks used
-- **[Examples](onboarding/examples/)** - Code examples and tutorials
-- **[Migration Guides](mcp/migration.md)** - Migration from legacy systems
-- **[Testing Guide](setup-testing.md)** - Testing strategies and setup
+## Project Management
 
-## 🤝 Contributing
+### Development
+- [Standup Notes](./standup.md) - Daily development updates
+- [TODO List](./todo.md) - Development tasks and priorities
+- [ODC](./ODC.md) - Operational decision context
 
-We welcome contributions! Please see our [Contributing Guidelines](onboarding/CONTRIBUTING.md) for details on how to:
+## Technical Stack
 
-- Report bugs and request features
-- Submit code changes
-- Improve documentation
-- Add new solvers and capabilities
+### Frontend
+- **Next.js**: React framework with API routes
+- **TypeScript**: Type-safe development
+- **Tailwind CSS**: Utility-first styling
+- **React Components**: Modular UI architecture
 
-## 📞 Support
+### Backend
+- **Node.js**: Server-side JavaScript
+- **API Routes**: Next.js API endpoints
+- **Message Bus**: In-memory event system
+- **Agent Orchestration**: LLM-powered coordination
 
-For questions and support:
+### AI/ML
+- **OpenAI GPT-4o-mini**: LLM for agent coordination
+- **Agentic AI**: Multi-agent decision support
+- **Mathematical Optimization**: HiGHS solver
+- **MCP Protocol**: Standardized optimization interface
 
-1. Check the documentation above
-2. Review [FAQ](FAQ.md) for common questions
-3. Open an issue on GitHub for bugs
-4. Contact the development team for enterprise support
+### Infrastructure
+- **Vercel**: Frontend deployment
+- **Supabase**: Database and authentication
+- **Pinecone**: Vector database for embeddings
+- **Docker**: Containerization for solver
+
+## Getting Started
+
+### Quick Start
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/dcisionai/dcisionai-platform.git
+   cd dcisionai-platform
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment**
+   ```bash
+   cp config.example.env .env.local
+   # Edit .env.local with your API keys
+   ```
+
+4. **Start development server**
+   ```bash
+   npm run dev
+   ```
+
+### Development Workflow
+1. **Agent Development**: Create new agents by subscribing to message bus events
+2. **MCP Extension**: Add new optimization types and constraints
+3. **Horizontal Expansion**: Add industry-specific templates and agents
+4. **Testing**: Comprehensive test suite for all components
+
+### Testing
+1. **Quick Test**: Run the automated test script for all use cases
+   ```bash
+   ./scripts/test-all-use-cases.sh
+   ```
+2. **Individual Testing**: Test specific use cases via API endpoints
+   ```bash
+   curl -X POST http://localhost:3000/api/test-simple-agent \
+     -H "Content-Type: application/json" \
+     -d '{"query": "test query", "useCase": "rag"}'
+   ```
+3. **Complete Workflow**: Test full agentic workflow
+   ```bash
+   curl -X POST http://localhost:3000/api/test-workflow-steps \
+     -H "Content-Type: application/json" \
+     -d '{"query": "optimize supply chain", "useCase": "optimization"}'
+   ```
+
+## Contributing
+
+### Development Standards
+- Use the message bus for all agent communication
+- Implement agent debate, critique, and collaboration
+- Add tests for new features
+- Document all public APIs and agentic flows
+
+### Code Review Process
+1. Create feature branch from main
+2. Implement changes with tests
+3. Update documentation
+4. Submit pull request
+5. Code review and approval
+6. Merge to main
+
+## Support
+
+### Documentation
+- [API Reference](./api/README.md) - Complete API documentation
+- [Architecture Guide](./architecture/architecture.md) - System design
+- [Development Guide](./onboarding/DEVELOPMENT.md) - Development setup
+
+### Community
+- GitHub Issues: Bug reports and feature requests
+- GitHub Discussions: Questions and community support
+- Email: support@dcisionai.com
+
+## License
+
+This project is proprietary software. All rights reserved by DcisionAI.
+
+---
+
+**DcisionAI Platform** - Building the future of enterprise decision support with agentic AI.
+
+## Session Context & Next Steps
+
+### Current State (as of last session)
+- **Agentic Architecture**: Fully event-driven, message bus-based, with agents subscribing/publishing to events. No central orchestrator; Coordinator Agent (LLM-powered) handles dynamic routing.
+- **Agent Types**: Core (Intent, Data, Model Builder, Solver, Explain) and Advanced (Critique, Debate, Coordinator, MultiAgentDebate). All agents interact via the message bus.
+- **Debate & Critique**: DebateAgent and MultiAgentDebate enable structured, LLM-powered agent-to-agent debates and group discussions. CritiqueAgent reviews outputs. All are coordinated via the message bus.
+- **UI/UX**: Agent Collaboration tab shows agent thinking (cards per agent), Agent Response tab shows only the final answer. Progress logs are streamed post-response for now.
+- **MCP Protocol**: Remains the universal interface for optimization, with rich context and extensibility.
+
+### Recent Technical Changes
+- Refactored all agent communication to use the message bus (no direct calls or central orchestration).
+- Implemented CoordinatorAgent for LLM-based dynamic routing and workflow control.
+- Added CritiqueAgent and DebateAgent for output review and agent-to-agent debate.
+- MultiAgentDebate supports group debates, consensus, and winner determination.
+- UI/UX improvements: Palantir-style tabs, agent cards, and clear separation of agent thinking vs. final answer.
+- Bug fixes: Hooks in render, ReactMarkdown errors, correct property mapping for agent responses.
+
+### Open Questions / Next Steps
+- How to enable persistent agent memory and learning (Level 3+ agentic maturity)?
+- Should agents be allowed to self-initiate or self-improve (true autonomy)?
+- How to support real-time, in-progress streaming of agent logs (not just post-response)?
+- What are the best practices for agent self-assessment and emergent behavior?
+- Security, scalability, and test coverage need further investment.
+
+**For the next agent session:**
+- Review this section for full context before making changes.
+- Consider the open questions above and document any architectural or design decisions.
+- Ensure all new agents or features use the message bus and follow the agentic event-driven pattern.

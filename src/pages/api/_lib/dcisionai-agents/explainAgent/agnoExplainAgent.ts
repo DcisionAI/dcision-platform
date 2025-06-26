@@ -2,6 +2,7 @@
 // Now uses the real Agno Python backend for advanced AI capabilities
 
 import { agnoClient, AgnoChatRequest } from '../../agno-client';
+import { messageBus } from '@/agent/MessageBus';
 
 export interface Explanation {
   summary: string;
@@ -308,6 +309,48 @@ function extractPartialData(jsonString: string): any {
   }
 }
 
+function normalizeExplanation(raw: any): Explanation {
+  // If it's a string, try to parse as JSON
+  if (typeof raw === 'string') {
+    try {
+      raw = JSON.parse(raw);
+    } catch {
+      // If not JSON, wrap as summary
+      return {
+        summary: raw,
+        keyDecisions: [],
+        recommendations: [],
+        insights: []
+      };
+    }
+  }
+
+  // If it's a single decision object, wrap it
+  if (raw && raw.decision && !raw.keyDecisions) {
+    raw = {
+      summary: raw.summary || '',
+      keyDecisions: [ {
+        decision: raw.decision,
+        rationale: raw.rationale || '',
+        impact: raw.impact || '',
+        confidence: typeof raw.confidence === 'number' ? raw.confidence : 0.7
+      }],
+      recommendations: raw.recommendations || [],
+      insights: raw.insights || []
+    };
+  }
+
+  // Fill missing fields with defaults
+  return {
+    summary: raw.summary || '',
+    keyDecisions: Array.isArray(raw.keyDecisions) ? raw.keyDecisions : [],
+    recommendations: Array.isArray(raw.recommendations) ? raw.recommendations : [],
+    insights: Array.isArray(raw.insights) ? raw.insights : [],
+    ragInsights: Array.isArray(raw.ragInsights) ? raw.ragInsights : [],
+    optimizationMetrics: raw.optimizationMetrics || undefined
+  };
+}
+
 export const agnoExplainAgent = {
   name: 'Construction Analysis Agent',
   description: 'Explains and analyzes construction optimization solutions',
@@ -325,19 +368,23 @@ export const agnoExplainAgent = {
     sessionId?: string,
     modelProvider: 'anthropic' | 'openai' = 'anthropic',
     modelName?: string
-  ): Promise<{ explanation: Explanation }> {
+  ): Promise<Explanation> {
     try {
       // Validate input
       if (!solution) {
         console.warn('No solution provided, using fallback explanation');
-        return {
-          explanation: createFallbackExplanation({}, 'unknown')
-        };
+        return createFallbackExplanation({}, 'unknown');
       }
 
       // Determine solution status
       let status = 'unknown';
-      if (solution.ragResult && solution.optimizationResult) {
+      if (solution.status === 'rag_complete') {
+        status = 'rag_completed';
+      } else if (solution.status === 'hybrid_complete') {
+        status = 'hybrid_completed';
+      } else if (solution.status === 'optimal' || solution.status === 'infeasible' || solution.status === 'unbounded') {
+        status = 'optimization_completed';
+      } else if (solution.ragResult && solution.optimizationResult) {
         status = 'hybrid_completed';
       } else if (solution.optimizationResult) {
         status = 'optimization_completed';
@@ -349,17 +396,18 @@ export const agnoExplainAgent = {
 
       let prompt = '';
       if (status === 'rag_completed') {
+        // Handle new RAG response format
+        const ragResults = solution.results || [];
+        const query = solution.query || 'Unknown query';
+        
         prompt = `You are an expert construction analyst. 
 
 Given the following RAG (Retrieval-Augmented Generation) solution, create a comprehensive, actionable explanation:
 
-**RAG Answer:**
-${solution.ragResult?.answer || 'No RAG answer available'}
+**Query:** ${query}
 
-**Sources:**
-${JSON.stringify(solution.ragResult?.sources || [], null, 2)}
-
-**User Intent:** ${solution.intent?.reasoning || 'Unknown intent'}
+**RAG Results:**
+${JSON.stringify(ragResults, null, 2)}
 
 Please provide a detailed analysis that includes:
 
@@ -605,9 +653,7 @@ Return ONLY this JSON structure:`;
       } else {
         // Unknown status, use fallback
         console.warn(`Unknown solution status: ${status}, using fallback`);
-        return {
-          explanation: createFallbackExplanation(solution, status)
-        };
+        return createFallbackExplanation(solution, status);
       }
 
       const request: AgnoChatRequest = {
@@ -650,9 +696,7 @@ Return ONLY this JSON structure:`;
             
             if (!result) {
               console.warn('Partial data extraction failed, using fallback explanation');
-              return {
-                explanation: createFallbackExplanation(solution, status)
-              };
+              return createFallbackExplanation(solution, status);
             }
             console.log('Successfully extracted partial data from response');
           } else {
@@ -666,9 +710,7 @@ Return ONLY this JSON structure:`;
           result = extractPartialData(response.response);
           if (!result) {
             console.warn('Using fallback explanation due to parsing error');
-            return {
-              explanation: createFallbackExplanation(solution, status)
-            };
+            return createFallbackExplanation(solution, status);
           }
           console.log('Successfully extracted partial data after parsing error');
         }
@@ -678,32 +720,25 @@ Return ONLY this JSON structure:`;
       } else {
         console.error('Unexpected response type:', typeof response.response);
         console.warn('Using fallback explanation due to unexpected response type');
-        return {
-          explanation: createFallbackExplanation(solution, status)
-        };
+        return createFallbackExplanation(solution, status);
       }
 
       // Validate response structure with defensive checks
       if (!result || !result.summary || !Array.isArray(result.keyDecisions) || !Array.isArray(result.recommendations) || !Array.isArray(result.insights)) {
         console.error('Invalid explanation structure:', result);
         console.warn('Using fallback explanation due to invalid structure');
-        return {
-          explanation: createFallbackExplanation(solution, status)
-        };
+        return createFallbackExplanation(solution, status);
       }
 
       console.log('✅ Explanation generated successfully');
-      return {
-        explanation: result
-      };
+      const normalized = normalizeExplanation(result);
+      return normalized;
     } catch (err: any) {
       console.error('Explainability agent error:', err);
       
       // Return fallback explanation instead of throwing
       console.warn('Using fallback explanation due to error');
-      return {
-        explanation: createFallbackExplanation(solution, 'error')
-      };
+      return createFallbackExplanation(solution, 'error');
     }
   },
 
@@ -740,4 +775,37 @@ Your role is to analyze solutions (RAG, optimization, or hybrid) and provide cle
     const result = await agnoClient.createAgent(config);
     return result.agent_id;
   }
-}; 
+};
+
+// Subscribe to call_explain_agent events
+messageBus.subscribe('call_explain_agent', async (msg: any) => {
+  const explanation = await agnoExplainAgent.explainSolution(msg.payload.solution, msg.payload.sessionId);
+  messageBus.publish({ type: 'explanation_ready', payload: explanation, correlationId: msg.correlationId });
+});
+
+// Subscribe to debate challenges
+messageBus.subscribe('debate_response_explanation_ready', async (msg: any) => {
+  const challenge = msg.payload.challenge;
+  const originalOutput = msg.payload.originalOutput;
+  
+  const defensePrompt = `You are the Explain Agent defending your explanation. 
+  
+Original Explanation: ${JSON.stringify(originalOutput)}
+Challenge: ${challenge}
+
+Provide a strong defense of your explanation approach. Address the challenge directly and explain your reasoning methodology.`;
+
+  const defense = await agnoClient.chat({
+    message: defensePrompt
+  });
+
+  messageBus.publish({
+    type: 'debate_response_explanation_ready',
+    payload: {
+      debateId: msg.payload.debateId,
+      response: defense.response,
+      originalOutput: originalOutput
+    },
+    correlationId: msg.correlationId
+  });
+}); 

@@ -2,6 +2,8 @@
 // Now uses the real Agno Python backend for advanced AI capabilities
 
 import { agnoClient, AgnoChatRequest } from '../../agno-client';
+import { messageBus } from '@/agent/MessageBus';
+// TODO: Ensure messageBus is imported from the correct location or injected by the runtime.
 
 export interface IntentResult {
   decisionType: string;
@@ -428,4 +430,40 @@ You must accurately classify each request and provide the appropriate parameters
     console.log('Parsing result:', result);
     return result;
   }
-}; 
+};
+
+// Subscribe to call_intent_agent events
+messageBus.subscribe('call_intent_agent', async (msg: any) => {
+  const intent = await agnoIntentAgent.analyzeIntent(msg.payload.query, msg.payload.sessionId);
+  messageBus.publish({ type: 'intent_identified', payload: intent, correlationId: msg.correlationId });
+});
+
+// Subscribe to debate challenges
+messageBus.subscribe('debate_response_intent_identified', async (msg: any) => {
+  const challenge = msg.payload.challenge;
+  const originalOutput = msg.payload.originalOutput;
+  
+  const defensePrompt = `You are the Intent Agent defending your analysis. 
+  
+Original Analysis: ${JSON.stringify(originalOutput)}
+Challenge: ${challenge}
+
+Provide a strong defense of your intent analysis. Address the challenge directly and explain your reasoning.`;
+
+  const defense = await agnoClient.chat({
+    messages: [
+      { role: 'system', content: 'You are an Intent Agent defending your analysis in a debate.' },
+      { role: 'user', content: defensePrompt }
+    ]
+  });
+
+  messageBus.publish({
+    type: 'debate_response_intent_identified',
+    payload: {
+      debateId: msg.payload.debateId,
+      response: defense.choices[0].message.content,
+      originalOutput: originalOutput
+    },
+    correlationId: msg.correlationId
+  });
+}); 

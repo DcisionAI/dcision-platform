@@ -16,13 +16,11 @@ NC='\033[0m' # No Color
 PROJECT_ID=${PROJECT_ID:-"dcisionai"}
 REGION=${REGION:-"us-central1"}
 SERVICE_NAME="platform-dcisionai"
-DOMAIN="platform.dcisionai.com"
 
 echo -e "${BLUE}🚀 DcisionAI Platform Deployment${NC}"
 echo "Project ID: $PROJECT_ID"
 echo "Region: $REGION"
 echo "Service Name: $SERVICE_NAME"
-echo "Domain: $DOMAIN"
 echo ""
 
 # Check if gcloud is configured
@@ -60,7 +58,6 @@ SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --region="$REGION" --
 
 echo -e "${GREEN}✅ Platform deployment successful!${NC}"
 echo -e "${GREEN}🌐 Service URL: $SERVICE_URL${NC}"
-echo -e "${GREEN}🌐 Custom Domain: https://$DOMAIN${NC}"
 echo ""
 
 # Test the deployment
@@ -80,7 +77,6 @@ echo ""
 echo -e "${BLUE}📋 Deployment Summary:${NC}"
 echo "✅ Platform service deployed: $SERVICE_NAME"
 echo "✅ Service URL: $SERVICE_URL"
-echo "✅ Custom domain: https://$DOMAIN"
 echo "✅ Solver service integration: https://solver.dcisionai.com"
 echo ""
 echo -e "${YELLOW}🔧 Useful commands:${NC}"

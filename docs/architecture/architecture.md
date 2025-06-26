@@ -2,123 +2,269 @@
 
 ## Overview
 
-DcisionAI is a modern, cloud-native platform for construction optimization and decision-making. The platform provides a unified interface for solving complex construction problems using a sophisticated **multi-agent AI system** and the **Model Context Protocol (MCP)** framework.
-
-The entire system is designed as a **single, cohesive Next.js application**, ensuring tight integration between the user interface, the AI agent layer, and the backend solvers.
+DcisionAI is a **horizontal agentic AI platform for enterprise decision support**, built as a single, cohesive Next.js application with sophisticated multi-agent AI capabilities. The platform uses construction optimization as a strategic wedge to expand into multiple industries.
 
 ## System Architecture
 
-```mermaid
-graph TD
-    subgraph "DcisionAI Platform (Single Next.js Service)"
-        subgraph "User Interface"
-            UI_Construction["Construction Workflow"]
-            UI_Tabs["Response Tabs (Analysis, Details, Summary, Viz)"]
-            UI_Chat["AI Assistant Chat (EnhancedAgentChat)"]
-            
-            UI_Construction --> UI_Chat
-            UI_Chat --> UI_Tabs
-        end
-
-        subgraph "API Layer"
-            API_Chat["/api/dcisionai/construction/chat"]
-        end
-
-        subgraph "Orchestration Layer"
-            Orchestrator["AgentOrchestrator"]
-        end
-
-        subgraph "AI Agent Layer"
-            IntentAgent["Intent Agent"]
-            DataAgent["Data Agent"]
-            ModelBuilderAgent["Model Builder Agent"]
-            ExplainAgent["Explain Agent"]
-        end
-
-        subgraph "Solver Layer"
-            ConstructionSolver["ConstructionMCPSolver"]
-            Highs["HiGHS Solver (native binary)"]
-        end
-        
-        UI_Chat -- "User Query" --> API_Chat
-        API_Chat -- "Orchestrate Request" --> Orchestrator
-        Orchestrator --> IntentAgent
-        Orchestrator --> DataAgent
-        Orchestrator --> ModelBuilderAgent
-        Orchestrator --> ConstructionSolver
-        ConstructionSolver --> Highs
-        Orchestrator --> ExplainAgent
-        
-        ExplainAgent -- "Explanation (Summary, Tradeoffs, etc.)" --> Orchestrator
-        Highs -- "Solution (Primal Values)" --> ConstructionSolver
-        ConstructionSolver -- "Full Solution Object" --> Orchestrator
-        ModelBuilderAgent -- "Mermaid Diagram" --> Orchestrator
-        
-        Orchestrator -- "Final Response (Solution, Explanation, Visualization)" --> API_Chat
-        API_Chat -- "JSON Response" --> UI_Tabs
-    end
-
-    style UI_Tabs fill:#cde4ff
-    style Orchestrator fill:#cde4ff
-    style API_Chat fill:#cde4ff
+```
+┌─────────────────────────────────────────────────────────┐
+│                DcisionAI Platform (Next.js)             │
+│                                                         │
+│  ┌─────────────────┐  ┌─────────────────────────────────┐ │
+│  │   Frontend UI   │  │        API Routes               │ │
+│  │                 │  │                                 │ │
+│  │ • React Pages   │  │ • /api/solver                   │ │
+│  │ • Components    │  │ • /api/agno                     │ │
+│  │ • Workflows     │  │ • /api/docs                     │ │
+│  │ • Chat Interface│  │ • /api/metrics                  │ │
+│  │ • Agent Tabs    │  │ • /api/dcisionai/agentic/chat   │ │
+│  └─────────────────┘  └─────────────────────────────────┘ │
+│                                                         │
+│  ┌─────────────────────────────────────────────────────┐ │
+│  │              Agentic AI Layer                       │ │
+│  │                                                     │ │
+│  │ • Message Bus (Event-Driven Communication)          │ │
+│  │ • Intent Agent                                      │ │
+│  │ • Data Agent                                        │ │
+│  │ • Model Builder Agent                               │ │
+│  │ • Solver Agent                                      │ │
+│  │ • Explain Agent                                     │ │
+│  │ • Critique Agent                                    │ │
+│  │ • Debate Agent                                      │ │
+│  │ • Coordinator Agent                                 │ │
+│  └─────────────────────────────────────────────────────┘ │
+│                                                         │
+│  ┌─────────────────────────────────────────────────────┐ │
+│  │              Optimization Engine                    │ │
+│  │                                                     │ │
+│  │ • HiGHS Solver (Binary)                             │ │
+│  │ • MCP Protocol Implementation                       │ │
+│  │ • Multi-Solver Management                           │ │
+│  │ • Construction-Specific Templates                   │ │
+│  └─────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────┘
 ```
 
-## Key Components
+## Core Components
 
-### 1. Frontend (Next.js)
+### 1. Message Bus System
 
-**Location**: `src/pages/` and `src/components/`
+The platform uses an **event-driven message bus** for agent communication, enabling true agentic interactions:
 
-The frontend is a rich, interactive application built with Next.js and TypeScript. It provides domain-specific workflows and a powerful AI-driven chat interface.
+```typescript
+interface MessageBus {
+  // Event-driven communication
+  publish(event: AgentEvent): void;
+  subscribe(eventType: string, handler: EventHandler): void;
+  
+  // Agent coordination
+  routeMessage(message: AgentMessage): Promise<void>;
+  broadcastUpdate(update: SystemUpdate): void;
+}
+```
 
--   **Workflows**: Specialized UIs for Construction, Retail, and Finance.
--   **AI Assistant (`EnhancedAgentChat.tsx`)**: The primary user interaction component where users can submit natural language queries.
--   **Response Rendering (`ResponseTabs.tsx`)**: A key UI component that displays the orchestrated response from the backend in a clean, tabbed view:
-    -   **Analysis**: Shows the `IntentAgent`'s analysis of the user's query.
-    -   **Solution Details**: Displays the raw, structured solution from the solver, including variable values, objective value, and solver status.
-    -   **Summary**: Presents a human-readable explanation from the `ExplainAgent`, including an executive summary, tradeoffs considered, and alternative solutions.
-    -   **Visualization**: Renders a Mermaid diagram of the optimization problem.
+**Key Features:**
+- **Event-Driven Architecture**: Agents publish and subscribe to events
+- **Dynamic Routing**: LLM-powered message routing between agents
+- **Real-time Updates**: Live progress updates and agent status
+- **Debate & Critique**: Multi-agent debate and output review
 
-### 2. API & Orchestration Layer
+### 2. Agentic AI Layer
 
-**API Location**: `src/pages/api/`
-**Orchestrator Location**: `src/pages/api/_lib/AgentOrchestrator.ts`
+#### Agent Types
 
--   **Chat API (`/api/dcisionai/construction/chat`)**: The main entry point for user queries from the frontend.
--   **Agent Orchestrator (`AgentOrchestrator.ts`)**: The brain of the backend. It receives requests from the API and coordinates the workflow between the different AI agents and the solver layer. Its key responsibilities include:
-    -   Executing the agent workflow (Intent → Data → ModelBuilder → Solver → Explain).
-    -   Aggregating the results from each agent.
-    -   Assembling the final, structured response object containing the **solution**, the **explanation**, and the **visualization diagram**. This response is specifically formatted for consumption by the `ResponseTabs.tsx` component on the frontend.
+**Core Decision Agents:**
+- **Intent Agent**: Analyzes user intent and problem classification
+- **Data Agent**: Handles data preparation and validation
+- **Model Builder Agent**: Creates optimization models and constraints
+- **Solver Agent**: Executes mathematical optimization
+- **Explain Agent**: Generates explanations and insights
 
-### 3. AI Agent Layer
+**Advanced Agentic Agents:**
+- **Critique Agent**: Reviews and critiques other agents' outputs
+- **Debate Agent**: Engages in one-on-one debates with other agents
+- **Coordinator Agent**: Uses LLM to dynamically route messages and coordinate workflows
 
-**Location**: `src/pages/api/_lib/dcisionai-agents/`
+#### Agentic Capabilities
 
-The AI Agent Layer provides specialized AI agents that work together to understand, process, and solve complex problems. These agents are stateful and managed through the `agno.ai` framework.
+**Current Level: 2.5/5 (Agentic-Ready)**
 
--   **Intent Agent**: Analyzes user input to determine the execution path (e.g., RAG, Optimization, Hybrid).
--   **Data Agent**: Enriches user data with domain-specific context.
--   **Model Builder Agent**: Converts the enriched data into a formal MCP (Model Context Protocol) model and generates a **Mermaid diagram** for visualization.
--   **Explain Agent**: Generates human-readable explanations of the final solution, including a summary, a discussion of tradeoffs, and alternative scenarios.
+```typescript
+interface AgenticCapabilities {
+  // ✅ Implemented
+  multiAgentArchitecture: true;
+  eventDrivenCommunication: true;
+  llmPoweredCoordination: true;
+  agentDebate: true;
+  agentCritique: true;
+  
+  // ⚠️ Partial
+  dynamicWorkflow: true; // But limited autonomy
+  agentMemory: false; // No persistent memory
+  
+  // ❌ Missing
+  agentLearning: false;
+  agentAutonomy: false;
+  selfImprovement: false;
+  emergentBehavior: false;
+}
+```
 
-### 4. Solver Layer
+### 3. MCP (Model Context Protocol) Implementation
 
-**Location**: `src/pages/api/_lib/solvers/`
+The platform implements a comprehensive MCP protocol for optimization problems:
 
-The solver layer is responsible for taking the MCP model and executing it using a mathematical optimization solver.
+```typescript
+interface MCPProtocol {
+  // Core MCP types
+  variables: Variable[];
+  constraints: Constraint[];
+  objectives: Objective[];
+  
+  // Protocol configuration
+  steps: Step[];
+  allowPartialSolutions: boolean;
+  explainabilityEnabled: boolean;
+  
+  // Context management
+  environment: Environment;
+  dataset: Dataset;
+  problem: ProblemMetadata;
+}
+```
 
--   **Construction MCP Solver (`ConstructionMCPSolver.ts`)**: A specialized client that transforms the MCP model into a format understood by the HiGHS solver.
--   **HiGHS Solver (`highs.ts`)**: The core optimization engine. It's a high-performance, open-source solver that runs as a native binary.
-    -   **Solution Parsing**: The HiGHS integration includes a robust parser that correctly handles the solver's output, distinguishing between **primal** and **dual** solution values to prevent data duplication.
+**Features:**
+- **Standardized Optimization**: Universal protocol across industries
+- **Solver Integration**: HiGHS solver with MCP compatibility
+- **Context Management**: Rich problem context and metadata
+- **Extensible Design**: Easy to add new solvers and domains
 
-## Data Flow: From Query to UI
+### 4. Optimization Engine
 
-1.  A user enters a query into the `EnhancedAgentChat` component in the UI.
-2.  The query is sent to the `/api/dcisionai/construction/chat` endpoint.
-3.  The `AgentOrchestrator` initiates the agent workflow.
-4.  The `IntentAgent` classifies the query.
-5.  The `ModelBuilderAgent` creates an MCP model and a Mermaid diagram.
-6.  The `ConstructionMCPSolver` invokes the `HiGHS` binary to solve the model.
-7.  The `ExplainAgent` generates a detailed summary of the solution.
-8.  The `AgentOrchestrator` collects all these artifacts (solution, explanation, diagram) and packages them into a single JSON response.
-9.  The frontend receives the JSON response, and the `ResponseTabs` component renders each piece of data in the appropriate tab.
+**HiGHS Solver Integration:**
+- **Binary Distribution**: Self-contained solver binary
+- **Multiple Formats**: LP, MIP, QP problem support
+- **Performance**: High-performance mathematical optimization
+- **Reliability**: Production-ready solver engine
+
+**Template System:**
+- **Construction Templates**: Pre-built optimization models
+- **Domain-Specific**: Industry-tailored constraints and objectives
+- **Extensible**: Easy to add new industry templates
+
+## Agent Communication Flow
+
+### Traditional Orchestrated Flow
+```
+User → Orchestrator → Intent Agent → Data Agent → Model Builder → Solver → Explain Agent → User
+```
+
+### New Agentic Flow (Message Bus)
+```
+User → Message Bus → [Agents Subscribe/Publish Events] → Dynamic Routing → LLM Coordination → User
+```
+
+**Key Differences:**
+- **Event-Driven**: Agents publish events, others subscribe
+- **Dynamic Routing**: LLM decides which agent should handle each message
+- **Agent Autonomy**: Agents can initiate conversations, debates, and critiques
+- **Real-time Updates**: Live progress and status updates
+
+## Agent Debate & Collaboration System
+
+### One-on-One Debates
+```typescript
+interface DebateAgent {
+  async debate(opponent: Agent, topic: string): Promise<DebateResult> {
+    // Structured debate with rounds
+    // Challenge and counter-arguments
+    // LLM-powered evaluation
+    // Winner determination
+  }
+}
+```
+
+### Multi-Agent Debates
+```typescript
+interface MultiAgentDebate {
+  async groupDebate(agents: Agent[], topic: string): Promise<GroupDebateResult> {
+    // Multiple agents participate
+    // Structured debate rounds
+    // Collective decision making
+    // Consensus building
+  }
+}
+```
+
+## UI/UX & API Integration
+
+- **Agentic Chat API**: `/api/dcisionai/agentic/chat` (returns agentic response format)
+- **UI Tabs**: Agent Response, Agent Collaboration, Solution Details, Explanation
+- **Real-Time Progress**: Live workflow and agent status updates
+
+## Horizontal Platform Strategy
+
+### Construction as Wedge
+- **Market Size**: $1.6T globally
+- **High Pain**: Complex optimization problems
+- **Willingness to Pay**: Visible cost savings
+- **Perfect Use Case**: Multi-agent coordination
+
+### Expansion Pathways
+```typescript
+interface HorizontalExpansion {
+  manufacturing: "Supply chain optimization, production planning";
+  logistics: "Route optimization, fleet management";
+  energy: "Grid optimization, renewable energy planning";
+  healthcare: "Resource allocation, patient scheduling";
+  finance: "Portfolio optimization, risk management";
+  retail: "Inventory optimization, demand forecasting";
+}
+```
+
+## Technical Stack
+
+### Frontend
+- **Next.js**: React framework with API routes
+- **TypeScript**: Type-safe development
+- **Tailwind CSS**: Utility-first styling
+- **React Components**: Modular UI architecture
+
+### Backend
+- **Node.js**: Server-side JavaScript
+- **API Routes**: Next.js API endpoints
+- **Message Bus**: In-memory event system
+- **Agent Orchestration**: LLM-powered coordination
+
+### AI/ML
+- **OpenAI GPT-4o-mini**: LLM for agent coordination
+- **Agentic AI**: Multi-agent decision support
+- **Mathematical Optimization**: HiGHS solver
+- **MCP Protocol**: Standardized optimization interface
+
+### Infrastructure
+- **Vercel**: Frontend deployment
+- **Supabase**: Database and authentication
+- **Pinecone**: Vector database for embeddings
+- **Docker**: Containerization for solver
+
+## Roadmap
+
+### Short-term (3-6 months)
+- **Agent Memory**: Persistent agent experience storage
+- **Self-Assessment**: Agent performance evaluation
+- **Dynamic MCP**: Adaptive protocol optimization
+
+### Medium-term (6-12 months)
+- **Agent Learning**: Experience-based improvement
+- **Advanced DSS**: Scenario and sensitivity analysis
+- **Multi-Industry**: 3+ industry templates
+
+### Long-term (12+ months)
+- **Level 4 Agentic**: True agent autonomy
+- **Emergent Behavior**: Self-organizing systems
+- **Platform APIs**: Developer-friendly horizontal APIs
+
+## Conclusion
+
+DcisionAI is now a **Level 2.5+ agentic platform** with a robust message bus, agent debate, critique, and a modern UI/UX. The foundation is set for Level 4 autonomy and horizontal expansion.

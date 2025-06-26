@@ -7,6 +7,8 @@ import { ConstructionMCPSolver } from './ConstructionMCPSolver';
 import { constructionIndex, getEmbeddings } from '../../../lib/pinecone';
 import OpenAI from 'openai';
 import { generateMermaidFromMCP } from '../../../utils/mermaid.ts';
+import { messageBus } from '@/agent/MessageBus';
+import { agnoClient, AgnoChatRequest } from './agno-client';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -15,7 +17,7 @@ const openai = new OpenAI({
 
 export interface OrchestrationResult {
   sessionId: string;
-  executionPath: 'rag' | 'optimization' | 'hybrid';
+  executionPath: 'rag' | 'optimization' | 'hybrid' | 'event-driven';
   intentAnalysis: any;
   ragResult?: any;
   optimizationResult?: any;
@@ -60,171 +62,27 @@ export class AgentOrchestrator {
     sessionId: string,
     onProgress?: (event: ProgressEvent) => void
   ): Promise<OrchestrationResult> {
-    const startTime = new Date().toISOString();
-    const timestamps: Record<string, string> = {};
-
-    try {
-      // Step 1: Intent Analysis
-      timestamps.intentStart = new Date().toISOString();
-      onProgress?.({
-        step: 'intent',
-        status: 'start',
-        message: 'Analyzing user intent...'
-      });
-
-      const intentAnalysis = await agnoIntentAgent.analyzeIntent(userInput, sessionId);
-      
-      // Determine execution path
-      let executionPath: 'rag' | 'optimization' | 'hybrid';
-      switch (intentAnalysis.primaryIntent) {
-        case 'knowledge_retrieval':
-          executionPath = 'rag';
-          break;
-        case 'optimization':
-          executionPath = 'optimization';
-          break;
-        case 'hybrid_analysis':
-          executionPath = 'hybrid';
-          break;
-        default:
-          executionPath = 'optimization';
-      }
-
-      onProgress?.({
-        step: 'intent',
-        status: 'complete',
-        message: `Intent analysis complete. Execution path: ${executionPath}`,
-        data: intentAnalysis
-      });
-      timestamps.intentEnd = new Date().toISOString();
-
-      // Step 2: Execute based on path
-      let ragResult: any = null;
-      let optimizationResult: any = null;
-
-      if (executionPath === 'rag' || executionPath === 'hybrid') {
-        // RAG Processing
-        timestamps.ragStart = new Date().toISOString();
-        onProgress?.({
-          step: 'rag',
-          status: 'start',
-          message: 'Searching knowledge base...'
-        });
-
-        ragResult = await this.executeRAG(userInput, intentAnalysis);
-        
-        onProgress?.({
-          step: 'rag',
-          status: 'complete',
-          message: 'Knowledge base search complete',
-          data: ragResult
-        });
-        timestamps.ragEnd = new Date().toISOString();
-      }
-
-      if (executionPath === 'optimization' || executionPath === 'hybrid') {
-        // Optimization Processing
-        timestamps.optimizationStart = new Date().toISOString();
-        onProgress?.({
-          step: 'optimization',
-          status: 'start',
-          message: 'Starting optimization workflow...'
-        });
-
-        optimizationResult = await this.executeOptimization(
-          userInput, 
-          customerData, 
-          intentAnalysis, 
-          ragResult,
-          sessionId,
-          onProgress
-        );
-
-        onProgress?.({
-          step: 'optimization',
-          status: 'complete',
-          message: 'Optimization workflow complete',
-          data: optimizationResult
-        });
-        timestamps.optimizationEnd = new Date().toISOString();
-      }
-
-      // Step 3: Generate Explanation
-      timestamps.explanationStart = new Date().toISOString();
-      onProgress?.({
-        step: 'explanation',
-        status: 'start',
-        message: 'Generating explanation...'
-      });
-
-      const explanation = await this.generateExplanation(
-        executionPath,
-        intentAnalysis,
-        ragResult,
-        optimizationResult,
-        sessionId
-      );
-
-      onProgress?.({
-        step: 'explanation',
-        status: 'complete',
-        message: 'Explanation generated',
-        data: explanation
-      });
-      timestamps.explanationEnd = new Date().toISOString();
-
-      // The explanation from the agent is already the content we need.
-      // No need to destructure, as that was causing it to be undefined.
-      const endTime = new Date().toISOString();
-
-      // Attach diagram to the final result
-      if (optimizationResult?.mermaidDiagram) {
-        optimizationResult.mermaidDiagram = optimizationResult.mermaidDiagram;
-      }
-
-      return {
-        sessionId,
-        executionPath,
-        intentAnalysis,
-        ragResult,
-        optimizationResult,
-        explanation: explanation, // Use the explanation object directly
-        mermaidDiagram: optimizationResult?.mermaidDiagram,
-        status: 'success',
-        timestamps: {
-          start: startTime,
-          end: endTime,
-          steps: timestamps
+    const correlationId = sessionId;
+    return new Promise((resolve) => {
+      // Subscribe for the final result
+      messageBus.subscribe('explanation_ready', (msg: any) => {
+        if (msg.correlationId === correlationId) {
+          resolve({
+            sessionId,
+            executionPath: 'event-driven',
+            intentAnalysis: null, // You can extract from earlier events if needed
+            ragResult: null,
+            optimizationResult: null,
+            explanation: msg.payload.explanation,
+            mermaidDiagram: null,
+            status: 'success',
+            timestamps: { start: '', end: '', steps: {} }
+          });
         }
-      };
-
-    } catch (error: any) {
-      const endTime = new Date().toISOString();
-      
-      onProgress?.({
-        step: 'error',
-        status: 'error',
-        message: error.message,
-        error
       });
-
-      return {
-        sessionId,
-        executionPath: 'rag' as any, // fallback
-        intentAnalysis: null,
-        status: 'error',
-        error: {
-          code: 'ORCHESTRATION_ERROR',
-          message: error.message,
-          context: { error }
-        },
-        timestamps: {
-          start: startTime,
-          end: endTime,
-          steps: timestamps
-        }
-      };
-    }
+      // Start the process
+      messageBus.publish({ type: 'user_query', payload: { query: userInput, sessionId, customerData }, correlationId });
+    });
   }
 
   private async executeRAG(userInput: string, intentAnalysis: any): Promise<any> {

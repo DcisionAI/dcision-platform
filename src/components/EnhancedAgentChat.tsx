@@ -58,7 +58,7 @@ interface EnhancedAgentChatProps {
 
 const EnhancedAgentChat: React.FC<EnhancedAgentChatProps> = ({
   placeholder = 'How can I help you today?',
-  apiEndpoint = '/api/dcisionai/construction/chat',
+  apiEndpoint = '/api/dcisionai/agentic/chat',
   showSmartPrompts = false,
   useOrchestration = true,
 }) => {
@@ -228,12 +228,15 @@ const EnhancedAgentChat: React.FC<EnhancedAgentChatProps> = ({
         throw new Error(data.message || 'Something went wrong');
       }
 
+      // Handle agentic response format
+      const responseContent = data.type === 'agentic' ? data.content : data;
+      
       const assistantMessage: Message = {
         role: 'assistant',
-        content: ['optimization', 'rag', 'hybrid'].includes(data.type) ? data.content : data.message,
-        type: data.type,
-        progressEvents: data.content?.progressEvents || [],
-        timestamps: data.content?.timestamps,
+        content: responseContent,
+        type: data.type || 'agentic',
+        progressEvents: responseContent?.progressEvents || [],
+        timestamps: responseContent?.timestamps,
         sessionId: currentSessionId || undefined
       };
 
@@ -247,19 +250,19 @@ const EnhancedAgentChat: React.FC<EnhancedAgentChatProps> = ({
                 ...s, 
                 messageCount: s.messageCount + 1,
                 status: 'completed',
-                decisionType: data.content?.intentAgentAnalysis?.decisionType,
-                confidence: data.content?.intentAgentAnalysis?.confidence
+                decisionType: responseContent?.intent?.decisionType,
+                confidence: responseContent?.intent?.confidence
               }
             : s
         ));
       }
 
       // Update agent statuses based on progress events
-      if (data.content?.progressEvents && Array.isArray(data.content.progressEvents)) {
+      if (responseContent?.progressEvents && Array.isArray(responseContent.progressEvents)) {
         const updatedStatuses = initialAgentStatuses.map(agent => {
           const agentName = agent.name.split(' ')[0].toLowerCase();
-          const hasError = data.content.progressEvents.some((e: ProgressEvent) => e.step.toLowerCase() === agentName && e.status === 'error');
-          const isComplete = data.content.progressEvents.some((e: ProgressEvent) => e.step.toLowerCase() === agentName && e.status === 'complete');
+          const hasError = responseContent.progressEvents.some((e: ProgressEvent) => e.step.toLowerCase() === agentName && e.status === 'error');
+          const isComplete = responseContent.progressEvents.some((e: ProgressEvent) => e.step.toLowerCase() === agentName && e.status === 'complete');
 
           if (hasError) {
             return { ...agent, status: 'error' as const };

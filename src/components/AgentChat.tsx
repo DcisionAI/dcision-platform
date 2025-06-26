@@ -88,6 +88,7 @@ const AgentChat: React.FC<AgentChatProps> = ({
       });
 
       const data = await response.json();
+      console.log('API response:', data);
 
       if (!response.ok) {
         throw new Error(data.message || 'Something went wrong');
@@ -95,7 +96,7 @@ const AgentChat: React.FC<AgentChatProps> = ({
 
       const newMessage: Message = {
         role: 'assistant',
-        content: ['optimization', 'rag', 'hybrid'].includes(data.type) ? data.content : data.message,
+        content: data.type === 'agentic' ? data.content : data.message,
         type: data.type
       };
 
