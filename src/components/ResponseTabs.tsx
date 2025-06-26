@@ -104,6 +104,7 @@ const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
           ...baseTabs,
           { id: 'agent-response', label: 'Agent Response' },
           { id: 'solution-details', label: 'Solution Details' },
+          { id: 'scenario-analysis', label: 'Scenario Analysis' },
           { id: 'explanation', label: 'Explanation' },
         ];
       case 'hybrid':
@@ -860,6 +861,11 @@ const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
     );
   };
 
+  const renderScenarioAnalysis = () => {
+    // You can pass the relevant scenario data as props if needed
+    return <div><strong>Scenario Analysis:</strong> Coming soon or integrate ScenarioAnalysis component here.</div>;
+  };
+
   const renderContent = () => {
     if (typeof content === 'string') {
       return (
@@ -875,6 +881,8 @@ const ResponseTabs: React.FC<ResponseTabsProps> = ({ content }) => {
         return renderAgentResponse();
       case 'solution-details':
         return renderSolutionDetails();
+      case 'scenario-analysis':
+        return renderScenarioAnalysis();
       case 'explanation':
         return renderExplanation();
       case 'overview':

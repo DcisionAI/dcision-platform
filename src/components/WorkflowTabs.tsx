@@ -34,7 +34,7 @@ const WorkflowTabs: React.FC<WorkflowTabsProps> = ({
   return (
     <div className="flex flex-col h-full bg-docs-bg dark:bg-docs-dark-bg">
       <div className="border-b border-docs-section-border dark:border-gray-700">
-        <nav className="flex space-x-8 px-6" aria-label="Tabs">
+        <nav className="flex space-x-8 px-8" aria-label="Tabs">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -52,7 +52,7 @@ const WorkflowTabs: React.FC<WorkflowTabsProps> = ({
           ))}
         </nav>
       </div>
-      <div className="flex-1 overflow-hidden p-6">
+      <div className="flex-1 overflow-hidden px-8">
         {renderTabContent()}
       </div>
     </div>

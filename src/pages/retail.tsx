@@ -1,13 +1,15 @@
 import React from 'react';
 import HeroSection from '@/components/HeroSection';
-import RetailTabs from '@/workflows/retail/components/RetailTabs';
+import ExperimentalAIAssistant from '@/components/ExperimentalAIAssistant';
 
 const RetailPage = () => {
   return (
-    <>
+    <div className="p-4 md:p-8">
       <HeroSection title="DcisionAI" tagline="Optimizing retail operations with intelligent decision-making" />
-      <RetailTabs />
-    </>
+      <div className="mt-8">
+        <ExperimentalAIAssistant />
+      </div>
+    </div>
   );
 };
 

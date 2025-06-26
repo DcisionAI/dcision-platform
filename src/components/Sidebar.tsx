@@ -16,6 +16,8 @@ import {
   ChartBarIcon,
   Cog6ToothIcon,
   UserGroupIcon,
+  DocumentTextIcon,
+  Squares2X2Icon,
 } from '@heroicons/react/24/outline';
 import { useSidebar } from './layout/SidebarContext';
 import { useTheme } from './layout/ThemeContext';
@@ -33,6 +35,12 @@ const workflows: NavItem[] = [
   { name: 'Finance', href: '/finance', icon: DocumentDuplicateIcon },
 ];
 
+const tools: NavItem[] = [
+  { name: 'Knowledge Base', href: '/tools/knowledge-base', icon: DocumentTextIcon },
+  { name: 'Flow Builder', href: '/tools/flow-builder', icon: Squares2X2Icon },
+  { name: 'API', href: '/tools/api', icon: CodeBracketIcon },
+];
+
 const settings: NavItem[] = [
   { name: 'Endpoints', href: '/endpoints', icon: CodeBracketIcon },
   { name: 'API Keys', href: '/settings/api-keys', icon: KeyIcon },
@@ -41,6 +49,7 @@ const settings: NavItem[] = [
 
 const sections = [
   { title: 'Dcision Workflows', items: workflows },
+  { title: 'Tools', items: tools },
   { title: 'Settings', items: settings },
 ];
 

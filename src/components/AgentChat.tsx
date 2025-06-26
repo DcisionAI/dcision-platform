@@ -117,10 +117,10 @@ const AgentChat: React.FC<AgentChatProps> = ({
   };
 
   return (
-    <div className="w-full h-full p-6">
+    <div className="w-full h-full px-8">
       <div className="flex flex-col h-[calc(100vh-12rem)]">
         {/* Input Area at Top */}
-        <div className="relative rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm mb-8 mx-4">
+        <div className="relative rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm mb-8">
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -170,7 +170,7 @@ const AgentChat: React.FC<AgentChatProps> = ({
         </div>
 
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto px-4">
+        <div className="flex-1 overflow-y-auto">
           <div className="space-y-8">
             {messages.map((msg, index) => (
               <div
