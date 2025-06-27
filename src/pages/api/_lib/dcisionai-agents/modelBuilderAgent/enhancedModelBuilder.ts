@@ -90,17 +90,14 @@ export class EnhancedModelBuilder {
   ) {
     // Use configuration system with optional overrides
     this.modelConfig = getModelConfig('modelBuilderAgent');
-    
     if (modelProvider) {
       this.modelConfig.provider = modelProvider;
     }
-    if (modelName) {
-      this.modelConfig.modelName = modelName;
-    }
+    // Patch: use env override for model name
+    this.modelConfig.modelName = modelName || (this.modelConfig.provider === 'openai' ? (process.env.MODEL_BUILDER_MODEL || 'gpt-4o') : 'claude-3-5-sonnet-20241022');
     if (useGPT4oMini !== undefined) {
       this.modelConfig.useGPT4oMini = useGPT4oMini;
     }
-    
     console.log('Enhanced Model Builder initialized with:', {
       provider: this.modelConfig.provider,
       model: this.modelConfig.modelName,

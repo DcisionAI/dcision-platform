@@ -1,7 +1,42 @@
 import { messageBus } from './MessageBus';
-import OpenAI from 'openai';
+import { openai } from '../lib/openai-client';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Rate limiting and retry utilities
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> {
+  let lastError: any;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error: any) {
+      lastError = error;
+      
+      // Check if it's a rate limit error
+      if (error?.status === 429) {
+        const retryAfter = parseInt(error.headers?.['retry-after-ms'] || error.headers?.['retry-after']) || baseDelay;
+        console.warn(`Rate limit hit, retrying in ${retryAfter}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
+        await new Promise(resolve => setTimeout(resolve, retryAfter));
+        continue;
+      }
+      
+      // For other errors, use exponential backoff
+      if (attempt < maxRetries) {
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.warn(`OpenAI API error, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries + 1}):`, error.message);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      
+      throw error;
+    }
+  }
+  
+  throw lastError;
+}
 
 // Subscribe to trigger_critique event for comprehensive workflow critique
 messageBus.subscribe('trigger_critique', async (msg) => {
@@ -32,20 +67,22 @@ Please provide a detailed critique covering:
 
 Be thorough but constructive in your analysis.`;
 
-    const critique = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { 
-          role: 'system', 
-          content: 'You are an expert AI system reviewer specializing in optimization workflows and agentic AI systems. Provide thorough, constructive critiques.' 
-        },
-        { 
-          role: 'user', 
-          content: critiquePrompt 
-        }
-      ],
-      max_tokens: 1000,
-      temperature: 0.3
+    const critique = await withRetry(async () => {
+      return await openai.chat({
+        model: 'gpt-4o-mini',
+        messages: [
+          { 
+            role: 'system', 
+            content: 'You are an expert AI system reviewer specializing in optimization workflows and agentic AI systems. Provide thorough, constructive critiques.' 
+          },
+          { 
+            role: 'user', 
+            content: critiquePrompt 
+          }
+        ],
+        max_tokens: 1000,
+        temperature: 0.3
+      });
     });
 
     const critiqueResult = {
@@ -90,14 +127,36 @@ Be thorough but constructive in your analysis.`;
 // Legacy event subscriptions for backward compatibility
 ['model_built', 'solution_found'].forEach((eventType) => {
   messageBus.subscribe(eventType, async (msg) => {
-    const critiquePrompt = `You are an expert reviewer. Please critique the following output from the agent (${eventType}):\n${JSON.stringify(msg.payload)}\nWhat are the strengths, weaknesses, and possible improvements?`;
-    const critique = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: 'You are an expert agent output reviewer.' },
-        { role: 'user', content: critiquePrompt }
-      ]
-    });
-    messageBus.publish({ type: 'critique_ready', payload: { critique: critique.choices[0].message.content }, correlationId: msg.correlationId });
+    try {
+      const critiquePrompt = `You are an expert reviewer. Please critique the following output from the agent (${eventType}):\n${JSON.stringify(msg.payload)}\nWhat are the strengths, weaknesses, and possible improvements?`;
+      
+      const critique = await withRetry(async () => {
+        return await openai.chat({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: 'You are an expert agent output reviewer.' },
+            { role: 'user', content: critiquePrompt }
+          ],
+          max_tokens: 500,
+          temperature: 0.3
+        });
+      });
+      
+      messageBus.publish({ 
+        type: 'critique_ready', 
+        payload: { critique: critique.choices[0].message.content }, 
+        correlationId: msg.correlationId 
+      });
+    } catch (error: any) {
+      console.error(`❌ CritiqueAgent legacy error for ${eventType}:`, error);
+      messageBus.publish({ 
+        type: 'critique_ready', 
+        payload: { 
+          critique: 'Critique unavailable due to technical limitations.',
+          error: error.message
+        }, 
+        correlationId: msg.correlationId 
+      });
+    }
   });
 }); 

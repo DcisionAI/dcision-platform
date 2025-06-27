@@ -12,7 +12,7 @@ DcisionAI is building the **world's first horizontal agentic AI platform for ent
 - **Mathematical Rigor**: Production-grade optimization with HiGHS solver
 - **Explainable AI**: Clear explanations of decisions and tradeoffs
 - **Horizontal Platform**: One platform for multiple industries and use cases
-- **Event-Driven Message Bus**: Real-time agentic workflow, progress, and collaboration
+- **Choreographed Workflows**: Event-driven multi-agent orchestration with real-time progress tracking
 
 ### For Developers
 - **MCP Protocol**: Standardized optimization interface
@@ -23,9 +23,9 @@ DcisionAI is building the **world's first horizontal agentic AI platform for ent
 
 ## Platform Architecture
 
-### Agentic AI Layer
+### Choreographed Agentic AI Layer
 
-Our platform features a sophisticated multi-agent system with **event-driven communication**:
+Our platform features a sophisticated **choreographed multi-agent system** with event-driven communication:
 
 ```typescript
 // Core Decision Agents
@@ -34,22 +34,47 @@ interface CoreAgents {
   dataAgent: "Handles data preparation and validation";
   modelBuilderAgent: "Creates optimization models and constraints";
   solverAgent: "Executes mathematical optimization";
-  explainAgent: "Generates explanations and insights";
+  responseAgent: "Assembles final responses from multiple agents";
 }
 
 // Advanced Agentic Agents
 interface AdvancedAgents {
+  knowledgeAgent: "Handles RAG and document retrieval";
+  explainAgent: "Generates explanations and insights";
   critiqueAgent: "Reviews and critiques other agents' outputs";
   debateAgent: "Engages in structured debates with other agents";
   coordinatorAgent: "Uses LLM to dynamically route messages";
 }
 ```
 
-### Message Bus System
+### ChoreographedOrchestrator
+
+The **ChoreographedOrchestrator** is the central workflow coordinator that manages the entire multi-agent decision process:
+
+```typescript
+interface ChoreographedOrchestrator {
+  // Workflow Management
+  startWorkflow(event: UserQueryEvent): Promise<void>;
+  handleAgentEvent(event: AgentEvent): void;
+  completeWorkflow(session: WorkflowSession): Promise<void>;
+  
+  // Session Management
+  workflowSessions: Map<string, WorkflowSession>;
+  timeoutHandlers: Map<string, NodeJS.Timeout>;
+  
+  // Event Routing
+  triggerIntentAnalysis(event: Message): Promise<void>;
+  triggerDataPreparation(event: Message): Promise<void>;
+  triggerModelBuilding(event: Message): Promise<void>;
+  triggerResponseGeneration(event: Message): Promise<void>;
+}
+```
+
+### Event-Driven Message Bus System
 
 **Event-Driven Communication:**
 - Agents publish and subscribe to events
-- LLM-powered dynamic message routing
+- Correlation ID tracking for workflow sessions
 - Real-time progress updates and agent status
 - Multi-agent debate and critique orchestration
 - UI/UX: Agent Response, Collaboration, Solution, and Explanation tabs
@@ -62,18 +87,69 @@ interface AdvancedAgents {
 - Rich context management
 - Extensible design for new domains
 
+## Choreographed Workflow Process
+
+### Complete Workflow Flow
+```
+User Query → ChoreographedOrchestrator → Intent Agent → [Decision Point]
+                                                          ↓
+                    ┌─────────────────────────────────────┴─────────────────────────────────────┐
+                    ↓                                                                             ↓
+            Knowledge Retrieval Path                                              Optimization Path
+                    ↓                                                                             ↓
+            Knowledge Agent → Response Agent → Final Response                    Data Agent → Model Builder → Solver Agent → Response Agent → Final Response
+```
+
+### Event Flow Sequence
+
+1. **User Query Received**
+   ```
+   USER_QUERY_RECEIVED → ChoreographedOrchestrator.startWorkflow()
+   ```
+
+2. **Intent Analysis**
+   ```
+   ChoreographedOrchestrator → Intent Agent → INTENT_IDENTIFIED
+   ```
+
+3. **Path Decision**
+   ```
+   INTENT_IDENTIFIED → ChoreographedOrchestrator.routeToPath()
+   ```
+
+4. **Optimization Path** (if optimization required)
+   ```
+   OPTIMIZATION_REQUESTED → Data Agent → DATA_PREPARED
+   DATA_PREPARED → Model Builder → MODEL_BUILT
+   MODEL_BUILT → Solver Agent → SOLUTION_FOUND
+   SOLUTION_FOUND → Response Agent → RESPONSE_GENERATED
+   ```
+
+5. **Knowledge Path** (if knowledge retrieval required)
+   ```
+   KNOWLEDGE_RETRIEVAL_REQUESTED → Knowledge Agent → KNOWLEDGE_RETRIEVED
+   KNOWLEDGE_RETRIEVED → Response Agent → RESPONSE_GENERATED
+   ```
+
+6. **Workflow Completion**
+   ```
+   RESPONSE_GENERATED → ChoreographedOrchestrator.completeWorkflow()
+   WORKFLOW_COMPLETED → Final Response to User
+   ```
+
 ## Agentic Capabilities
 
 ### Current Level: 2.5/5 (Agentic-Ready)
 
 **✅ Implemented:**
-- Multi-agent architecture
-- Event-driven message bus
-- LLM-powered coordination
-- Agent debate and critique
-- Modular UI with agentic tabs
+- Choreographed multi-agent architecture
+- Event-driven message bus system
+- Intent analysis and routing
+- Base agent framework with retry logic
+- Mock fallback systems
 
 **🔄 In Progress:**
+- Complete workflow orchestration
 - Agent memory and learning
 - Dynamic workflow adaptation
 - Self-assessment capabilities
@@ -117,15 +193,47 @@ interface AdvancedAgents {
 - **Risk Management**: Financial risk assessment and mitigation
 - **Agentic Collaboration**: Multi-agent debate and critique for investment decisions
 
+## Current Development Status
+
+### ✅ Fully Functional Components
+- **IntentAgent**: Intent analysis and routing with keyword heuristics
+- **Event System**: Message bus and event routing with correlation IDs
+- **BaseAgent Framework**: Retry logic, error handling, and progress tracking
+- **Mock Intent Analysis**: Robust fallback when external services unavailable
+- **Session Management**: Workflow session tracking and timeout handling
+
+### ⚠️ Partially Working Components
+- **ChoreographedOrchestrator**: Intent analysis works, workflow orchestration needs fixes
+- **DataAgent**: Complete but not integrated in simplified workflow
+- **ModelBuilderAgent**: Fixed errors but not integrated
+- **SolverAgent**: Functional but has looping issues
+- **ResponseAgent**: Complete but not receiving proper events
+
+### ❌ Issues to Address
+- **Complete Workflow Orchestration**: Workflow times out after intent analysis
+- **Event Flow**: Response generation not completing
+- **Agent Looping**: Multiple event processing causing loops
+- **Agno Backend Integration**: External service not available
+
+## Recent Infrastructure & Agentic Improvements
+
+- **Choreographed Workflow System**: Centralized workflow orchestration with ChoreographedOrchestrator
+- **Event-Driven Architecture**: Comprehensive event system with correlation ID tracking
+- **Session Management**: Workflow session tracking with timeout handling
+- **Mock Fallback Systems**: Robust fallback when external services unavailable
+- **Test Endpoints**: `/api/test-simple-intent` and `/api/test-choreographed-workflow`
+- **Real-Time Progress Tracking**: Live workflow and agent status updates
+
 ## Roadmap
 
 ### Short-term (3-6 months)
+- **Fix Event Flow**: Complete workflow orchestration and response generation
 - **Agent Memory**: Persistent agent experience storage
 - **Self-Assessment**: Agent performance evaluation
 - **Dynamic MCP**: Adaptive protocol optimization
 
 ### Medium-term (6-12 months)
-- **Agent Learning**: Experience-based improvement
+- **Agent Learning**: Experience-based improvement, self-assessment, and workflow adaptation
 - **Advanced DSS**: Scenario and sensitivity analysis
 - **Multi-Industry**: 3+ industry templates
 
@@ -163,9 +271,9 @@ interface AdvancedAgents {
 
 ## Technical Differentiation
 
-### 1. Agentic AI Architecture
+### 1. Choreographed Agentic AI Architecture
 - **Event-Driven**: True agent autonomy and communication
-- **LLM-Powered**: Intelligent coordination and routing
+- **Workflow Orchestration**: Centralized coordination with ChoreographedOrchestrator
 - **Debate Capabilities**: Multi-agent reasoning and consensus
 - **Critique System**: Self-improvement and quality assurance
 
@@ -240,96 +348,49 @@ interface AdvancedAgents {
 **4. Data and Insights**
 - Industry benchmarking data
 - Optimization pattern libraries
-- Predictive analytics services
 
-### Pricing Strategy
+## Technical Stack
 
-**Construction (Primary Market)**
-- **Starter**: $10K/year (up to 10 users)
-- **Professional**: $50K/year (up to 50 users)
-- **Enterprise**: $200K+/year (unlimited users)
+### Frontend
+- **Next.js**: React framework with API routes
+- **TypeScript**: Type-safe development
+- **Tailwind CSS**: Utility-first styling
+- **React Components**: Modular UI architecture
 
-**Horizontal Platform (Future)**
-- **API Usage**: $0.10 per optimization call
-- **Enterprise Platform**: $500K+/year
-- **Custom Solutions**: $1M+ projects
+### Backend
+- **Node.js**: Server-side JavaScript
+- **API Routes**: Next.js API endpoints
+- **Message Bus**: Event-driven communication system
+- **Agent Orchestration**: Choreographed workflow coordination
 
-## Go-to-Market Strategy
+### AI/ML
+- **OpenAI GPT-4o-mini**: LLM for agent coordination
+- **Agentic AI**: Multi-agent decision support
+- **Mathematical Optimization**: HiGHS solver
+- **MCP Protocol**: Standardized optimization interface
 
-### Sell-With Approach
+### Infrastructure
+- **Vercel**: Frontend deployment
+- **Supabase**: Database and authentication
+- **Pinecone**: Vector database for embeddings
+- **Docker**: Containerization for solver
 
-**Why "Sell-With" Works:**
-1. **Proven Use Case**: Construction provides concrete ROI
-2. **Reference Customers**: Build credibility for other industries
-3. **Domain Expertise**: Deep understanding of optimization challenges
-4. **Network Effects**: Construction partners become advocates
+## Next Steps
 
-### Customer Acquisition
+### Priority 1: Fix Event Flow
+1. Debug ResponseAgent event reception
+2. Fix SolverAgent looping issues
+3. Complete workflow integration
 
-**Phase 1: Construction (0-18 months)**
-- Direct sales to construction companies
-- Industry conferences and trade shows
-- Construction-specific marketing campaigns
-- Partnership with construction software vendors
+### Priority 2: Production Readiness
+1. Agno backend setup and integration
+2. Comprehensive error handling
+3. Monitoring and alerting
 
-**Phase 2: Adjacent Markets (18-36 months)**
-- Leverage construction references
-- Industry-specific sales teams
-- Strategic partnerships
-- Platform marketing campaigns
-
-**Phase 3: Horizontal Platform (36+ months)**
-- Developer-focused marketing
-- API marketplace and documentation
-- Platform partnerships
-- Enterprise sales expansion
-
-## Success Metrics
-
-### Technical Metrics
-- **Agentic Level**: Progress toward Level 4 autonomy
-- **MCP Adoption**: Number of industries supported
-- **Solver Performance**: Optimization speed and accuracy
-- **API Usage**: Developer adoption and engagement
-
-### Business Metrics
-- **Revenue Growth**: Monthly and annual growth rates
-- **Customer Acquisition**: New customers and expansion
-- **Market Share**: Position in target markets
-- **Customer Satisfaction**: NPS and retention rates
-
-### Platform Metrics
-- **Industry Coverage**: Number of industries served
-- **Template Library**: Number of optimization templates
-- **Developer Ecosystem**: Third-party integrations
-- **Network Effects**: Cross-industry learning and improvement
-
-## Future Vision
-
-### 5-Year Roadmap
-
-**Year 1: Construction Leadership**
-- Dominate construction optimization market
-- Build agentic AI capabilities
-- Establish MCP protocol standards
-
-**Year 2-3: Adjacent Expansion**
-- Expand to manufacturing and logistics
-- Develop horizontal platform capabilities
-- Build developer ecosystem
-
-**Year 4-5: Platform Dominance**
-- Serve all optimization-heavy industries
-- Achieve Level 4 agentic AI
-- Become the standard for enterprise decision support
-
-### Long-term Vision
-
-**Universal Decision Support Platform**
-- Every enterprise uses DcisionAI for complex decisions
-- AI agents that truly understand and solve business problems
-- Mathematical optimization as a universal capability
-- Network effects that improve the platform for all users
+### Priority 3: Advanced Features
+1. Agent memory and learning
+2. Dynamic workflow adaptation
+3. Self-assessment capabilities
 
 ## Conclusion
 

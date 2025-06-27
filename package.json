@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -H 127.0.0.1",
     "build": "NODE_OPTIONS='--max-old-space-size=4096' next build",
     "start": "next start",
     "lint": "next lint",
@@ -30,7 +30,8 @@
     "run:solver": "docker run -p 8081:8080 solver-service",
     "solver:local": "docker-compose -f docker-compose.solver.yml up",
     "solver:test": "curl -X POST http://localhost:8081/solve -H \"Content-Type: application/json\" -d '{\"problem\":{\"objective\":{\"sense\":\"minimize\",\"linear\":[1,1]},\"variables\":[{\"name\":\"x\",\"type\":\"cont\",\"lb\":0,\"ub\":10},{\"name\":\"y\",\"type\":\"cont\",\"lb\":0,\"ub\":10}],\"constraints\":[{\"coefficients\":[1,1],\"sense\":\">=\",\"rhs\":1}]},\"solver\":\"highs\"}'",
-    "test:solver": "./scripts/test-solver-service.sh"
+    "test:solver": "./scripts/test-solver-service.sh",
+    "deploy:memory": "bash scripts/deploy-memory.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.54.0",
@@ -47,6 +48,7 @@
     "@supabase/supabase-js": "^2.43.1",
     "@types/classnames": "^2.3.0",
     "@types/d3": "^7.4.3",
+    "@types/ioredis": "^4.28.10",
     "ai": "^3.1.1",
     "axios": "^1.6.8",
     "cheerio": "^1.1.0",
@@ -62,6 +64,7 @@
     "formidable": "^3.5.4",
     "geist": "^1.3.0",
     "google-auth-library": "^10.1.0",
+    "ioredis": "^5.6.1",
     "jsonrepair": "^3.12.0",
     "mammoth": "^1.7.2",
     "mermaid": "^11.6.0",

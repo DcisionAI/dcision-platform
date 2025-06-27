@@ -1,7 +1,7 @@
 // Agno-based Explainability Agent for DcisionAI
 // Now uses the real Agno Python backend for advanced AI capabilities
 
-import { agnoClient, AgnoChatRequest } from '../../agno-client';
+import { agnoClient, AgnoChatRequest, AgnoChatResponse } from '../../agno-client';
 import { messageBus } from '@/agent/MessageBus';
 
 export interface Explanation {
@@ -369,38 +369,112 @@ export const agnoExplainAgent = {
     modelProvider: 'anthropic' | 'openai' = 'anthropic',
     modelName?: string
   ): Promise<Explanation> {
+    const status = solution.status || 'unknown';
+    console.log(`Explaining solution with status: ${status}`);
+
     try {
-      // Validate input
-      if (!solution) {
-        console.warn('No solution provided, using fallback explanation');
-        return createFallbackExplanation({}, 'unknown');
-      }
-
-      // Determine solution status
-      let status = 'unknown';
-      if (solution.status === 'rag_complete') {
-        status = 'rag_completed';
-      } else if (solution.status === 'hybrid_complete') {
-        status = 'hybrid_completed';
-      } else if (solution.status === 'optimal' || solution.status === 'infeasible' || solution.status === 'unbounded') {
-        status = 'optimization_completed';
-      } else if (solution.ragResult && solution.optimizationResult) {
-        status = 'hybrid_completed';
-      } else if (solution.optimizationResult) {
-        status = 'optimization_completed';
-      } else if (solution.ragResult) {
-        status = 'rag_completed';
-      }
-
-      console.log(`Explaining solution with status: ${status}`);
-
-      let prompt = '';
-      if (status === 'rag_completed') {
-        // Handle new RAG response format
-        const ragResults = solution.results || [];
-        const query = solution.query || 'Unknown query';
+      // Try to use Agno backend first
+      let response;
+      try {
+        const request: AgnoChatRequest = {
+          message: this.buildPrompt(solution, status),
+          session_id: sessionId,
+          model_provider: modelProvider,
+          model_name: modelName || (modelProvider === 'anthropic' ? 'claude-3-5-sonnet-20241022' : 'gpt-4-turbo-preview'),
+          context: {
+            timestamp: new Date().toISOString(),
+            solution_type: status
+          }
+        };
         
-        prompt = `You are an expert construction analyst. 
+        response = await agnoClient.chat(request);
+        
+        // Check if the response has an error
+        if (response.error) {
+          console.warn(`⚠️ Agno backend error: ${response.error_details}`);
+          throw new Error(`Agno backend error: ${response.error_details}`);
+        }
+        
+        console.log('✅ Agno backend response received');
+        return this.parseExplanation(response.response, solution);
+      } catch (agnoError) {
+        console.warn(`⚠️ Agno backend failed, using fallback: ${agnoError}`);
+        // Fall through to direct LLM call
+      }
+      
+      // Fallback: Use direct LLM call
+      console.log('🔄 Using direct LLM fallback for explanation');
+      const fallbackResponse = await this.fallbackLLMCall(
+        this.buildPrompt(solution, status),
+        modelProvider,
+        modelName
+      );
+      
+      return this.parseExplanation(fallbackResponse.response, solution);
+    } catch (error) {
+      console.error('Explainability agent error:', error);
+      console.log('Using fallback explanation due to error');
+      
+      // Create a basic fallback explanation
+      return {
+        summary: `Generated explanation for ${status} solution. ${solution.response || 'No additional details available.'}`,
+        keyDecisions: [],
+        recommendations: [],
+        insights: [],
+        ragInsights: []
+      };
+    }
+  },
+
+  /**
+   * Fallback LLM call when Agno backend is unavailable
+   */
+  async fallbackLLMCall(prompt: string, modelProvider: 'anthropic' | 'openai', modelName?: string): Promise<AgnoChatResponse> {
+    if (modelProvider === 'anthropic') {
+      const Anthropic = require('@anthropic-ai/sdk');
+      const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+      
+      const completion = await anthropic.messages.create({
+        model: modelName || 'claude-3-5-sonnet-20241022',
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: prompt }]
+      });
+      
+      return {
+        response: completion.content[0].text,
+        model_used: modelName || 'claude-3-5-sonnet-20241022',
+        timestamp: new Date().toISOString()
+      };
+    } else {
+      const OpenAI = require('openai');
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      
+      const completion = await openai.chat.completions.create({
+        model: modelName || 'gpt-4-turbo-preview',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 2000
+      });
+      
+      return {
+        response: completion.choices[0].message.content || '',
+        model_used: modelName || 'gpt-4-turbo-preview',
+        timestamp: new Date().toISOString()
+      };
+    }
+  },
+
+  /**
+   * Build the prompt for explanation generation
+   */
+  buildPrompt(solution: any, status: string): string {
+    let prompt = '';
+    
+    if (status === 'rag_completed') {
+      // Handle new RAG response format
+      const ragResults = solution.results || [];
+      const query = solution.query || 'Unknown query';
+      
+      prompt = `You are an expert construction analyst. 
 
 Given the following RAG (Retrieval-Augmented Generation) solution, create a comprehensive, actionable explanation:
 
@@ -477,44 +551,27 @@ IMPORTANT RULES:
 7. Keep string values concise but informative to avoid truncation.
 
 Return ONLY this JSON structure:`;
+    } else {
+      // Handle other solution types (optimization, hybrid, etc.)
+      prompt = `You are an expert construction analyst. Analyze the following solution and provide a comprehensive explanation.
 
-      } else if (status === 'optimization_completed') {
-        prompt = `You are an expert construction analyst with deep expertise in optimization and mathematical modeling. 
-
-Given the following optimization solution, create a comprehensive, actionable explanation:
-
-**Optimization Results:**
-${JSON.stringify(solution.optimizationResult || {}, null, 2)}
-
-**User Intent:** ${solution.intent?.reasoning || 'Unknown intent'}
+**Solution:** ${JSON.stringify(solution, null, 2)}
 
 Please provide a detailed analysis that includes:
 
-1. **Executive Summary**: A clear, high-level overview of the optimization results
-2. **Key Decisions**: For each major decision:
-   - What was optimized
-   - Why it was chosen
-   - What impact it will have
-   - Confidence level in the decision
-3. **Actionable Recommendations**: Specific, implementable recommendations with:
-   - Clear action items
-   - Expected benefits
-   - Priority levels
-   - Implementation guidance
-   - Timeline estimates
-4. **Performance Insights**: Valuable insights about:
-   - Resource optimization insights
-   - Timeline and scheduling insights
-   - Quality and compliance insights
+1. **Executive Summary**: A clear, high-level overview
+2. **Key Decisions**: Important decisions made and their rationale
+3. **Recommendations**: Actionable recommendations
+4. **Insights**: Key insights and learnings
 
 Respond in JSON format with the following structure:
 
 {
-  "summary": "string (executive summary)",
+  "summary": "string",
   "keyDecisions": [
     {
       "decision": "string",
-      "rationale": "string",
+      "rationale": "string", 
       "impact": "string",
       "confidence": "number (0-1)"
     }
@@ -530,216 +587,17 @@ Respond in JSON format with the following structure:
   ],
   "insights": [
     {
-      "category": "string (e.g., 'cost', 'efficiency', 'risk', 'quality')",
+      "category": "string",
       "insight": "string",
       "value": "string"
     }
-  ],
-  "optimizationMetrics": {
-    "objectiveValue": "number",
-    "solverStatus": "string",
-    "computationTime": "number",
-    "constraintViolations": "number"
-  }
+  ]
 }
 
-Focus on practical, actionable insights that construction managers can implement immediately. 
-
-CRITICAL: You MUST respond with ONLY a valid JSON object. Do not include any markdown formatting, code blocks, or additional text. The JSON must be properly formatted and complete.
-
-IMPORTANT RULES:
-1. All string values must be properly quoted.
-2. All arrays must be properly formatted with square brackets.
-3. All numbers must not be quoted.
-4. The confidence values must be numbers between 0 and 1.
-5. Return ONLY the JSON structure below, no additional text.
-6. Ensure the JSON is complete and properly closed with all required fields.
-7. Keep string values concise but informative to avoid truncation.
-
-Return ONLY this JSON structure:`;
-
-      } else if (status === 'hybrid_completed') {
-        prompt = `You are an expert construction analyst with deep expertise in both knowledge management and optimization. 
-
-Given the following hybrid solution (combining RAG knowledge retrieval and optimization), create a comprehensive, actionable explanation:
-
-**RAG Knowledge Retrieved:**
-${solution.ragResult?.answer || 'No RAG answer available'}
-
-**Optimization Results:**
-${JSON.stringify(solution.optimizationResult || {}, null, 2)}
-
-**User Intent:** ${solution.intent?.reasoning || 'Unknown intent'}
-
-Please provide a detailed analysis that includes:
-
-1. **Executive Summary**: A clear, high-level overview combining knowledge and optimization insights
-2. **Knowledge-Enhanced Decisions**: For each major decision:
-   - What was decided (optimization)
-   - How knowledge informed the decision (RAG)
-   - Why it was chosen (rationale)
-   - What impact it will have
-   - Confidence level in the decision
-3. **Actionable Recommendations**: Specific, implementable recommendations with:
-   - Clear action items
-   - Expected benefits
-   - Priority levels
-   - Implementation guidance
-   - Timeline estimates
-4. **Integrated Insights**: Valuable insights combining knowledge and optimization:
-   - Best practices applied to optimization
-   - Risk mitigation through knowledge and optimization
-   - Compliance considerations in optimization
-   - Efficiency gains through knowledge-informed decisions
-
-Respond in JSON format with the following structure:
-
-{
-  "summary": "string (executive summary)",
-  "keyDecisions": [
-    {
-      "decision": "string",
-      "rationale": "string (including knowledge influence)",
-      "impact": "string",
-      "confidence": "number (0-1)"
+CRITICAL: You MUST respond with ONLY a valid JSON object.`;
     }
-  ],
-  "recommendations": [
-    {
-      "action": "string",
-      "benefit": "string",
-      "priority": "high|medium|low",
-      "implementation": "string",
-      "timeline": "string"
-    }
-  ],
-  "insights": [
-    {
-      "category": "string (e.g., 'knowledge_optimization', 'best_practices', 'risk', 'efficiency')",
-      "insight": "string",
-      "value": "string"
-    }
-  ],
-  "ragInsights": [
-    {
-      "source": "string (source type)",
-      "relevance": "string (why this source is relevant)",
-      "keyInformation": "string (key information from this source)"
-    }
-  ],
-  "optimizationMetrics": {
-    "objectiveValue": "number",
-    "solverStatus": "string",
-    "computationTime": "number",
-    "constraintViolations": "number"
-  }
-}
-
-Focus on how knowledge and optimization work together to provide superior solutions. 
-
-CRITICAL: You MUST respond with ONLY a valid JSON object. Do not include any markdown formatting, code blocks, or additional text. The JSON must be properly formatted and complete.
-
-IMPORTANT RULES:
-1. All string values must be properly quoted.
-2. All arrays must be properly formatted with square brackets.
-3. All numbers must not be quoted.
-4. The confidence values must be numbers between 0 and 1.
-5. Return ONLY the JSON structure below, no additional text.
-6. Ensure the JSON is complete and properly closed with all required fields.
-7. Keep string values concise but informative to avoid truncation.
-
-Return ONLY this JSON structure:`;
-
-      } else {
-        // Unknown status, use fallback
-        console.warn(`Unknown solution status: ${status}, using fallback`);
-        return createFallbackExplanation(solution, status);
-      }
-
-      const request: AgnoChatRequest = {
-        message: prompt,
-        session_id: sessionId,
-        model_provider: modelProvider,
-        model_name: modelName || (modelProvider === 'anthropic' ? 'claude-3-5-sonnet-20241022' : 'gpt-4-turbo-preview'),
-        context: {
-          timestamp: new Date().toISOString(),
-          inputType: 'solution_explanation',
-          solutionType: status,
-          solutionSize: JSON.stringify(solution).length,
-          agentType: 'construction_analysis_agent'
-        }
-      };
-
-      const response = await agnoClient.chat(request);
-      
-      // Log response details for debugging
-      console.log('Explain agent response received:');
-      console.log('Response type:', typeof response.response);
-      console.log('Response length:', typeof response.response === 'string' ? response.response.length : 'N/A');
-      
-      if (typeof response.response === 'string' && response.response.length > 200) {
-        console.log('Response preview:', response.response.substring(0, 200) + '...');
-      } else {
-        console.log('Full response:', response.response);
-      }
-      
-      let result;
-      
-      if (typeof response.response === 'string') {
-        try {
-          console.log('Attempting to parse string response...');
-          result = cleanAndParseJSON(response.response);
-          
-          if (!result) {
-            console.warn('JSON parsing failed, attempting to extract partial data...');
-            result = extractPartialData(response.response);
-            
-            if (!result) {
-              console.warn('Partial data extraction failed, using fallback explanation');
-              return createFallbackExplanation(solution, status);
-            }
-            console.log('Successfully extracted partial data from response');
-          } else {
-            console.log('Successfully parsed JSON response');
-          }
-        } catch (err) {
-          console.error('JSON parsing error in Explain Agent:', err);
-          console.error('Raw response:', response.response);
-          console.warn('Attempting to extract partial data due to parsing error...');
-          
-          result = extractPartialData(response.response);
-          if (!result) {
-            console.warn('Using fallback explanation due to parsing error');
-            return createFallbackExplanation(solution, status);
-          }
-          console.log('Successfully extracted partial data after parsing error');
-        }
-      } else if (typeof response.response === 'object' && response.response !== null) {
-        console.log('Response is already an object, using directly');
-        result = response.response;
-      } else {
-        console.error('Unexpected response type:', typeof response.response);
-        console.warn('Using fallback explanation due to unexpected response type');
-        return createFallbackExplanation(solution, status);
-      }
-
-      // Validate response structure with defensive checks
-      if (!result || !result.summary || !Array.isArray(result.keyDecisions) || !Array.isArray(result.recommendations) || !Array.isArray(result.insights)) {
-        console.error('Invalid explanation structure:', result);
-        console.warn('Using fallback explanation due to invalid structure');
-        return createFallbackExplanation(solution, status);
-      }
-
-      console.log('✅ Explanation generated successfully');
-      const normalized = normalizeExplanation(result);
-      return normalized;
-    } catch (err: any) {
-      console.error('Explainability agent error:', err);
-      
-      // Return fallback explanation instead of throwing
-      console.warn('Using fallback explanation due to error');
-      return createFallbackExplanation(solution, 'error');
-    }
+    
+    return prompt;
   },
 
   /**
@@ -774,38 +632,175 @@ Your role is to analyze solutions (RAG, optimization, or hybrid) and provide cle
 
     const result = await agnoClient.createAgent(config);
     return result.agent_id;
+  },
+
+  parseExplanation(response: string, solution?: any): Explanation {
+    let result;
+    
+    if (typeof response === 'string') {
+      try {
+        console.log('Attempting to parse string response...');
+        result = cleanAndParseJSON(response);
+        
+        if (!result) {
+          console.warn('JSON parsing failed, attempting to extract partial data...');
+          result = extractPartialData(response);
+          
+          if (!result) {
+            console.warn('Partial data extraction failed, using fallback explanation');
+            return createFallbackExplanation(solution, 'unknown');
+          }
+          console.log('Successfully extracted partial data from response');
+        } else {
+          console.log('Successfully parsed JSON response');
+        }
+      } catch (err) {
+        console.error('JSON parsing error in Explain Agent:', err);
+        console.error('Raw response:', response);
+        console.warn('Attempting to extract partial data due to parsing error...');
+        
+        result = extractPartialData(response);
+        if (!result) {
+          console.warn('Using fallback explanation due to parsing error');
+          return createFallbackExplanation(solution, 'unknown');
+        }
+        console.log('Successfully extracted partial data after parsing error');
+      }
+    } else if (typeof response === 'object' && response !== null) {
+      console.log('Response is already an object, using directly');
+      result = response;
+    } else {
+      console.error('Unexpected response type:', typeof response);
+      console.warn('Using fallback explanation due to unexpected response type');
+      return createFallbackExplanation(solution, 'unknown');
+    }
+
+    // Validate response structure with defensive checks
+    if (!result || !result.summary || !Array.isArray(result.keyDecisions) || !Array.isArray(result.recommendations) || !Array.isArray(result.insights)) {
+      console.error('Invalid explanation structure:', result);
+      console.warn('Using fallback explanation due to invalid structure');
+      return createFallbackExplanation(solution, 'unknown');
+    }
+
+    console.log('✅ Explanation generated successfully');
+    const normalized = normalizeExplanation(result);
+    return normalized;
   }
 };
 
-// Subscribe to call_explain_agent events
+// Track processed sessions to prevent duplicates
+const processedSessions = new Set<string>();
+
+// Subscribe to explanation requests
 messageBus.subscribe('call_explain_agent', async (msg: any) => {
-  const explanation = await agnoExplainAgent.explainSolution(msg.payload.solution, msg.payload.sessionId);
-  messageBus.publish({ type: 'explanation_ready', payload: explanation, correlationId: msg.correlationId });
+  const correlationId = msg.correlationId;
+  if (!correlationId) return;
+  
+  // Prevent duplicate processing
+  if (processedSessions.has(correlationId)) {
+    console.log(`📝 Skipping duplicate explain request for session: ${correlationId}`);
+    return;
+  }
+  
+  processedSessions.add(correlationId);
+  console.log(`📝 Explain Agent processing for session: ${correlationId}`);
+  
+  try {
+    const { solution, sessionId, modelProvider, modelName } = msg.payload;
+    
+    // Process RAG response
+    if (solution.status === 'rag_completed' || solution.status === 'rag_complete') {
+      console.log(`📝 Processing RAG response for session: ${correlationId}`);
+      
+      const explanation = await agnoExplainAgent.explainSolution(
+        solution, 
+        sessionId || correlationId, 
+        modelProvider, 
+        modelName
+      );
+      
+      // Publish explanation ready event
+      messageBus.publish({
+        type: 'explanation_ready',
+        payload: explanation,
+        correlationId
+      });
+      
+      console.log(`✅ Explanation ready for session: ${correlationId}`);
+    } else {
+      console.log(`📝 Processing regular solution for session: ${correlationId}`);
+      
+      const explanation = await agnoExplainAgent.explainSolution(
+        solution, 
+        sessionId || correlationId, 
+        modelProvider, 
+        modelName
+      );
+      
+      // Publish explanation ready event
+      messageBus.publish({
+        type: 'explanation_ready',
+        payload: explanation,
+        correlationId
+      });
+      
+      console.log(`✅ Explanation ready for session: ${correlationId}`);
+    }
+  } catch (error) {
+    console.error(`❌ Explain agent error for session: ${correlationId}:`, error);
+    
+    // Create fallback explanation
+    const fallbackExplanation: Explanation = {
+      summary: 'An error occurred while generating the explanation. Please try again.',
+      keyDecisions: [],
+      recommendations: [],
+      insights: [],
+      ragInsights: []
+    };
+    
+    // Publish fallback explanation
+    messageBus.publish({
+      type: 'explanation_ready',
+      payload: fallbackExplanation,
+      correlationId
+    });
+  } finally {
+    // Clean up processed session after a delay
+    setTimeout(() => {
+      processedSessions.delete(correlationId);
+    }, 5000);
+  }
 });
 
-// Subscribe to debate challenges
-messageBus.subscribe('debate_response_explanation_ready', async (msg: any) => {
-  const challenge = msg.payload.challenge;
-  const originalOutput = msg.payload.originalOutput;
-  
-  const defensePrompt = `You are the Explain Agent defending your explanation. 
-  
+// Ensure subscriptions are only registered once
+let _explainAgentSubscribed = false;
+if (!_explainAgentSubscribed) {
+  // Subscribe to debate challenges
+  messageBus.subscribe('debate_response_explanation_ready', async (msg: any) => {
+    const challenge = msg.payload.challenge;
+    const originalOutput = msg.payload.originalOutput;
+    
+    const defensePrompt = `You are the Explain Agent defending your explanation. 
+    
 Original Explanation: ${JSON.stringify(originalOutput)}
 Challenge: ${challenge}
 
 Provide a strong defense of your explanation approach. Address the challenge directly and explain your reasoning methodology.`;
 
-  const defense = await agnoClient.chat({
-    message: defensePrompt
-  });
+    const defense = await agnoClient.chat({
+      message: defensePrompt
+    });
 
-  messageBus.publish({
-    type: 'debate_response_explanation_ready',
-    payload: {
-      debateId: msg.payload.debateId,
-      response: defense.response,
-      originalOutput: originalOutput
-    },
-    correlationId: msg.correlationId
+    messageBus.publish({
+      type: 'debate_response_explanation_ready',
+      payload: {
+        debateId: msg.payload.debateId,
+        response: defense.response,
+        originalOutput: originalOutput
+      },
+      correlationId: msg.correlationId
+    });
   });
-}); 
+  
+  _explainAgentSubscribed = true;
+} 

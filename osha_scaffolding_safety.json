@@ -1,0 +1,13 @@
+{
+  "id": "osha_scaffolding_safety_requirements",
+  "text": "OSHA Scaffolding Safety Requirements (1926.451-454): Scaffolding must be designed by a qualified person and constructed according to the design. All scaffolds must support at least 4 times the maximum intended load. Guardrails must be installed on all open sides and ends of platforms more than 10 feet above the ground. Toeboards must be installed when workers are working on platforms more than 10 feet above the ground. Scaffolds must be inspected by a competent person before each work shift and after any occurrence that could affect structural integrity. Workers must be trained on scaffold hazards and proper use before working on scaffolds. Scaffolds must be erected, moved, dismantled, or altered only under the supervision of a competent person. All scaffold components must be inspected for visible defects before use. Scaffolds must be secured to prevent movement and must not be loaded beyond their maximum intended load or rated capacity.",
+  "type": "regulation",
+  "domain": "construction",
+  "location": "US",
+  "tags": ["OSHA", "safety", "scaffolding", "fall protection", "regulations"],
+  "relationships": [
+    {"type": "applies_to", "target": "task_working_at_height"},
+    {"type": "required_for", "target": "scaffold_erection"},
+    {"type": "protects_against", "target": "fall_hazards"}
+  ]
+} 

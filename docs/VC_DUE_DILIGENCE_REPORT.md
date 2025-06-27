@@ -63,6 +63,19 @@ DcisionAI operates as a **single, cohesive Next.js application** with sophistica
 └─────────────────────────────────────────────────────────┘
 ```
 
+### Recent Infra & Agentic Improvements
+
+- **Redis-based Distributed Event Bus**: All agent communication now uses a Redis-backed message bus for persistent, distributed eventing. Falls back to in-memory if Redis is unavailable.
+- **Persistent Agent Memory**: Redis enables persistent, cross-session agent memory and event logs, a foundation for Level 3+ agentic maturity.
+- **Real-Time Health Endpoints**: `/api/redis-status` and `/api/rate-limit-status` provide real-time monitoring of Redis and OpenAI usage.
+- **OpenAI Rate Limit Resilience**: Load-balanced OpenAI client with key rotation, usage tracking, and exponential backoff.
+- **On-Demand Agent Debate**: DebateAgent is now decoupled from the default workflow and can be triggered on demand via API/UI.
+
+## TODO / Next Steps
+- **Level 3+ Agentic Memory**: Integrate vector DB or LLAMA-style long-term memory for agents (beyond Redis event log).
+- **Agent Learning & Self-Assessment**: Enable agents to learn from experience, self-assess, and adapt workflows.
+- **True Autonomy & Emergent Behavior**: Move toward fully autonomous, self-improving agentic systems.
+
 ### Agentic AI Implementation
 
 #### Current Agentic Level: 2.5/5
@@ -547,7 +560,6 @@ DcisionAI represents a **unique opportunity** to invest in a **category-defining
 
 The technical foundation is strong, the market opportunity is massive, and the competitive advantages are significant. While execution risks remain, the potential rewards justify an aggressive investment approach.
 
-**Recommendation: PROCEED with $4M investment at $20M valuation.**
 
 ---
 

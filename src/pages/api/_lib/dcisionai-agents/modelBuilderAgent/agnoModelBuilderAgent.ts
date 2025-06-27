@@ -5,7 +5,11 @@ import { agnoClient, AgnoChatRequest } from '../../agno-client';
 import type { MCPConfig } from '../mcp/MCPTypes';
 import { templateLoader } from '../../../../../templates/optimization';
 import { OptimizationTemplate, Variable } from '../../../../../templates/optimization/types';
-import { messageBus } from '@/agent/MessageBus';
+import { messageBus, isSubscribed, markSubscribed } from '@/agent/MessageBus';
+// RAG utilities for knowledge retrieval fallback
+import { embedChunks } from '@/lib/RAG/embedding';
+import { queryVectors } from '@/utils/RAG/pinecone';
+import { getLLMAnswer } from '@/lib/RAG/llm';
 
 export interface ModelBuilderResult {
   mcpConfig: MCPConfig;
@@ -707,8 +711,8 @@ export const agnoModelBuilderAgent = {
       console.log('Model Builder: Received enriched data:', enrichedData);
       console.log('Model Builder: Received intent:', intent);
 
-      // Use GPT-4o-mini by default for better performance and cost-effectiveness
-      const defaultModelName = modelName || (modelProvider === 'openai' ? 'gpt-4o-mini' : 'claude-3-5-sonnet-20241022');
+      // Use GPT-4o by default for model building, but allow override via env
+      const defaultModelName = modelName || (modelProvider === 'openai' ? (process.env.MODEL_BUILDER_MODEL || 'gpt-4o') : 'claude-3-5-sonnet-20241022');
       console.log(`Model Builder: Using ${modelProvider} with model ${defaultModelName}`);
 
       // --- Primary Strategy: Compose model directly from enriched data ---
@@ -840,107 +844,144 @@ Your role is to translate construction management requirements into precise math
   }
 };
 
-// Subscribe to call_model_builder events
-messageBus.subscribe('call_model_builder', async (msg: any) => {
-  console.log(`🏗️ Model Builder processing request for session: ${msg.correlationId}`);
-  console.log(`🏗️ Intent type: ${msg.payload.intent.primaryIntent}`);
-  
-  if (msg.payload.intent.primaryIntent === 'knowledge_retrieval') {
-    // Handle knowledge retrieval requests with RAG model
-    console.log(`🏗️ Building RAG model for knowledge retrieval`);
-    const ragModel = {
-      mcpConfig: {
-        name: 'knowledge_retrieval',
-        description: 'RAG-based knowledge retrieval model',
-        variables: [],
-        constraints: [],
-        objective: {
-          type: 'minimize',
-          expression: '0' // No optimization for RAG
-        },
-        metadata: {
-          modelType: 'rag',
-          query: msg.payload.intent.ragQuery,
-          keywords: msg.payload.intent.keywords
-        }
-      },
-      confidence: 0.9,
-      reasoning: 'Built RAG model for knowledge retrieval request',
-      modelType: 'rag'
-    };
-    console.log(`✅ RAG model built for knowledge retrieval: ${msg.correlationId}`);
-    messageBus.publish({ type: 'model_built', payload: ragModel, correlationId: msg.correlationId });
-  } else if (msg.payload.intent.primaryIntent === 'hybrid_analysis') {
-    // Handle hybrid requests with combined RAG + optimization model
-    console.log(`🏗️ Building hybrid model for hybrid analysis`);
+// Use global subscription registry instead of module-level variables
+let _modelBuilderSubscribed = false;
+if (!_modelBuilderSubscribed) {
+  // Subscribe to call_model_builder events
+  messageBus.subscribe('call_model_builder', async (msg: any) => {
+    console.log(`🏗️ Model Builder processing request for session: ${msg.correlationId}`);
+    console.log(`🏗️ Intent type: ${msg.payload.intent.primaryIntent}`);
     
-    // Safely access ragData with fallbacks
-    const ragData = msg.payload.enrichedData?.ragData || {};
-    const optimizationData = msg.payload.enrichedData?.optimizationData || {};
-    
-    // Create hybrid model that combines RAG and optimization
-    const hybridModel = {
-      mcpConfig: {
-        name: 'hybrid_rag_optimization',
-        description: 'Hybrid model combining RAG knowledge retrieval with optimization',
-        variables: optimizationData?.variables || [],
-        constraints: optimizationData?.constraints || [],
-        objective: {
-          type: 'minimize',
-          expression: '0' // Will be enhanced with RAG context
-        },
-        metadata: {
-          modelType: 'hybrid',
-          ragQuery: ragData.query || 'Unknown query',
-          keywords: ragData.keywords || [],
-          optimizationType: msg.payload.intent.optimizationType,
-          problemComplexity: msg.payload.intent.problemComplexity
+    if (msg.payload.intent.primaryIntent === 'knowledge_retrieval') {
+      // Perform RAG: vector search + LLM generation
+      const query = msg.payload.intent.ragQuery || msg.payload.intent.primaryIntent;
+      console.log(`🏗️ [RAG] Start retrieval for query: ${query}`);
+      let answer = '';
+      let results: any[] = [];
+      
+      try {
+        console.log('🏗️ [RAG] Embedding query...');
+        const [embedding] = await embedChunks([query]);
+        console.log(`🏗️ [RAG] Embedding length: ${embedding.length}`);
+        console.log('🏗️ [RAG] Querying vector store...');
+        results = await queryVectors('dcisionai-construction-kb', embedding, 5);
+        console.log(`🏗️ [RAG] Retrieved ${results.length} chunks`);
+        
+        if (results.length > 0) {
+          const context = results
+            .map((r, i) => `Source ${i + 1}: ${r.metadata?.text || ''}`)
+            .join('\n---\n');
+          console.log(`🏗️ [RAG] Context length: ${context.length}`);
+          console.log('🏗️ [RAG] Calling LLM with context...');
+          answer = await getLLMAnswer(query, context);
+          console.log(`🏗️ [RAG] LLM answer preview: ${answer.substring(0, 200)}`);
+        } else {
+          console.log('🏗️ [RAG] No results found in knowledge base, using LLM fallback...');
+          answer = await getLLMAnswer(query, '');
+          console.log(`🏗️ [RAG] Fallback LLM answer preview: ${answer.substring(0, 200)}`);
         }
-      },
-      confidence: 0.85,
-      reasoning: 'Built hybrid model combining RAG knowledge retrieval with optimization',
-      modelType: 'hybrid',
-      ragData: ragData,
-      optimizationData: optimizationData
-    };
-    console.log(`✅ Hybrid model built for hybrid analysis: ${msg.correlationId}`);
-    messageBus.publish({ type: 'model_built', payload: hybridModel, correlationId: msg.correlationId });
-  } else {
-    // Handle optimization requests with full model building
-    console.log(`🏗️ Building optimization model`);
-    const model = await agnoModelBuilderAgent.buildModel(
-      msg.payload.enrichedData,
-      msg.payload.intent,
-      msg.payload.sessionId
-    );
-    console.log(`✅ Optimization model built: ${msg.correlationId}`);
-    messageBus.publish({ type: 'model_built', payload: model, correlationId: msg.correlationId });
-  }
-});
-
-// Subscribe to debate challenges
-messageBus.subscribe('debate_response_model_built', async (msg: any) => {
-  const challenge = msg.payload.challenge;
-  const originalOutput = msg.payload.originalOutput;
+      } catch (err: any) {
+        console.warn('🏗️ [RAG] Retrieval or LLM with context failed, falling back to plain LLM:', err.message);
+        try {
+          answer = await getLLMAnswer(query, '');
+          console.log(`🏗️ [RAG] Fallback LLM answer preview: ${answer.substring(0, 200)}`);
+        } catch (err2: any) {
+          console.error('🏗️ [RAG] Fallback LLM also failed:', err2.message);
+          answer = 'Error retrieving information. Please try again or contact support.';
+        }
+      }
+      
+      // Publish RAG response
+      messageBus.publish({
+        type: 'rag_response_ready',
+        payload: {
+          query,
+          keywords: msg.payload.intent.keywords,
+          response: answer,
+          results: results,
+          model: { modelType: 'rag' }
+        },
+        correlationId: msg.correlationId
+      });
+      return;
+    } else if (msg.payload.intent.primaryIntent === 'hybrid_analysis') {
+      // Handle hybrid requests with combined RAG + optimization model
+      console.log(`🏗️ Building hybrid model for hybrid analysis`);
+      
+      // Safely access ragData with fallbacks
+      const ragData = msg.payload.enrichedData?.ragData || {};
+      const optimizationData = msg.payload.enrichedData?.optimizationData || {};
+      
+      // Create hybrid model that combines RAG and optimization
+      const hybridModel = {
+        mcpConfig: {
+          name: 'hybrid_rag_optimization',
+          description: 'Hybrid model combining RAG knowledge retrieval with optimization',
+          variables: optimizationData?.variables || [],
+          constraints: optimizationData?.constraints || [],
+          objective: {
+            type: 'minimize',
+            expression: '0' // Will be enhanced with RAG context
+          },
+          metadata: {
+            modelType: 'hybrid',
+            ragQuery: ragData.query || 'Unknown query',
+            keywords: ragData.keywords || [],
+            optimizationType: msg.payload.intent.optimizationType,
+            problemComplexity: msg.payload.intent.problemComplexity
+          }
+        },
+        confidence: 0.85,
+        reasoning: 'Built hybrid model combining RAG knowledge retrieval with optimization',
+        modelType: 'hybrid',
+        ragData: ragData,
+        optimizationData: optimizationData
+      };
+      console.log(`✅ Hybrid model built for hybrid analysis: ${msg.correlationId}`);
+      messageBus.publish({ type: 'model_built', payload: hybridModel, correlationId: msg.correlationId });
+      return;
+    } else if (msg.payload.intent.primaryIntent === 'optimization') {
+      // Handle optimization requests with full model building
+      console.log(`🏗️ Building optimization model`);
+      const model = await agnoModelBuilderAgent.buildModel(
+        msg.payload.enrichedData,
+        msg.payload.intent,
+        msg.payload.sessionId
+      );
+      console.log(`✅ Optimization model built: ${msg.correlationId}`);
+      messageBus.publish({ type: 'model_built', payload: model, correlationId: msg.correlationId });
+      return;
+    }
+  });
   
-  const defensePrompt = `You are the Model Builder Agent defending your model construction. 
-  
+  // Subscribe to debate challenges
+  messageBus.subscribe('debate_response_model_built', async (msg: any) => {
+    const challenge = msg.payload.challenge;
+    const originalOutput = msg.payload.originalOutput;
+    
+    const defensePrompt = `You are the Model Builder Agent defending your model construction. 
+    
 Original Model: ${JSON.stringify(originalOutput)}
 Challenge: ${challenge}
 
 Provide a strong defense of your model building approach. Address the challenge directly and explain your design decisions.`;
 
-  const defense = await agnoClient.chat({
-    message: defensePrompt
-  });
+    const defense = await agnoClient.chat({
+      message: defensePrompt
+    });
 
-  messageBus.publish({
-    type: 'debate_response_model_built',
-    payload: {
-      debateId: msg.payload.debateId,
-      response: defense.response,
-      originalOutput: originalOutput
-    },
-    correlationId: msg.correlationId
+    messageBus.publish({
+      type: 'debate_response_model_built',
+      payload: {
+        debateId: msg.payload.debateId,
+        response: defense.response,
+        originalOutput: originalOutput
+      },
+      correlationId: msg.correlationId
+    });
   });
-}); 
+  
+  _modelBuilderSubscribed = true;
+  markSubscribed('call_model_builder', 'ModelBuilderAgent');
+  markSubscribed('debate_response_model_built', 'ModelBuilderAgent');
+}

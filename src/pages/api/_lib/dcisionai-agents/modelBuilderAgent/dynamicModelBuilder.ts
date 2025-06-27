@@ -97,7 +97,7 @@ export class DynamicModelBuilder {
     modelName?: string
   ) {
     this.modelProvider = modelProvider;
-    this.modelName = modelName || (modelProvider === 'openai' ? 'gpt-4o-mini' : 'claude-3-5-sonnet-20241022');
+    this.modelName = modelName || (modelProvider === 'openai' ? (process.env.MODEL_BUILDER_MODEL || 'gpt-4o') : 'claude-3-5-sonnet-20241022');
   }
 
   /**

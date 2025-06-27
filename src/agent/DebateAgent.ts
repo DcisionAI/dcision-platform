@@ -1,7 +1,5 @@
 import { messageBus } from './MessageBus';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+import { openai } from '../lib/openai-client';
 
 interface DebateRound {
   agent: string;
@@ -17,6 +15,43 @@ interface DebateSession {
 }
 
 const activeDebates = new Map<string, DebateSession>();
+
+// Rate limiting and retry utilities
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> {
+  let lastError: any;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error: any) {
+      lastError = error;
+      
+      // Check if it's a rate limit error
+      if (error?.status === 429) {
+        const retryAfter = parseInt(error.headers?.['retry-after-ms'] || error.headers?.['retry-after']) || baseDelay;
+        console.warn(`Rate limit hit, retrying in ${retryAfter}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
+        await new Promise(resolve => setTimeout(resolve, retryAfter));
+        continue;
+      }
+      
+      // For other errors, use exponential backoff
+      if (attempt < maxRetries) {
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.warn(`OpenAI API error, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries + 1}):`, error.message);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      
+      throw error;
+    }
+  }
+  
+  throw lastError;
+}
 
 // Subscribe to trigger_debate event for comprehensive workflow debate
 messageBus.subscribe('trigger_debate', async (msg) => {
@@ -61,7 +96,7 @@ Generate a challenging debate question that addresses:
 
 Be constructive but challenging.`;
 
-    const challenge = await openai.chat.completions.create({
+    const challenge = await openai.chat({
       model: 'gpt-4o-mini',
       messages: [
         { 
@@ -99,7 +134,7 @@ WORKFLOW SOLUTION:
 
 Provide a strong defense of the approach, addressing the challenge directly and explaining the rationale behind the decisions made.`;
 
-    const response = await openai.chat.completions.create({
+    const response = await openai.chat({
       model: 'gpt-4o-mini',
       messages: [
         { 
@@ -135,7 +170,7 @@ Provide:
 3. A recommendation for improvement
 4. An overall assessment of the solution quality (1-10)`;
 
-    const finalArgument = await openai.chat.completions.create({
+    const finalArgument = await openai.chat({
       model: 'gpt-4o-mini',
       messages: [
         { 
@@ -170,7 +205,7 @@ Provide:
 3. Reasoning for the decision
 4. Key insights from the debate`;
 
-    const summary = await openai.chat.completions.create({
+    const summary = await openai.chat({
       model: 'gpt-4o-mini',
       messages: [
         { 
@@ -362,7 +397,8 @@ Provide:
 });
 
 async function evaluateDebateTrigger(payload: any, eventType: string): Promise<boolean> {
-  const prompt = `Evaluate if this agent output should trigger a debate:
+  try {
+    const prompt = `Evaluate if this agent output should trigger a debate:
 Event: ${eventType}
 Payload: ${JSON.stringify(payload)}
 
@@ -373,96 +409,140 @@ Consider factors like:
 - Novelty of the approach
 
 Respond with "YES" or "NO" only.`;
-  
-  const result = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      { role: 'system', content: 'You are a debate trigger evaluator.' },
-      { role: 'user', content: prompt }
-    ]
-  });
-  
-  return result.choices[0].message.content?.trim() === 'YES';
+    
+    const result = await withRetry(async () => {
+      return await openai.chat({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'You are a debate trigger evaluator.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 10,
+        temperature: 0.1
+      });
+    });
+    
+    return result.choices[0].message.content?.trim() === 'YES';
+  } catch (error) {
+    console.error('Failed to evaluate debate trigger due to rate limit or API error:', error);
+    return false; // Default to no debate if we can't evaluate
+  }
 }
 
 async function generateChallenge(payload: any, eventType: string): Promise<string> {
-  const prompt = `Generate a challenging question or counter-argument for this agent output:
+  try {
+    const prompt = `Generate a challenging question or counter-argument for this agent output:
 Event: ${eventType}
 Output: ${JSON.stringify(payload)}
 
 Be constructive but challenging. Focus on potential weaknesses, alternative approaches, or areas that need more justification.`;
-  
-  const result = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      { role: 'system', content: 'You are a debate moderator challenging agent outputs.' },
-      { role: 'user', content: prompt }
-    ]
-  });
-  
-  return result.choices[0].message.content || 'No specific challenge generated.';
+    
+    const result = await withRetry(async () => {
+      return await openai.chat({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'You are a debate moderator challenging agent outputs.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 150,
+        temperature: 0.4
+      });
+    });
+    
+    return result.choices[0].message.content || 'No specific challenge generated.';
+  } catch (error) {
+    console.error('Failed to generate challenge due to rate limit or API error:', error);
+    return 'Challenge unavailable due to technical limitations.';
+  }
 }
 
 async function generateCounterArgument(rounds: DebateRound[], topic: string): Promise<string> {
-  const debateHistory = rounds.map(r => `${r.agent}: ${r.argument}`).join('\n');
-  
-  const prompt = `Based on this debate history, generate a counter-argument:
+  try {
+    const debateHistory = rounds.map(r => `${r.agent}: ${r.argument}`).join('\n');
+    
+    const prompt = `Based on this debate history, generate a counter-argument:
 Topic: ${topic}
 History:
 ${debateHistory}
 
 Provide a strong counter-argument that challenges the most recent response.`;
-  
-  const result = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      { role: 'system', content: 'You are a debate moderator generating counter-arguments.' },
-      { role: 'user', content: prompt }
-    ]
-  });
-  
-  return result.choices[0].message.content || 'No counter-argument generated.';
+    
+    const result = await withRetry(async () => {
+      return await openai.chat({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'You are a debate moderator generating counter-arguments.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 150,
+        temperature: 0.4
+      });
+    });
+    
+    return result.choices[0].message.content || 'No counter-argument generated.';
+  } catch (error) {
+    console.error('Failed to generate counter-argument due to rate limit or API error:', error);
+    return 'Counter-argument unavailable due to technical limitations.';
+  }
 }
 
 async function generateDebateSummary(debateSession: DebateSession): Promise<string> {
-  const debateHistory = debateSession.rounds.map(r => `${r.agent}: ${r.argument}`).join('\n');
-  
-  const prompt = `Summarize this debate:
+  try {
+    const debateHistory = debateSession.rounds.map(r => `${r.agent}: ${r.argument}`).join('\n');
+    
+    const prompt = `Summarize this debate:
 Topic: ${debateSession.topic}
 Rounds: ${debateSession.rounds.length}
 History:
 ${debateHistory}
 
 Provide a concise summary of the key arguments, points of contention, and overall outcome.`;
-  
-  const result = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      { role: 'system', content: 'You are a debate summarizer.' },
-      { role: 'user', content: prompt }
-    ]
-  });
-  
-  return result.choices[0].message.content || 'No summary generated.';
+    
+    const result = await withRetry(async () => {
+      return await openai.chat({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'You are a debate summarizer.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 200,
+        temperature: 0.3
+      });
+    });
+    
+    return result.choices[0].message.content || 'No summary generated.';
+  } catch (error) {
+    console.error('Failed to generate debate summary due to rate limit or API error:', error);
+    return 'Debate summary unavailable due to technical limitations.';
+  }
 }
 
 async function determineDebateWinner(debateSession: DebateSession): Promise<string> {
-  const debateHistory = debateSession.rounds.map(r => `${r.agent}: ${r.argument}`).join('\n');
-  
-  const prompt = `Determine the winner of this debate:
+  try {
+    const debateHistory = debateSession.rounds.map(r => `${r.agent}: ${r.argument}`).join('\n');
+    
+    const prompt = `Determine the winner of this debate:
 Topic: ${debateSession.topic}
 History:
 ${debateHistory}
 
 Consider argument quality, evidence, logic, and persuasiveness. Respond with the agent name or "TIE".`;
-  
-  const result = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      { role: 'system', content: 'You are a debate judge determining winners.' },
-      { role: 'user', content: prompt }
-    ]
-  });
-  
-  return result.choices[0].message.content || 'TIE';
+    
+    const result = await withRetry(async () => {
+      return await openai.chat({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'You are a debate judge determining winners.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 100, // Limit tokens to reduce rate limit impact
+        temperature: 0.3
+      });
+    });
+    
+    return result.choices[0].message.content || 'TIE';
+  } catch (error) {
+    console.error('Failed to determine debate winner due to rate limit or API error:', error);
+    return 'TIE'; // Fallback to tie if we can't determine winner
+  }
 } 

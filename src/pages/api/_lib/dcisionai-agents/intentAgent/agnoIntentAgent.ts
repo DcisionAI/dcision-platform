@@ -2,8 +2,9 @@
 // Now uses the real Agno Python backend for advanced AI capabilities
 
 import { agnoClient, AgnoChatRequest } from '../../agno-client';
-import { messageBus } from '@/agent/MessageBus';
-// TODO: Ensure messageBus is imported from the correct location or injected by the runtime.
+import { messageBus, isSubscribed, markSubscribed } from '@/agent/MessageBus';
+// Side-effect import: log module load to confirm subscription registration
+console.log('[IntentAgent] agnoIntentAgent module loaded');
 
 export interface IntentResult {
   decisionType: string;
@@ -247,53 +248,41 @@ Consider construction industry best practices, regulatory requirements, and opti
         console.log('Raw response:', response.response);
         console.log('Response type:', typeof response.response);
         
-        // Return fallback response
-        return {
-          decisionType: 'resource-allocation',
-          primaryIntent: 'optimization',
-          keywords: ['optimization', 'construction'],
-          optimizationType: 'crew_assignment',
-          modelType: 'MIP',
-          problemComplexity: 'basic',
-          templateRecommendations: ['crew_assignment_basic'],
-          extractedParameters: {},
-          confidence: 0.5,
-          reasoning: 'Fallback response due to parsing error'
-        };
+        // Use mock fallback for testing when Agno is not available
+        return this.getMockIntentResult(userInput);
       }
 
       // Validate and normalize response with better error handling
-      const result: IntentResult = {
+      let result: IntentResult = {
         decisionType: parsedResponse.decisionType || 'resource-allocation',
         primaryIntent: parsedResponse.primaryIntent || 'optimization',
         secondaryIntent: parsedResponse.secondaryIntent,
         keywords: Array.isArray(parsedResponse.keywords) ? parsedResponse.keywords : ['optimization'],
         ragQuery: parsedResponse.ragQuery,
         optimizationQuery: parsedResponse.optimizationQuery,
-        optimizationType: parsedResponse.optimizationType || 'crew_assignment',
-        modelType: parsedResponse.modelType || 'MIP',
-        problemComplexity: parsedResponse.problemComplexity || 'basic',
+        optimizationType: parsedResponse.optimizationType,
+        modelType: parsedResponse.modelType,
+        problemComplexity: parsedResponse.problemComplexity,
         templateRecommendations: Array.isArray(parsedResponse.templateRecommendations) ? parsedResponse.templateRecommendations : [],
         extractedParameters: parsedResponse.extractedParameters || {},
         confidence: typeof parsedResponse.confidence === 'number' ? parsedResponse.confidence : 0.8,
         reasoning: parsedResponse.reasoning || 'Intent analysis completed'
       };
+      
+      // Enforce that knowledge retrieval intents do not include optimization fields
+      if (result.primaryIntent === 'knowledge_retrieval') {
+        result.optimizationQuery = undefined;
+        result.optimizationType = undefined;
+        result.modelType = undefined;
+        result.problemComplexity = undefined;
+        result.templateRecommendations = [];
+        result.extractedParameters = {};
+      }
 
       // Additional validation to ensure we have a valid result
       if (!isValidIntentResult(result)) {
         console.warn('Parsed response failed validation, using fallback');
-        return {
-          decisionType: 'resource-allocation',
-          primaryIntent: 'optimization',
-          keywords: ['optimization', 'construction'],
-          optimizationType: 'crew_assignment',
-          modelType: 'MIP',
-          problemComplexity: 'basic',
-          templateRecommendations: ['crew_assignment_basic'],
-          extractedParameters: {},
-          confidence: 0.5,
-          reasoning: 'Fallback response due to validation error'
-        };
+        return this.getMockIntentResult(userInput);
       }
 
       return result;
@@ -301,20 +290,97 @@ Consider construction industry best practices, regulatory requirements, and opti
     } catch (error) {
       console.error('Error in intent analysis:', error);
       
-      // Return fallback response
+      // Use mock fallback for testing when Agno is not available
+      return this.getMockIntentResult(userInput);
+    }
+  },
+
+  /**
+   * Mock intent analysis for testing when Agno service is not available
+   */
+  getMockIntentResult(userInput: string): IntentResult {
+    console.log('Using mock intent analysis for testing');
+    
+    const lowerInput = userInput.toLowerCase();
+    
+    // Heuristic for RAG queries
+    const ragKeywords = [
+      'best practice', 'best practices', 'regulation', 'regulations', 'standard', 'standards',
+      'how to', 'guideline', 'guidelines', 'recommendation', 'recommendations', 'policy', 'policies',
+      'procedure', 'procedures', 'knowledge', 'information', 'explain', 'explanation', 'describe', 'definition', 'overview', 'summary',
+      'osha', 'safety', 'requirement', 'requirements', 'what are', 'what is', 'tell me about', 'information about'
+    ];
+    
+    const isRAG = ragKeywords.some(kw => lowerInput.includes(kw));
+    
+    if (isRAG) {
+      return {
+        decisionType: 'knowledge_retrieval',
+        primaryIntent: 'knowledge_retrieval',
+        keywords: ragKeywords.filter(kw => lowerInput.includes(kw)),
+        ragQuery: userInput,
+        optimizationQuery: undefined,
+        optimizationType: undefined,
+        modelType: undefined,
+        problemComplexity: undefined,
+        templateRecommendations: [],
+        extractedParameters: {},
+        confidence: 0.8,
+        reasoning: 'Mock fallback: Detected RAG/knowledge query by keyword heuristic.'
+      };
+    }
+    
+    // Heuristic for optimization queries
+    const optimizationKeywords = [
+      'optimize', 'optimization', 'schedule', 'scheduling', 'assign', 'assignment', 'allocate', 'allocation',
+      'crew', 'worker', 'worker', 'resource', 'cost', 'budget', 'efficiency', 'maximize', 'minimize',
+      'plan', 'planning', 'timeline', 'deadline', 'constraint', 'constraints'
+    ];
+    
+    const isOptimization = optimizationKeywords.some(kw => lowerInput.includes(kw));
+    
+    if (isOptimization) {
+      // Determine optimization type based on keywords
+      let optimizationType = 'crew_assignment';
+      if (lowerInput.includes('cost') || lowerInput.includes('budget')) {
+        optimizationType = 'cost_optimization';
+      } else if (lowerInput.includes('supply') || lowerInput.includes('chain')) {
+        optimizationType = 'supply_chain';
+      } else if (lowerInput.includes('schedule') || lowerInput.includes('timeline')) {
+        optimizationType = 'project_scheduling';
+      } else if (lowerInput.includes('resource') || lowerInput.includes('equipment')) {
+        optimizationType = 'resource_allocation';
+      }
+      
       return {
         decisionType: 'resource-allocation',
         primaryIntent: 'optimization',
-        keywords: ['optimization', 'construction'],
-        optimizationType: 'crew_assignment',
+        keywords: optimizationKeywords.filter(kw => lowerInput.includes(kw)),
+        ragQuery: undefined,
+        optimizationQuery: userInput,
+        optimizationType: optimizationType,
         modelType: 'MIP',
         problemComplexity: 'basic',
-        templateRecommendations: ['crew_assignment_basic'],
+        templateRecommendations: [`${optimizationType}_basic`],
         extractedParameters: {},
-        confidence: 0.5,
-        reasoning: 'Fallback response due to error in intent analysis'
+        confidence: 0.7,
+        reasoning: 'Mock fallback: Detected optimization query by keyword heuristic.'
       };
     }
+    
+    // Default fallback: optimization
+    return {
+      decisionType: 'resource-allocation',
+      primaryIntent: 'optimization',
+      keywords: ['optimization', 'construction'],
+      optimizationType: 'crew_assignment',
+      modelType: 'MIP',
+      problemComplexity: 'basic',
+      templateRecommendations: ['crew_assignment_basic'],
+      extractedParameters: {},
+      confidence: 0.5,
+      reasoning: 'Mock fallback: Default optimization response for testing.'
+    };
   },
 
   /**
@@ -432,38 +498,52 @@ You must accurately classify each request and provide the appropriate parameters
   }
 };
 
-// Subscribe to call_intent_agent events
-messageBus.subscribe('call_intent_agent', async (msg: any) => {
-  const intent = await agnoIntentAgent.analyzeIntent(msg.payload.query, msg.payload.sessionId);
-  messageBus.publish({ type: 'intent_identified', payload: intent, correlationId: msg.correlationId });
-});
+// Use global subscription registry instead of module-level variables
+if (!isSubscribed('call_intent_agent', 'IntentAgent')) {
+  // Subscribe to call_intent_agent events
+  messageBus.subscribe('call_intent_agent', async (msg: any) => {
+    console.log(`🧠 Intent Agent received call_intent_agent event:`, msg);
+    try {
+      const intent = await agnoIntentAgent.analyzeIntent(msg.payload.query, msg.payload.sessionId);
+      console.log(`✅ Intent Agent completed analysis:`, intent);
+      messageBus.publish({ type: 'intent_identified', payload: intent, correlationId: msg.correlationId });
+    } catch (error: any) {
+      console.error(`❌ Intent Agent error:`, error);
+      messageBus.publish({ 
+        type: 'intent_error', 
+        payload: { error: error.message }, 
+        correlationId: msg.correlationId 
+      });
+    }
+  });
 
-// Subscribe to debate challenges
-messageBus.subscribe('debate_response_intent_identified', async (msg: any) => {
-  const challenge = msg.payload.challenge;
-  const originalOutput = msg.payload.originalOutput;
-  
-  const defensePrompt = `You are the Intent Agent defending your analysis. 
-  
+  // Subscribe to debate challenges
+  messageBus.subscribe('debate_response_intent_identified', async (msg: any) => {
+    const challenge = msg.payload.challenge;
+    const originalOutput = msg.payload.originalOutput;
+    
+    const defensePrompt = `You are the Intent Agent defending your analysis. 
+    
 Original Analysis: ${JSON.stringify(originalOutput)}
 Challenge: ${challenge}
 
 Provide a strong defense of your intent analysis. Address the challenge directly and explain your reasoning.`;
 
-  const defense = await agnoClient.chat({
-    messages: [
-      { role: 'system', content: 'You are an Intent Agent defending your analysis in a debate.' },
-      { role: 'user', content: defensePrompt }
-    ]
-  });
+    const defense = await agnoClient.chat({
+      message: defensePrompt
+    });
 
-  messageBus.publish({
-    type: 'debate_response_intent_identified',
-    payload: {
-      debateId: msg.payload.debateId,
-      response: defense.choices[0].message.content,
-      originalOutput: originalOutput
-    },
-    correlationId: msg.correlationId
+    messageBus.publish({
+      type: 'debate_response_intent_identified',
+      payload: {
+        debateId: msg.payload.debateId,
+        response: defense.response,
+        originalOutput: originalOutput
+      },
+      correlationId: msg.correlationId
+    });
   });
-}); 
+  
+  markSubscribed('call_intent_agent', 'IntentAgent');
+  markSubscribed('debate_response_intent_identified', 'IntentAgent');
+}

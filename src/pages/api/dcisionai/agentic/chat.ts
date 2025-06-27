@@ -1,13 +1,26 @@
+// Global subscription registry to prevent duplicates
+declare global {
+  var __subscriptionRegistry: Set<string>;
+}
+
+if (!global.__subscriptionRegistry) {
+  global.__subscriptionRegistry = new Set();
+}
+
 // All agent imports working - restore full workflow
-import '@/agent/CoordinatorAgent';
-import '@/agent/CritiqueAgent';
-import '@/agent/DebateAgent';
-import '@/agent/MultiAgentDebate';
-import '../../_lib/dcisionai-agents/intentAgent/agnoIntentAgent';
-import '../../_lib/dcisionai-agents/dataAgent/agnoDataAgent';
-import '../../_lib/dcisionai-agents/modelBuilderAgent/agnoModelBuilderAgent';
-import '../../_lib/dcisionai-agents/explainAgent/agnoExplainAgent';
-import '../../_lib/ConstructionMCPSolver';
+// Import all agents and handlers (side-effect imports must use consistent paths to avoid duplicate subscriptions)
+if (!global.__subscriptionRegistry.has('agents_imported')) {
+  global.__subscriptionRegistry.add('agents_imported');
+  import('@/agent/CoordinatorAgent');
+  import('@/agent/CritiqueAgent');
+  import('@/agent/DebateAgent');
+  import('@/agent/MultiAgentDebate');
+  import('@/pages/api/_lib/dcisionai-agents/intentAgent');
+  import('@/pages/api/_lib/dcisionai-agents/dataAgent');
+  import('@/pages/api/_lib/dcisionai-agents/modelBuilderAgent');
+  import('@/pages/api/_lib/dcisionai-agents/explainAgent');
+  import('@/pages/api/_lib/ConstructionMCPSolver');
+}
 
 import { NextApiRequest, NextApiResponse } from 'next';
 import { messageBus } from '@/agent/MessageBus';
@@ -21,6 +34,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ type: 'error', content: 'Method not allowed' });
   }
 
+  // Define cleanup functions at the top level
+  let onProgress: ((msg: any) => void) | null = null;
+  let onAgentInteraction: ((msg: any) => void) | null = null;
+  let onCritiqueReady: ((msg: any) => void) | null = null;
+  let onWorkflowFinished: ((msg: any) => void) | null = null;
+
+  const cleanup = () => {
+    if (onProgress) messageBus.unsubscribe('progress', onProgress);
+    if (onAgentInteraction) messageBus.unsubscribe('agent_interaction', onAgentInteraction);
+    if (onCritiqueReady) messageBus.unsubscribe('critique_ready', onCritiqueReady);
+    if (onWorkflowFinished) messageBus.unsubscribe('workflow_finished', onWorkflowFinished);
+  };
+
   try {
     const { message, customerData = {}, sessionId = uuidv4() } = req.body;
     if (!message) {
@@ -30,13 +56,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(`🚀 Starting agentic workflow for session: ${sessionId}`);
     console.log(`📝 User message: ${message}`);
 
-    // Progress tracking
+    // Set up timeout for the entire workflow
+    const workflowTimeout = setTimeout(() => {
+      console.error(`⏰ Workflow timeout for session: ${sessionId}`);
+      messageBus.publish({ 
+        type: 'workflow_error', 
+        payload: { error: 'Workflow timeout', step: 'timeout' }, 
+        correlationId: sessionId 
+      });
+      
+      // Clean up all state
+      cleanup();
+      
+      res.status(408).json({ 
+        type: 'error', 
+        content: 'Request timeout - agentic workflow took too long to complete',
+        sessionId: sessionId
+      });
+    }, 45000); // 45 second timeout (5 seconds less than the 50 second curl timeout)
+
+    // Set up progress tracking
     const progressEvents: any[] = [];
     const agentInteractions: any[] = [];
-    const debateResults: any[] = [];
 
-    // Subscribe to progress events
-    messageBus.subscribe('progress', (msg: any) => {
+    // Subscribe to workflow events with cleanup
+    let finalResult: any = null;
+    let workflowError: any = null;
+    
+    // Progress events
+    onProgress = (msg: any) => {
       if (msg.correlationId === sessionId) {
         progressEvents.push({
           step: msg.payload.step,
@@ -46,10 +94,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
         console.log(`📊 Progress [${msg.payload.step}]: ${msg.payload.status} - ${msg.payload.message}`);
       }
-    });
-
-    // Subscribe to agent interactions
-    messageBus.subscribe('agent_interaction', (msg: any) => {
+    };
+    messageBus.subscribe('progress', onProgress);
+    
+    // Agent interactions
+    onAgentInteraction = (msg: any) => {
       if (msg.correlationId === sessionId) {
         agentInteractions.push({
           from: msg.payload.from,
@@ -60,100 +109,126 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
         console.log(`🤖 Agent Interaction: ${msg.payload.from} → ${msg.payload.to} (${msg.payload.type})`);
       }
-    });
-
-    // Subscribe to debate events
-    messageBus.subscribe('debate_result', (msg: any) => {
-      if (msg.correlationId === sessionId) {
-        debateResults.push({
-          topic: msg.payload.topic,
-          participants: msg.payload.participants,
-          winner: msg.payload.winner,
-          reasoning: msg.payload.reasoning,
-          timestamp: new Date().toISOString()
-        });
-        console.log(`🗣️ Debate Result: ${msg.payload.winner} won debate on ${msg.payload.topic}`);
-      }
-    });
-
-    // Subscribe to critique events
-    messageBus.subscribe('critique_ready', (msg: any) => {
+    };
+    messageBus.subscribe('agent_interaction', onAgentInteraction);
+    
+    // Critique events
+    onCritiqueReady = (msg: any) => {
       if (msg.correlationId === sessionId) {
         console.log(`🔍 Critique: ${msg.payload.critique}`);
       }
-    });
-
-    // Subscribe to final result
-    let finalResult: any = null;
-    messageBus.subscribe('workflow_finished', (msg: any) => {
+    };
+    messageBus.subscribe('critique_ready', onCritiqueReady);
+    
+    // Final result
+    onWorkflowFinished = (msg: any) => {
       if (msg.correlationId === sessionId) {
         finalResult = msg.payload;
         console.log(`✅ Agentic workflow completed for session: ${sessionId}`);
+        clearTimeout(workflowTimeout);
+        
+        // Clean up all state
+        cleanup();
+        
+        // Format the response
+        const responseContent = {
+          // Core result
+          solution: finalResult.solution,
+          explanation: finalResult.explanation,
+          visualization: finalResult.visualization,
+          intent: finalResult.intent,
+          enrichedData: finalResult.enrichedData,
+          model: finalResult.model,
+          
+          // Agentic features
+          progressEvents,
+          agentInteractions,
+          
+          // New agentic results
+          critique: finalResult.critique,
+          
+          // Metadata
+          sessionId,
+          workflowType: 'agentic',
+          timestamps: {
+            start: new Date(Date.now() - (Date.now() - Date.parse(msg.payload.timestamps.start))).toISOString(),
+            end: new Date().toISOString(),
+            duration: Date.now() - Date.parse(msg.payload.timestamps.start)
+          }
+        };
+        
+        res.status(200).json({
+          type: 'agentic',
+          content: responseContent
+        });
       }
-    });
+    };
+    messageBus.subscribe('workflow_finished', onWorkflowFinished);
+
+    // Error handling
+    const onWorkflowError = (msg: any) => {
+      if (msg.correlationId === sessionId) {
+        workflowError = msg.payload;
+        console.error(`❌ Workflow error for session: ${sessionId}:`, msg.payload);
+        clearTimeout(workflowTimeout);
+        
+        // Clean up all state
+        cleanup();
+        
+        res.status(500).json({
+          type: 'error',
+          content: `Workflow error: ${msg.payload.error}`,
+          sessionId: sessionId,
+          step: msg.payload.step
+        });
+      }
+    };
+    messageBus.subscribe('workflow_error', onWorkflowError);
 
     // Start the agentic workflow
+    // Kick off the agentic workflow; disable critique/debate by default
     messageBus.publish({
       type: 'start',
       payload: {
         query: message,
         sessionId,
-        customerData
+        customerData,
+        runCritique: false,
+        runDebate: false
       },
       correlationId: sessionId
     });
 
     // Wait for the workflow to complete (with timeout)
-    const timeout = 60000; // 60 seconds (increased for critique and debate)
+    const timeout = 45000; // 45 seconds (reduced from 60)
     const startTime = Date.now();
     
-    while (!finalResult && (Date.now() - startTime) < timeout) {
+    while (!finalResult && !workflowError && (Date.now() - startTime) < timeout) {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
 
+    // Cleanup error handler
+    messageBus.unsubscribe('workflow_error', onWorkflowError);
+
+    if (workflowError) {
+      cleanup();
+      return res.status(500).json({
+        type: 'error',
+        content: `Workflow error: ${workflowError.error?.message || workflowError.error || 'Unknown error'}`
+      });
+    }
+
     if (!finalResult) {
+      cleanup();
       return res.status(408).json({
         type: 'error',
         content: 'Request timeout - agentic workflow took too long to complete'
       });
     }
 
-    // Format the response
-    const responseContent = {
-      // Core result
-      solution: finalResult.solution,
-      explanation: finalResult.explanation,
-      visualization: finalResult.visualization,
-      intent: finalResult.intent,
-      enrichedData: finalResult.enrichedData,
-      model: finalResult.model,
-      
-      // Agentic features
-      progressEvents,
-      agentInteractions,
-      debateResults,
-      
-      // New agentic results
-      critique: finalResult.critique,
-      debate: finalResult.debate,
-      
-      // Metadata
-      sessionId,
-      workflowType: 'agentic',
-      timestamps: {
-        start: new Date(startTime).toISOString(),
-        end: new Date().toISOString(),
-        duration: Date.now() - startTime
-      }
-    };
-
-    res.status(200).json({
-      type: 'agentic',
-      content: responseContent
-    });
-
   } catch (error: any) {
     console.error('❌ Agentic chat API error:', error);
+    cleanup();
     res.status(500).json({
       type: 'error',
       content: 'Network or server error. Please try again in a moment.'

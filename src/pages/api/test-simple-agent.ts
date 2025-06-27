@@ -3,6 +3,8 @@ import '@/agent/CoordinatorAgent';
 import '@/agent/CritiqueAgent';
 import '@/agent/DebateAgent';
 import '@/agent/MultiAgentDebate';
+// Load the Intent Agent module (must be imported for its side-effects to register the subscription)
+import '@/pages/api/_lib/dcisionai-agents/intentAgent/agnoIntentAgent';
 
 import { NextApiRequest, NextApiResponse } from 'next';
 import { messageBus } from '@/agent/MessageBus';
@@ -47,6 +49,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     });
 
+    // Subscribe to all events for debugging
+    messageBus.subscribe('*', (msg: any) => {
+      if (msg.correlationId === sessionId) {
+        console.log(`🔍 Event received: ${msg.type} for session ${sessionId}`);
+        events.push({
+          type: msg.type,
+          payload: msg.payload,
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    console.log(`📤 Publishing call_intent_agent for session: ${sessionId}`);
+    
     // Directly call intent agent
     messageBus.publish({
       type: 'call_intent_agent',
@@ -76,6 +92,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       timeout: !intentReceived
     };
 
+    console.log(`📊 Test completed: ${JSON.stringify(response)}`);
     res.status(200).json(response);
 
   } catch (error: any) {

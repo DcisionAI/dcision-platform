@@ -14,6 +14,8 @@ export interface AgnoChatResponse {
   session_id?: string;
   model_used: string;
   timestamp: string;
+  error?: boolean;
+  error_details?: string;
 }
 
 export interface AgnoAgentConfig {
@@ -128,21 +130,48 @@ export class AgnoClient {
    * Chat with an agent
    */
   async chat(request: AgnoChatRequest): Promise<AgnoChatResponse> {
-    const response = await fetch(`${this.baseUrl}/api/agent/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...request,
-        model_provider: request.model_provider || this.defaultProvider
-      })
-    });
+    try {
+      console.log(`🤖 Agno client: Sending chat request to ${this.baseUrl}/chat`);
+      
+      const response = await fetch(`${this.baseUrl}/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+        signal: AbortSignal.timeout(30000), // 30 second timeout
+      });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: response.statusText }));
-      throw new Error(`Chat failed: ${error.detail}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Agno client error: ${response.status} ${response.statusText}`);
+        console.error(`❌ Error details: ${errorText}`);
+        
+        // Return a structured error response instead of throwing
+        return {
+          response: `Error: ${response.status} ${response.statusText}`,
+          model_used: request.model_name || 'unknown',
+          timestamp: new Date().toISOString(),
+          error: true,
+          error_details: errorText
+        };
+      }
+
+      const result = await response.json();
+      console.log(`✅ Agno client: Received response from ${this.baseUrl}/chat`);
+      return result;
+    } catch (error) {
+      console.error(`❌ Agno client network error:`, error);
+      
+      // Return a structured error response instead of throwing
+      return {
+        response: `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        model_used: request.model_name || 'unknown',
+        timestamp: new Date().toISOString(),
+        error: true,
+        error_details: error instanceof Error ? error.message : 'Unknown error'
+      };
     }
-
-    return response.json();
   }
 
   /**

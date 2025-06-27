@@ -225,115 +225,125 @@ Return ONLY the JSON object:`;
   }
 };
 
-// Subscribe to intent_result events
-messageBus.subscribe('call_data_agent', async (msg: any) => {
-  console.log(`📊 Data Agent processing request for session: ${msg.correlationId}`);
-  console.log(`📊 Intent type: ${msg.payload.intent.primaryIntent}`);
-  
-  if (msg.payload.intent.primaryIntent === 'optimization') {
-    // Handle optimization requests with full data enrichment
-    const enriched = await agnoDataAgent.enrichData(
-      msg.payload.customerData || {},
-      msg.payload.intent,
-      msg.payload.sessionId
-    );
-    messageBus.publish({ type: 'data_prepared', payload: enriched, correlationId: msg.correlationId });
-  } else if (msg.payload.intent.primaryIntent === 'knowledge_retrieval') {
-    // Handle knowledge retrieval requests with minimal data structure
-    console.log(`📊 Processing knowledge retrieval request`);
-    const enriched = {
-      enrichedData: {
-        query: msg.payload.intent.ragQuery,
+// Ensure subscriptions are only registered once
+let _dataAgentSubscribed = false;
+if (!_dataAgentSubscribed) {
+  // Subscribe to intent_result events
+  messageBus.subscribe('call_data_agent', async (msg: any) => {
+    console.log(`📊 Data Agent processing request for session: ${msg.correlationId}`);
+    console.log(`📊 Intent type: ${msg.payload.intent.primaryIntent}`);
+    
+    if (msg.payload.intent.primaryIntent === 'optimization') {
+      // Handle optimization requests with full data enrichment
+      const enriched = await agnoDataAgent.enrichData(
+        msg.payload.customerData || {},
+        msg.payload.intent,
+        msg.payload.sessionId
+      );
+      messageBus.publish({ type: 'data_prepared', payload: enriched, correlationId: msg.correlationId });
+      return;
+    } else if (msg.payload.intent.primaryIntent === 'knowledge_retrieval') {
+      // Handle knowledge retrieval requests with minimal data structure
+      console.log(`📊 Processing knowledge retrieval request`);
+      const enriched = {
+        enrichedData: {
+          query: msg.payload.intent.ragQuery,
+          keywords: msg.payload.intent.keywords,
+          type: 'knowledge_retrieval'
+        },
+        constraints: [],
+        metadata: {
+          sourceType: 'rag_query',
+          enrichmentLevel: 'minimal',
+          confidence: 0.9,
+        },
+      };
+      console.log(`✅ Data prepared for knowledge retrieval: ${msg.correlationId}`);
+      messageBus.publish({ type: 'data_prepared', payload: enriched, correlationId: msg.correlationId });
+      return;
+    } else if (msg.payload.intent.primaryIntent === 'hybrid_analysis') {
+      // Handle hybrid requests with both RAG and optimization data
+      console.log(`📊 Processing hybrid analysis request`);
+      
+      // First, prepare RAG data - use ragQuery if available, otherwise use user input
+      const ragQuery = msg.payload.intent.ragQuery || msg.payload.userInput || msg.payload.intent.optimizationQuery;
+      const ragData = {
+        query: ragQuery,
         keywords: msg.payload.intent.keywords,
-        type: 'knowledge_retrieval'
-      },
-      constraints: [],
-      metadata: {
-        sourceType: 'rag_query',
-        enrichmentLevel: 'minimal',
-        confidence: 0.9,
-      },
-    };
-    console.log(`✅ Data prepared for knowledge retrieval: ${msg.correlationId}`);
-    messageBus.publish({ type: 'data_prepared', payload: enriched, correlationId: msg.correlationId });
-  } else if (msg.payload.intent.primaryIntent === 'hybrid_analysis') {
-    // Handle hybrid requests with both RAG and optimization data
-    console.log(`📊 Processing hybrid analysis request`);
-    
-    // First, prepare RAG data - use ragQuery if available, otherwise use user input
-    const ragQuery = msg.payload.intent.ragQuery || msg.payload.userInput || msg.payload.intent.optimizationQuery;
-    const ragData = {
-      query: ragQuery,
-      keywords: msg.payload.intent.keywords,
-      type: 'rag_query'
-    };
-    
-    // Then, prepare optimization data
-    const optimizationData = await agnoDataAgent.enrichData(
-      msg.payload.customerData || {},
-      msg.payload.intent,
-      msg.payload.sessionId
-    );
-    
-    // Combine both data types
-    const enriched = {
-      enrichedData: {
-        ragData: ragData,
-        optimizationData: optimizationData.enrichedData,
-        type: 'hybrid'
-      },
-      constraints: optimizationData.constraints,
-      metadata: {
-        sourceType: 'hybrid_rag_optimization',
-        enrichmentLevel: 'comprehensive',
-        confidence: 0.85,
-      },
-    };
-    console.log(`✅ Data prepared for hybrid analysis: ${msg.correlationId}`);
-    messageBus.publish({ type: 'data_prepared', payload: enriched, correlationId: msg.correlationId });
-  } else {
-    // Handle other request types with fallback
-    console.log(`📊 Processing unknown intent type: ${msg.payload.intent.primaryIntent}`);
-    const enriched = {
-      enrichedData: {
-        query: msg.payload.userInput || 'Unknown query',
-        type: 'fallback'
-      },
-      constraints: [],
-      metadata: {
-        sourceType: 'fallback',
-        enrichmentLevel: 'minimal',
-        confidence: 0.5,
-      },
-    };
-    console.log(`✅ Data prepared for fallback: ${msg.correlationId}`);
-    messageBus.publish({ type: 'data_prepared', payload: enriched, correlationId: msg.correlationId });
-  }
-});
+        type: 'rag_query'
+      };
+      
+      // Then, prepare optimization data
+      const optimizationData = await agnoDataAgent.enrichData(
+        msg.payload.customerData || {},
+        msg.payload.intent,
+        msg.payload.sessionId
+      );
+      
+      // Combine both data types
+      const enriched = {
+        enrichedData: {
+          ragData: ragData,
+          optimizationData: optimizationData.enrichedData,
+          type: 'hybrid'
+        },
+        constraints: optimizationData.constraints,
+        metadata: {
+          sourceType: 'hybrid_rag_optimization',
+          enrichmentLevel: 'comprehensive',
+          confidence: 0.85,
+        },
+      };
+      console.log(`✅ Data prepared for hybrid analysis: ${msg.correlationId}`);
+      messageBus.publish({ type: 'data_prepared', payload: enriched, correlationId: msg.correlationId });
+      return;
+    } else {
+      // Handle other request types with fallback
+      console.log(`📊 Processing unknown intent type: ${msg.payload.intent.primaryIntent}`);
+      const enriched = {
+        enrichedData: {
+          query: msg.payload.userInput || 'Unknown query',
+          type: 'fallback'
+        },
+        constraints: [],
+        metadata: {
+          sourceType: 'fallback',
+          enrichmentLevel: 'minimal',
+          confidence: 0.5,
+        },
+      };
+      console.log(`✅ Data prepared for fallback: ${msg.correlationId}`);
+      messageBus.publish({ type: 'data_prepared', payload: enriched, correlationId: msg.correlationId });
+      return;
+    }
+  });
 
-// Subscribe to debate challenges
-messageBus.subscribe('debate_response_data_prepared', async (msg: any) => {
-  const challenge = msg.payload.challenge;
-  const originalOutput = msg.payload.originalOutput;
-  
-  const defensePrompt = `You are the Data Agent defending your data preparation. 
-  
+  // Subscribe to debate challenges
+  messageBus.subscribe('debate_response_data_prepared', async (msg: any) => {
+    const challenge = msg.payload.challenge;
+    const originalOutput = msg.payload.originalOutput;
+    
+    const defensePrompt = `You are the Data Agent defending your data preparation. 
+    
 Original Data: ${JSON.stringify(originalOutput)}
 Challenge: ${challenge}
 
 Provide a strong defense of your data preparation approach. Address the challenge directly and explain your methodology.`;
 
-  const defense = await agnoClient.chat({
-    message: defensePrompt
-  });
+    const defense = await agnoClient.chat({
+      message: defensePrompt
+    });
 
-  messageBus.publish({
-    type: 'debate_response_data_prepared',
-    payload: {
-      debateId: msg.payload.debateId,
-      response: defense.response,
-      originalOutput: originalOutput
-    },
-    correlationId: msg.correlationId
+    messageBus.publish({
+      type: 'debate_response_data_prepared',
+      payload: {
+        debateId: msg.payload.debateId,
+        response: defense.response,
+        originalOutput: originalOutput
+      },
+      correlationId: msg.correlationId
+    });
   });
-}); 
+  
+  _dataAgentSubscribed = true;
+} 
